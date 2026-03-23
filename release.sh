@@ -8,13 +8,21 @@ if [ -z "$VERSION" ]; then
 fi
 
 ANDROID_HOME="/c/Users/tomho/AppData/Local/Android/Sdk"
-SCRIPT_DIR="$(dirname "$0")"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 KEYSTORE="$SCRIPT_DIR/thaiid-release.keystore"
-KEYPASS="$(grep KEYSTORE_PASSWORD "$SCRIPT_DIR/.env.local" | cut -d= -f2)"
 APK="android/app/build/outputs/apk/release/app-release.apk"
 
-if [ -z "$KEYPASS" ]; then
+# Source all env vars from .env.local
+set -a
+source "$SCRIPT_DIR/.env.local"
+set +a
+
+if [ -z "$KEYSTORE_PASSWORD" ]; then
   echo "Error: KEYSTORE_PASSWORD not found in .env.local"
+  exit 1
+fi
+if [ -z "$EXPO_PUBLIC_GEMINI_API_KEY" ]; then
+  echo "Error: EXPO_PUBLIC_GEMINI_API_KEY not found in .env.local"
   exit 1
 fi
 
@@ -22,14 +30,13 @@ echo "==> Prebuild"
 ANDROID_HOME="$ANDROID_HOME" npx expo prebuild --platform android --no-install
 
 echo "==> Build APK"
+rm -rf android/app/build/generated/assets/createBundleReleaseJsAndAssets
 cd android
-ANDROID_HOME="$ANDROID_HOME" \
-EXPO_PUBLIC_GEMINI_API_KEY="$(grep EXPO_PUBLIC_GEMINI_API_KEY "$SCRIPT_DIR/.env.local" | cut -d= -f2)" \
-./gradlew assembleRelease \
+ANDROID_HOME="$ANDROID_HOME" ./gradlew assembleRelease \
   -Pandroid.injected.signing.store.file="$KEYSTORE" \
-  -Pandroid.injected.signing.store.password="$KEYPASS" \
+  -Pandroid.injected.signing.store.password="$KEYSTORE_PASSWORD" \
   -Pandroid.injected.signing.key.alias=thaiid \
-  -Pandroid.injected.signing.key.password="$KEYPASS"
+  -Pandroid.injected.signing.key.password="$KEYSTORE_PASSWORD"
 cd ..
 
 echo "==> Tag & release $VERSION"
