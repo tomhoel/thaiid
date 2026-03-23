@@ -100,7 +100,7 @@ export default function SettingsScreen() {
   const handleSaveGenerate = async () => {
     setIsGenerating(true);
     try {
-      const apiKey = 'REDACTED_API_KEY';
+      const apiKey = process.env.EXPO_PUBLIC_GEMINI_API_KEY;
       
       const assetUri = Image.resolveAssetSource(require('../../pics/1.png')).uri;
       const imgRes = await fetch(assetUri);
