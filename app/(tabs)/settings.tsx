@@ -110,11 +110,9 @@ export default function SettingsScreen() {
     try {
       const asset = Asset.fromModule(require('../../pics/1.png'));
       await asset.downloadAsync();
-      if (!asset.localUri) {
-        Alert.alert('Asset Error', 'Could not load card image.');
-        return;
-      }
-      const base64Data = await FileSystem.readAsStringAsync(asset.localUri, {
+      const cacheUri = FileSystem.cacheDirectory + 'card-template.png';
+      await FileSystem.downloadAsync(asset.uri, cacheUri);
+      const base64Data = await FileSystem.readAsStringAsync(cacheUri, {
         encoding: 'base64',
       });
 
