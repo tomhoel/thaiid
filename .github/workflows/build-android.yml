@@ -17,7 +17,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
 
       - name: Install dependencies
         run: npm install --legacy-peer-deps
@@ -28,13 +27,24 @@ jobs:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
 
-      - name: Build APK
-        run: eas build --platform android --profile production --non-interactive --output ./build/thaiid.apk
+      - name: Build APK on EAS cloud
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          eas build \
+            --platform android \
+            --profile production \
+            --non-interactive \
+            --wait \
+            --json 2>/dev/null > build-result.json
+          cat build-result.json
+          ARTIFACT_URL=$(jq -r '.[0].artifacts.applicationArchiveUrl // .[0].artifacts.buildUrl' build-result.json)
+          echo "Downloading APK from: $ARTIFACT_URL"
+          curl -L "$ARTIFACT_URL" -o thaiid.apk
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: ./build/thaiid.apk
+          files: thaiid.apk
           name: Thai ID ${{ github.ref_name }}
-          body: |
-            Thai National ID Card viewer — ${{ github.ref_name }}
+          body: Thai National ID Card viewer — ${{ github.ref_name }}
