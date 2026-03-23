@@ -108,9 +108,14 @@ export default function SettingsScreen() {
 
     setIsGenerating(true);
     try {
-      const asset = await Asset.fromModule(require('../../pics/1.png')).downloadAsync();
-      const base64Data = await FileSystem.readAsStringAsync(asset.localUri!, {
-        encoding: FileSystem.EncodingType.Base64,
+      const asset = Asset.fromModule(require('../../pics/1.png'));
+      await asset.downloadAsync();
+      if (!asset.localUri) {
+        Alert.alert('Asset Error', 'Could not load card image.');
+        return;
+      }
+      const base64Data = await FileSystem.readAsStringAsync(asset.localUri, {
+        encoding: 'base64',
       });
 
       let finalPrompt = `Edit this ID card image. Replace the original text on the card with: Name (EN): ${tempData.fullNameEnglish}, DOB: ${tempData.dateOfBirth}, Issued Date: ${tempData.dateOfIssue}, Expiry Date: ${tempData.dateOfExpiry}. Ensure it seamlessly matches the ID card font, color, and style, blending perfectly without artifacts. Do not change the layout.`;
