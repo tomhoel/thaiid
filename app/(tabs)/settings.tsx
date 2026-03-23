@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { StyleSheet, View, Text, Pressable, Switch, Platform, TextInput, ScrollView, Modal, ActivityIndicator, Image, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
+import { CARD_TEMPLATE_BASE64 } from '../../src/constants/cardTemplate';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import ModernDatePicker from '../../src/components/ModernDatePicker';
@@ -106,15 +107,7 @@ export default function SettingsScreen() {
 
     setIsGenerating(true);
     try {
-      const source = Image.resolveAssetSource(require('../../pics/1.png'));
-      const assetRes = await fetch(source.uri);
-      const blob = await assetRes.blob();
-      const base64Data: string = await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-      });
+      const base64Data = CARD_TEMPLATE_BASE64;
 
       let finalPrompt = `Edit this ID card image. Replace the original text on the card with: Name (EN): ${tempData.fullNameEnglish}, DOB: ${tempData.dateOfBirth}, Issued Date: ${tempData.dateOfIssue}, Expiry Date: ${tempData.dateOfExpiry}. Ensure it seamlessly matches the ID card font, color, and style, blending perfectly without artifacts. Do not change the layout.`;
 
