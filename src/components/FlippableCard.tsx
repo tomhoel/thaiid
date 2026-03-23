@@ -1,8 +1,8 @@
 /**
  * FlippableCard — Tap to flip between front/back card images.
- * Uses React Native Animated with spring physics for a satisfying flip.
+ * Holographic shimmer effect responds to device tilt (accelerometer).
  */
-import React, { useRef, useState, useCallback } from 'react';
+import React, { useRef, useState, useCallback, useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -11,6 +11,8 @@ import {
   Pressable,
   Dimensions,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Accelerometer } from 'expo-sensors';
 import * as Haptics from 'expo-haptics';
 import { Colors } from '../constants/colors';
 import { useProfile } from '../context/ProfileContext';
@@ -19,10 +21,84 @@ const { width: SCREEN_W } = Dimensions.get('window');
 const CARD_W = SCREEN_W - 40;
 const CARD_H = CARD_W * 0.63;
 
+// Holographic shimmer overlay
+function HoloShimmer({ tiltX, tiltY }: { tiltX: Animated.Value; tiltY: Animated.Value }) {
+  const translateX = tiltX.interpolate({
+    inputRange: [-1, 1],
+    outputRange: [-CARD_W * 0.8, CARD_W * 0.8],
+  });
+  const translateY = tiltY.interpolate({
+    inputRange: [-1, 1],
+    outputRange: [-CARD_H * 0.8, CARD_H * 0.8],
+  });
+
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={[
+        StyleSheet.absoluteFillObject,
+        { borderRadius: 14, overflow: 'hidden' },
+      ]}
+    >
+      <Animated.View
+        style={{
+          width: CARD_W * 2,
+          height: CARD_H * 2,
+          position: 'absolute',
+          top: -CARD_H * 0.5,
+          left: -CARD_W * 0.5,
+          transform: [{ translateX }, { translateY }],
+        }}
+      >
+        <LinearGradient
+          colors={[
+            'transparent',
+            'rgba(255,80,80,0.06)',
+            'rgba(255,200,50,0.08)',
+            'rgba(50,255,100,0.06)',
+            'rgba(80,150,255,0.08)',
+            'rgba(180,80,255,0.06)',
+            'transparent',
+          ]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={{ width: '100%', height: '100%' }}
+        />
+      </Animated.View>
+    </Animated.View>
+  );
+}
+
 export default function FlippableCard() {
   const flipAnim = useRef(new Animated.Value(0)).current;
   const [isFlipped, setIsFlipped] = useState(false);
   const { profile } = useProfile();
+
+  // Accelerometer-driven tilt values
+  const tiltX = useRef(new Animated.Value(0)).current;
+  const tiltY = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    let sub: ReturnType<typeof Accelerometer.addListener> | null = null;
+
+    Accelerometer.isAvailableAsync().then(available => {
+      if (!available) return;
+      Accelerometer.setUpdateInterval(80);
+      sub = Accelerometer.addListener(({ x, y }) => {
+        // Clamp and smooth — spring towards target
+        Animated.spring(tiltX, {
+          toValue: Math.max(-1, Math.min(1, x)),
+          friction: 12, tension: 40, useNativeDriver: true,
+        }).start();
+        Animated.spring(tiltY, {
+          toValue: Math.max(-1, Math.min(1, y - 0.5)), // offset for phone held upright
+          friction: 12, tension: 40, useNativeDriver: true,
+        }).start();
+      });
+    });
+
+    return () => { sub?.remove(); };
+  }, []);
 
   const handleFlip = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -64,7 +140,6 @@ export default function FlippableCard() {
 
   return (
     <Pressable onPress={handleFlip} style={styles.container}>
-      {/* Shadow layer */}
       <View style={styles.shadowWrap}>
         {/* Front */}
         <Animated.View
@@ -85,6 +160,7 @@ export default function FlippableCard() {
             style={styles.cardImage}
             resizeMode="cover"
           />
+          <HoloShimmer tiltX={tiltX} tiltY={tiltY} />
         </Animated.View>
 
         {/* Back */}
@@ -107,6 +183,7 @@ export default function FlippableCard() {
             style={styles.cardImage}
             resizeMode="cover"
           />
+          <HoloShimmer tiltX={tiltX} tiltY={tiltY} />
         </Animated.View>
       </View>
     </Pressable>
@@ -134,9 +211,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     overflow: 'hidden',
   },
-  faceBack: {
-    // back face sits behind front, flipped in
-  },
+  faceBack: {},
   cardImage: {
     width: '100%',
     height: '100%',

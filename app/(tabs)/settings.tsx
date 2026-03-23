@@ -13,6 +13,7 @@ import { cardData as defaultCardData } from '../../src/constants/cardData';
 import GarudaEmblem from '../../src/components/GarudaEmblem';
 import { useLang } from '../../src/i18n/LanguageContext';
 import { useBiometric } from '../../src/context/BiometricContext';
+import { useTheme } from '../../src/context/ThemeContext';
 
 function Item({ icon, label, value, toggle, onToggle, last, color, onPress }: {
   icon: keyof typeof Ionicons.glyphMap; label: string; value?: string;
@@ -49,6 +50,7 @@ export default function SettingsScreen() {
   const { top } = useSafeAreaInsets();
   const { lang, toggle, t } = useLang();
   const { enabled: bio, setEnabled: setBio } = useBiometric();
+  const { theme, toggleTheme } = useTheme();
   const [notif, setNotif] = useState(true);
   const [showDemoModal, setShowDemoModal] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -202,7 +204,7 @@ export default function SettingsScreen() {
       <View style={styles.groupCard}>
         <Item icon="notifications-outline" label={t('settings.notifications')} toggle={notif} onToggle={setNotif} color={Colors.orange} />
         <Item icon="language-outline" label={t('settings.language')} value={lang === 'en' ? 'English' : 'ไทย'} color={Colors.orange} onPress={toggle} />
-        <Item icon="sunny-outline" label={t('settings.theme')} value={t('settings.dark')} color={Colors.orange} />
+        <Item icon={theme === 'dark' ? 'moon-outline' : 'sunny-outline'} label={t('settings.theme')} value={theme === 'dark' ? 'Dark' : 'Light'} color={Colors.orange} onPress={toggleTheme} />
         <Item icon="build-outline" label="Demo Profile Settings" color={Colors.t4} onPress={handleOpenDemo} last />
       </View>
 
@@ -357,13 +359,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: Colors.bgCard,
-    borderRadius: 14,
     paddingVertical: 10,
-    paddingHorizontal: 12,
+    paddingHorizontal: 16,
+    marginHorizontal: -16,
     marginBottom: 8,
-    borderWidth: 1,
-    borderColor: Colors.b1,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.b1,
   },
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   headerTitle: { fontSize: 16, fontWeight: '800', color: Colors.t1, letterSpacing: -0.3 },
