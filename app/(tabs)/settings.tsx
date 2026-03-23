@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, Text, Pressable, Switch, Platform, TextInput, ScrollView, Modal, ActivityIndicator, Image } from 'react-native';
+import { StyleSheet, View, Text, Pressable, Switch, Platform, TextInput, ScrollView, Modal, ActivityIndicator, Image, Alert } from 'react-native';
 import * as FileSystem from 'expo-file-system';
 import { Asset } from 'expo-asset';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -100,71 +100,66 @@ export default function SettingsScreen() {
   };
 
   const handleSaveGenerate = async () => {
+    const apiKey = process.env.EXPO_PUBLIC_GEMINI_API_KEY;
+    if (!apiKey) {
+      Alert.alert('Missing API Key', 'EXPO_PUBLIC_GEMINI_API_KEY is not set.');
+      return;
+    }
+
     setIsGenerating(true);
     try {
-      const apiKey = process.env.EXPO_PUBLIC_GEMINI_API_KEY;
-      
       const asset = await Asset.fromModule(require('../../pics/1.png')).downloadAsync();
       const base64Data = await FileSystem.readAsStringAsync(asset.localUri!, {
         encoding: FileSystem.EncodingType.Base64,
       });
 
       let finalPrompt = `Edit this ID card image. Replace the original text on the card with: Name (EN): ${tempData.fullNameEnglish}, DOB: ${tempData.dateOfBirth}, Issued Date: ${tempData.dateOfIssue}, Expiry Date: ${tempData.dateOfExpiry}. Ensure it seamlessly matches the ID card font, color, and style, blending perfectly without artifacts. Do not change the layout.`;
-      
+
       let finalParts: any[] = [
-        {
-          inlineData: {
-            mimeType: "image/png",
-            data: base64Data
-          }
-        }
+        { inlineData: { mimeType: "image/png", data: base64Data } }
       ];
 
       if (selectedPhoto) {
-         finalPrompt += ` Additionally, seamlessly replace the person's portrait face photo on the right side of the ID card with the SECOND provided image natively. You must meticulously merge the new face into the layout while keeping the background of the ID card intact, particularly the height/scale line measurements securely sitting behind the person on the card. Do not remove the ID card background.`;
-         finalParts.push({
-           inlineData: {
-             mimeType: selectedPhotoMime || 'image/jpeg',
-             data: selectedPhoto
-           }
-         });
+        finalPrompt += ` Additionally, seamlessly replace the person's portrait face photo on the right side of the ID card with the SECOND provided image natively. You must meticulously merge the new face into the layout while keeping the background of the ID card intact, particularly the height/scale line measurements securely sitting behind the person on the card. Do not remove the ID card background.`;
+        finalParts.push({ inlineData: { mimeType: selectedPhotoMime || 'image/jpeg', data: selectedPhoto } });
       }
 
       finalParts.push({ text: finalPrompt });
 
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image-preview:generateContent?key=${apiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{
-            role: "user",
-            parts: finalParts
-          }],
-          generationConfig: {
-             responseModalities: ["IMAGE"]
-          }
-        })
-      });
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ role: "user", parts: finalParts }],
+            generationConfig: { responseModalities: ["TEXT", "IMAGE"] }
+          })
+        }
+      );
       const data = await response.json();
 
+      if (!response.ok) {
+        Alert.alert('Gemini Error', data.error?.message || `HTTP ${response.status}`);
+        return;
+      }
+
       let newPicUri = tempData.pictureUri;
-      if (data.candidates && data.candidates[0].content.parts) {
-        const parts = data.candidates[0].content.parts;
-        const inlinePart = parts.find((p: any) => p.inlineData);
-        if (inlinePart && inlinePart.inlineData.data) {
+      if (data.candidates?.[0]?.content?.parts) {
+        const inlinePart = data.candidates[0].content.parts.find((p: any) => p.inlineData);
+        if (inlinePart?.inlineData?.data) {
           const mime = inlinePart.inlineData.mimeType || 'image/png';
           newPicUri = `data:${mime};base64,${inlinePart.inlineData.data}`;
         } else {
-             console.error("No inline data returned by Gemini:", data);
+          Alert.alert('No Image', 'Gemini responded but returned no image. Try again.');
         }
       } else {
-         console.error("Gemini Edit failed:", data);
+        Alert.alert('No Response', JSON.stringify(data).slice(0, 200));
       }
 
       updateProfile({ ...tempData, pictureUri: newPicUri });
-    } catch (err) {
-      console.error('Failed communicating with Gemini:', err);
-      updateProfile(tempData); // Update text minimally if image fails
+    } catch (err: any) {
+      Alert.alert('Network Error', err?.message || String(err));
     } finally {
       setIsGenerating(false);
       setShowDemoModal(false);
