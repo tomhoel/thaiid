@@ -37,6 +37,8 @@ jobs:
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > $GITHUB_WORKSPACE/android/app/release.keystore
 
       - name: Build release APK
+        env:
+          EXPO_PUBLIC_GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           cd android
           chmod +x gradlew
