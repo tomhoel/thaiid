@@ -29,6 +29,13 @@
     },
     "plugins": [
       "expo-router"
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "a0539ca0-7971-46c1-a1fb-b0a3a1f06b73"
+      }
+    },
+    "owner": "tomhoel"
   }
 }
