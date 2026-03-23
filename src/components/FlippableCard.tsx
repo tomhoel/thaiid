@@ -53,11 +53,12 @@ function HoloShimmer({ tiltX, tiltY }: { tiltX: Animated.Value; tiltY: Animated.
         <LinearGradient
           colors={[
             'transparent',
-            'rgba(255,80,80,0.06)',
-            'rgba(255,200,50,0.08)',
-            'rgba(50,255,100,0.06)',
-            'rgba(80,150,255,0.08)',
-            'rgba(180,80,255,0.06)',
+            'rgba(255,50,50,0.18)',
+            'rgba(255,180,30,0.22)',
+            'rgba(50,255,120,0.18)',
+            'rgba(60,130,255,0.22)',
+            'rgba(180,60,255,0.18)',
+            'rgba(255,50,150,0.15)',
             'transparent',
           ]}
           start={{ x: 0, y: 0 }}
