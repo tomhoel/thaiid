@@ -20,29 +20,36 @@ jobs:
         with:
           node-version: 22
 
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
       - name: Install dependencies
         run: npm install --legacy-peer-deps
 
-      - name: Setup EAS
-        uses: expo/expo-github-action@v8
-        with:
-          eas-version: latest
-          token: ${{ secrets.EXPO_TOKEN }}
+      - name: Expo Prebuild
+        run: npx expo prebuild --platform android --clean --no-install
 
-      - name: Build APK on EAS cloud
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      - name: Decode keystore
         run: |
-          eas build \
-            --platform android \
-            --profile production \
-            --non-interactive \
-            --wait \
-            --json 2>/dev/null > build-result.json
-          cat build-result.json
-          ARTIFACT_URL=$(jq -r '.[0].artifacts.applicationArchiveUrl // .[0].artifacts.buildUrl' build-result.json)
-          echo "Downloading APK from: $ARTIFACT_URL"
-          curl -L "$ARTIFACT_URL" -o thaiid.apk
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > $GITHUB_WORKSPACE/android/app/release.keystore
+
+      - name: Build release APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleRelease \
+            -Pandroid.injected.signing.store.file=$GITHUB_WORKSPACE/android/app/release.keystore \
+            -Pandroid.injected.signing.store.password=${{ secrets.KEYSTORE_PASSWORD }} \
+            -Pandroid.injected.signing.key.alias=${{ secrets.KEY_ALIAS }} \
+            -Pandroid.injected.signing.key.password=${{ secrets.KEY_PASSWORD }}
+
+      - name: Collect APK
+        run: |
+          APK=$(find android/app/build/outputs/apk/release -name "*.apk" | head -1)
+          cp "$APK" thaiid.apk
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
