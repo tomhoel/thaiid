@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
 import { StyleSheet, View, Text, Pressable, Switch, Platform, TextInput, ScrollView, Modal, ActivityIndicator, Image, Alert } from 'react-native';
-import * as FileSystem from 'expo-file-system/legacy';
-import { Asset } from 'expo-asset';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
@@ -108,12 +106,14 @@ export default function SettingsScreen() {
 
     setIsGenerating(true);
     try {
-      const asset = Asset.fromModule(require('../../pics/1.png'));
-      await asset.downloadAsync();
-      const cacheUri = FileSystem.cacheDirectory + 'card-template.png';
-      await FileSystem.downloadAsync(asset.uri, cacheUri);
-      const base64Data = await FileSystem.readAsStringAsync(cacheUri, {
-        encoding: 'base64',
+      const source = Image.resolveAssetSource(require('../../pics/1.png'));
+      const assetRes = await fetch(source.uri);
+      const blob = await assetRes.blob();
+      const base64Data: string = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
       });
 
       let finalPrompt = `Edit this ID card image. Replace the original text on the card with: Name (EN): ${tempData.fullNameEnglish}, DOB: ${tempData.dateOfBirth}, Issued Date: ${tempData.dateOfIssue}, Expiry Date: ${tempData.dateOfExpiry}. Ensure it seamlessly matches the ID card font, color, and style, blending perfectly without artifacts. Do not change the layout.`;
