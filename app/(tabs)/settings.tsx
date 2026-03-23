@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { StyleSheet, View, Text, Pressable, Switch, Platform, TextInput, ScrollView, Modal, ActivityIndicator, Image, Alert } from 'react-native';
-import { File } from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { Asset } from 'expo-asset';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
@@ -114,8 +114,9 @@ export default function SettingsScreen() {
         Alert.alert('Asset Error', 'Could not load card image.');
         return;
       }
-      const file = new File(asset.localUri);
-      const base64Data = file.base64();
+      const base64Data = await FileSystem.readAsStringAsync(asset.localUri, {
+        encoding: 'base64',
+      });
 
       let finalPrompt = `Edit this ID card image. Replace the original text on the card with: Name (EN): ${tempData.fullNameEnglish}, DOB: ${tempData.dateOfBirth}, Issued Date: ${tempData.dateOfIssue}, Expiry Date: ${tempData.dateOfExpiry}. Ensure it seamlessly matches the ID card font, color, and style, blending perfectly without artifacts. Do not change the layout.`;
 
