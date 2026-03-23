@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { StyleSheet, View, Text, Pressable, Switch, Platform, TextInput, ScrollView, Modal, ActivityIndicator, Image } from 'react-native';
+import * as FileSystem from 'expo-file-system';
+import { Asset } from 'expo-asset';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
@@ -102,16 +104,10 @@ export default function SettingsScreen() {
     try {
       const apiKey = process.env.EXPO_PUBLIC_GEMINI_API_KEY;
       
-      const assetUri = Image.resolveAssetSource(require('../../pics/1.png')).uri;
-      const imgRes = await fetch(assetUri);
-      const blob = await imgRes.blob();
-      const base64Full = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
+      const asset = await Asset.fromModule(require('../../pics/1.png')).downloadAsync();
+      const base64Data = await FileSystem.readAsStringAsync(asset.localUri!, {
+        encoding: FileSystem.EncodingType.Base64,
       });
-      const base64Data = base64Full.includes(',') ? base64Full.split(',')[1] : base64Full;
 
       let finalPrompt = `Edit this ID card image. Replace the original text on the card with: Name (EN): ${tempData.fullNameEnglish}, DOB: ${tempData.dateOfBirth}, Issued Date: ${tempData.dateOfIssue}, Expiry Date: ${tempData.dateOfExpiry}. Ensure it seamlessly matches the ID card font, color, and style, blending perfectly without artifacts. Do not change the layout.`;
       
