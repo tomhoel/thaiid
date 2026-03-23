@@ -1,46 +1,48 @@
-// Thai National ID — Design System (UI/UX Pro Max)
-// Style: Premium Government | WCAG AAA Contrast
+// Thai National ID — Design System
+// Premium Government · Dark Theme · WCAG AAA
 export const Colors = {
   // Backgrounds
-  bg: '#F8FAFC',
-  bgSecondary: '#F1F5F9',
-  card: '#FFFFFF',
+  bg: '#0C1526',
+  bgCard: '#131E33',
+  bgElevated: '#1A2742',
+  bgSurface: 'rgba(255,255,255,0.04)',
 
-  // Thai Navy (primary)
-  navy: '#0F172A',
-  navyLight: '#1E293B',
+  // Navy
+  navy: '#0C1526',
+  navyLight: '#1A2742',
+  navyMid: '#162036',
 
-  // Thai Blue (CTA/accent)
-  blue: '#0369A1',
-  blueBg: 'rgba(3, 105, 161, 0.07)',
-
-  // Thai Gold
-  gold: '#B8941F',
+  // Gold
+  gold: '#C09520',
   goldLight: '#D4AF37',
-  goldBg: 'rgba(184, 148, 31, 0.08)',
+  goldBg: 'rgba(212, 175, 55, 0.1)',
+  goldBorder: 'rgba(212, 175, 55, 0.18)',
+
+  // Blue
+  blue: '#3B82F6',
+  blueBg: 'rgba(59, 130, 246, 0.1)',
 
   // Thai Flag
   flagRed: '#E31E2D',
-  flagBlue: '#1B2A4A',
 
   // Status
-  green: '#16A34A',
-  greenBg: 'rgba(22, 163, 74, 0.07)',
-  red: '#DC2626',
-  orange: '#D97706',
+  green: '#22C55E',
+  greenBg: 'rgba(34, 197, 94, 0.1)',
+  greenBorder: 'rgba(34, 197, 94, 0.18)',
+  orange: '#F59E0B',
+  red: '#EF4444',
 
-  // Text — WCAG AAA
-  t1: '#020617',  // primary
-  t2: '#334155',  // secondary
-  t3: '#64748B',  // muted
-  t4: '#94A3B8',  // disabled
-  tWhite: '#FFFFFF',
+  // Text
+  t1: '#F1F5F9',
+  t2: '#94A3B8',
+  t3: '#64748B',
+  t4: '#475569',
 
-  // Borders & Dividers
-  b1: '#E2E8F0',
-  b2: '#CBD5E1',
-  divider: '#F1F5F9',
+  // Borders
+  b1: 'rgba(255,255,255,0.06)',
+  b2: 'rgba(255,255,255,0.1)',
+  divider: 'rgba(255,255,255,0.04)',
 
   // Shadows
-  shadow: 'rgba(15, 23, 42, 0.08)',
+  shadow: 'rgba(0, 0, 0, 0.3)',
 };

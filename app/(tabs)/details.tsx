@@ -5,8 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { Colors } from '../../src/constants/colors';
-import { cardData } from '../../src/constants/cardData';
-import GarudaEmblem from '../../src/components/GarudaEmblem';
+import { useProfile } from '../../src/context/ProfileContext';
 
 function Row({ label, value, sub, copy, last }: {
   label: string; value: string; sub?: string; copy?: boolean; last?: boolean;
@@ -26,18 +25,20 @@ function Row({ label, value, sub, copy, last }: {
         <Text style={styles.rVal}>{value}</Text>
         {sub && <Text style={styles.rSub}>{sub}</Text>}
       </View>
-      {copy && <Ionicons name="copy-outline" size={14} color={Colors.t4} style={{ marginLeft: 6 }} />}
+      {copy && <Ionicons name="copy-outline" size={12} color={Colors.t4} style={{ marginLeft: 4 }} />}
     </Pressable>
   );
 }
 
-function Sec({ title, icon, color, children }: {
+function Section({ title, icon, color, children }: {
   title: string; icon: keyof typeof Ionicons.glyphMap; color: string; children: React.ReactNode;
 }) {
   return (
     <View style={styles.sec}>
       <View style={styles.secHead}>
-        <View style={[styles.secDot, { backgroundColor: color }]} />
+        <View style={[styles.secIcon, { backgroundColor: color + '14' }]}>
+          <Ionicons name={icon} size={14} color={color} />
+        </View>
         <Text style={styles.secTitle}>{title}</Text>
       </View>
       <View style={styles.secCard}>{children}</View>
@@ -47,57 +48,52 @@ function Sec({ title, icon, color, children }: {
 
 export default function DetailsScreen() {
   const { top } = useSafeAreaInsets();
+  const { profile: cardData } = useProfile();
   return (
-    <View style={[styles.screen, { paddingTop: top }]}>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+    <View style={[styles.screen, { paddingTop: top + 6 }]}>
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.hTitle}>Card Details</Text>
+        <Text style={styles.hSub}>รายละเอียดบัตร</Text>
+      </View>
 
-        {/* Header */}
-        <View style={styles.header}>
-          <GarudaEmblem size={28} color={Colors.navy} />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.hTitle}>Card Details</Text>
-            <Text style={styles.hSub}>รายละเอียดบัตร</Text>
-          </View>
-          <Ionicons name="search-outline" size={22} color={Colors.t3} />
+      {/* Type chip */}
+      <View style={styles.typeChip}>
+        <View style={styles.typeIconWrap}>
+          <Ionicons name="card" size={14} color={Colors.goldLight} />
         </View>
+        <Text style={styles.typeText}>{cardData.titleEnglish}</Text>
+        <Text style={styles.typeDot}>·</Text>
+        <Text style={styles.typeTh}>{cardData.titleThai}</Text>
+      </View>
 
-        {/* Type banner */}
-        <View style={styles.typeBanner}>
-          <View style={styles.typeIcon}>
-            <Ionicons name="card" size={18} color={Colors.gold} />
-          </View>
-          <View>
-            <Text style={styles.typeTitle}>{cardData.titleEnglish}</Text>
-            <Text style={styles.typeSub}>{cardData.titleThai}</Text>
-          </View>
-        </View>
-
-        <Sec title="Personal Information" icon="person" color={Colors.blue}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+        <Section title="Personal" icon="person" color={Colors.blue}>
           <Row label="Name (TH)" value={cardData.nameThai} copy />
           <Row label="Name (EN)" value={cardData.fullNameEnglish} copy />
           <Row label="Date of Birth" value={cardData.dateOfBirth} sub={cardData.dateOfBirthThai} last />
-        </Sec>
+        </Section>
 
-        <Sec title="Identification" icon="finger-print" color={Colors.gold}>
+        <Section title="Identification" icon="finger-print" color={Colors.gold}>
           <Row label="ID Number" value={cardData.idNumber} copy />
           <Row label="Laser Code" value={cardData.laserCode} copy />
           <Row label="Reference" value={cardData.reference} copy last />
-        </Sec>
+        </Section>
 
-        <Sec title="Address" icon="location" color={Colors.flagRed}>
-          <Row label="Full Address" value={cardData.addressThai} copy />
+        <Section title="Address" icon="location" color={Colors.flagRed}>
+          <Row label="Address" value={cardData.addressThai} copy />
           <Row label="Province" value={cardData.province} />
           <Row label="District" value={cardData.district} />
           <Row label="Sub-district" value={cardData.subDistrict} last />
-        </Sec>
+        </Section>
 
-        <Sec title="Card Validity" icon="calendar" color={Colors.green}>
-          <Row label="Date of Issue" value={cardData.dateOfIssue} />
-          <Row label="Date of Expiry" value={cardData.dateOfExpiry} />
+        <Section title="Validity" icon="calendar" color={Colors.green}>
+          <Row label="Issued" value={cardData.dateOfIssue} />
+          <Row label="Expires" value={cardData.dateOfExpiry} />
           <Row label="Status" value="Active" last />
-        </Sec>
+        </Section>
 
-        <View style={{ height: 100 }} />
+        <View style={{ height: 30 }} />
       </ScrollView>
     </View>
   );
@@ -105,43 +101,84 @@ export default function DetailsScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: Colors.bg },
-  scroll: { paddingHorizontal: 20 },
+  scroll: { paddingHorizontal: 16 },
 
-  header: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingTop: 16, paddingBottom: 16 },
-  hTitle: { fontSize: 24, fontWeight: '800', color: Colors.t1, letterSpacing: -0.5 },
-  hSub: { fontSize: 12, color: Colors.t3, marginTop: 1 },
+  header: { paddingHorizontal: 16, marginBottom: 10 },
+  hTitle: { fontSize: 20, fontWeight: '800', color: Colors.t1, letterSpacing: -0.5 },
+  hSub: { fontSize: 10, color: Colors.t3, marginTop: 2 },
 
-  typeBanner: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    backgroundColor: Colors.goldBg, padding: 14, borderRadius: 14, marginBottom: 22,
-    borderWidth: 1, borderColor: 'rgba(184, 148, 31, 0.15)',
+  typeChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    marginHorizontal: 16,
+    marginBottom: 16,
+    backgroundColor: Colors.bgCard,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 16,
+    shadowColor: Colors.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 1,
+    shadowRadius: 6,
+    elevation: 2,
   },
-  typeIcon: {
-    width: 38, height: 38, borderRadius: 10, backgroundColor: Colors.card,
-    alignItems: 'center', justifyContent: 'center',
-    shadowColor: Colors.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 1, shadowRadius: 4, elevation: 2,
+  typeIconWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 9,
+    backgroundColor: Colors.goldBg,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  typeTitle: { fontSize: 14, fontWeight: '600', color: Colors.t1 },
-  typeSub: { fontSize: 11, color: Colors.t3, marginTop: 1 },
+  typeText: { fontSize: 12, fontWeight: '600', color: Colors.t1 },
+  typeDot: { color: Colors.t4, fontSize: 12 },
+  typeTh: { fontSize: 11, color: Colors.t3 },
 
-  sec: { marginBottom: 20 },
-  secHead: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8, marginLeft: 4 },
-  secDot: { width: 8, height: 8, borderRadius: 4 },
-  secTitle: { fontSize: 13, fontWeight: '700', color: Colors.t2, textTransform: 'uppercase', letterSpacing: 0.5 },
+  sec: { marginBottom: 14 },
+  secHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    marginBottom: 7,
+    marginLeft: 4,
+  },
+  secIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  secTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.t2,
+    letterSpacing: 0.3,
+  },
   secCard: {
-    backgroundColor: Colors.card, borderRadius: 16,
-    shadowColor: Colors.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 1, shadowRadius: 8, elevation: 2,
+    backgroundColor: Colors.bgCard,
+    borderRadius: 18,
+    shadowColor: Colors.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 1,
+    shadowRadius: 8,
+    elevation: 2,
   },
 
   row: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingVertical: 14, paddingHorizontal: 16, minHeight: 50,
-    borderBottomWidth: 1, borderBottomColor: Colors.divider,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    minHeight: 44,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.divider,
   },
   noBorder: { borderBottomWidth: 0 },
-  rowActive: { backgroundColor: Colors.bgSecondary },
-  rLabel: { fontSize: 13, color: Colors.t3, width: 100 },
+  rowActive: { backgroundColor: Colors.bgSurface },
+  rLabel: { fontSize: 12, color: Colors.t3, width: 90 },
   rRight: { flex: 1, alignItems: 'flex-end' },
-  rVal: { fontSize: 14, fontWeight: '500', color: Colors.t1, textAlign: 'right' },
-  rSub: { fontSize: 11, color: Colors.t3, marginTop: 1, textAlign: 'right' },
+  rVal: { fontSize: 13, fontWeight: '500', color: Colors.t1, textAlign: 'right' },
+  rSub: { fontSize: 10, color: Colors.t3, marginTop: 1, textAlign: 'right' },
 });
