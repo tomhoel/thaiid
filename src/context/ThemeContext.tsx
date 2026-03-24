@@ -9,6 +9,7 @@ interface ThemeCtx {
   colors: ColorPalette;
   toggleTheme: () => void;
   setTheme: (t: Theme) => void;
+  themeLoaded: boolean;
 }
 
 const ThemeContext = createContext<ThemeCtx>({
@@ -16,16 +17,19 @@ const ThemeContext = createContext<ThemeCtx>({
   colors: DarkColors,
   toggleTheme: () => {},
   setTheme: () => {},
+  themeLoaded: false,
 });
 
 const KEY = 'app_theme';
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<Theme>('dark');
+  const [themeLoaded, setThemeLoaded] = useState(false);
 
   useEffect(() => {
     AsyncStorage.getItem(KEY).then(v => {
       if (v === 'light' || v === 'dark') setThemeState(v);
+      setThemeLoaded(true);
     });
   }, []);
 
@@ -41,7 +45,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const colors = theme === 'dark' ? DarkColors : LightColors;
 
   return (
-    <ThemeContext.Provider value={{ theme, colors, toggleTheme, setTheme }}>
+    <ThemeContext.Provider value={{ theme, colors, toggleTheme, setTheme, themeLoaded }}>
       {children}
     </ThemeContext.Provider>
   );
