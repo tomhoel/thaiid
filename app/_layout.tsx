@@ -2,7 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as SystemUI from 'expo-system-ui';
+import { useFonts, IBMPlexMono_500Medium } from '@expo-google-fonts/ibm-plex-mono';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
 import { BiometricProvider, useBiometric } from '../src/context/BiometricContext';
 import { ProfileProvider } from '../src/context/ProfileContext';
@@ -15,6 +17,7 @@ const SPLASH_MIN_MS = 800;
 function AppShell() {
   const { authenticated, ready: bioReady } = useBiometric();
   const { theme, colors, themeLoaded } = useTheme();
+  const [fontsLoaded] = useFonts({ IBMPlexMono_500Medium });
   const [splashDone, setSplashDone] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -32,7 +35,7 @@ function AppShell() {
     return () => { if (timerRef.current) clearTimeout(timerRef.current); };
   }, []);
 
-  const loading = !themeLoaded || !bioReady || !splashDone;
+  const loading = !themeLoaded || !bioReady || !splashDone || !fontsLoaded;
 
   if (loading) return <AppSplash />;
 
@@ -50,14 +53,16 @@ function AppShell() {
 
 export default function RootLayout() {
   return (
-    <ThemeProvider>
-      <LanguageProvider>
-        <ProfileProvider>
-          <BiometricProvider>
-            <AppShell />
-          </BiometricProvider>
-        </ProfileProvider>
-      </LanguageProvider>
-    </ThemeProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ThemeProvider>
+        <LanguageProvider>
+          <ProfileProvider>
+            <BiometricProvider>
+              <AppShell />
+            </BiometricProvider>
+          </ProfileProvider>
+        </LanguageProvider>
+      </ThemeProvider>
+    </GestureHandlerRootView>
   );
 }

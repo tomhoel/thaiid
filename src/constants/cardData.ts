@@ -32,6 +32,13 @@ export const cardData = {
   dateOfExpiryThai: '26 ธ.ค. 2574',
   dateOfExpiry: '26 Dec. 2031',
 
+  // Demographics
+  sex: 'Male',
+  sexThai: 'ชาย',
+  nationality: 'Thai',
+  nationalityThai: 'ไทย',
+  bloodType: 'O+',
+
   // References
   reference: '6501-02-09051034',
   laserCode: 'ME5-1694541-81',

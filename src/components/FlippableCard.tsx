@@ -3,7 +3,6 @@
  * All animations on UI thread via react-native-reanimated.
  */
 import React, { useRef, useCallback, useEffect, useState } from 'react';
-import { useIsFocused } from '@react-navigation/native';
 import { StyleSheet, View, Image, Pressable, Dimensions, ActivityIndicator, Text } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -20,6 +19,8 @@ import Animated, {
   Extrapolation,
   type SharedValue,
 } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
+
 import { Accelerometer } from 'expo-sensors';
 import * as Haptics from 'expo-haptics';
 import { useProfile } from '../context/ProfileContext';
@@ -27,6 +28,8 @@ import { useProfile } from '../context/ProfileContext';
 const { width: SCREEN_W } = Dimensions.get('window');
 const CARD_W = SCREEN_W - 40;
 const CARD_H = CARD_W * 0.63;
+const CHIP_W = Math.round(CARD_W * 0.14);
+const CHIP_H = Math.round(CARD_H * 0.22);
 
 /* ── 3 colors instead of 5 — halves the Image count ── */
 const HOLO_COLORS = ['#50E8FF', '#FFD750', '#FF70C0'];
@@ -99,27 +102,63 @@ function HoloEmblem({
   );
 }
 
-/* ── Holographic border ── */
+
+/* ── Card border — always-on gold + tilt-reactive metallic shimmer ── */
 function HoloBorder({ tiltX, tiltY }: { tiltX: SharedValue<number>; tiltY: SharedValue<number> }) {
-  const borderStyle = useAnimatedStyle(() => {
+  // Shifts between cool silver (one tilt direction) and bright gold (other)
+  const shimmerStyle = useAnimatedStyle(() => {
     'worklet';
-    const combined = tiltX.value * 0.6 + tiltY.value * 0.4;
-    const mag = tiltX.value * tiltX.value + tiltY.value * tiltY.value;
-    return {
-      borderColor: interpolateColor(
-        combined,
-        [-1, -0.33, 0.33, 1],
-        ['#50E8FF', '#FFD750', '#FF70C0', '#50E8FF'],
-      ),
-      opacity: interpolate(mag, [0, 0.15, 0.6], [0.45, 0.72, 0.95], Extrapolation.CLAMP),
-    };
+    const combined = tiltX.value * 0.65 + tiltY.value * 0.35;
+    const color = interpolateColor(
+      combined,
+      [-1, -0.35, 0, 0.35, 1],
+      [
+        'rgba(210,240,255,0.95)',  // silver-white
+        'rgba(230,245,255,0.80)',
+        'rgba(212,175,55,0.72)',   // gold at rest
+        'rgba(255,215,80,0.85)',
+        'rgba(255,200,60,0.95)',   // bright gold
+      ],
+    );
+    return { borderColor: color };
   });
 
   return (
-    <Animated.View
-      pointerEvents="none"
-      style={[StyleSheet.absoluteFillObject, { borderRadius: 14, borderWidth: 2 }, borderStyle]}
-    />
+    <>
+      {/* Outer halo — barely-there warmth */}
+      <View
+        pointerEvents="none"
+        style={[StyleSheet.absoluteFillObject, {
+          borderRadius: 15,
+          borderWidth: 3,
+          borderColor: 'rgba(212,175,55,0.10)',
+          margin: -1.5,
+        }]}
+      />
+      {/* Base gold border — always visible */}
+      <View
+        pointerEvents="none"
+        style={[StyleSheet.absoluteFillObject, {
+          borderRadius: 14,
+          borderWidth: 1,
+          borderColor: 'rgba(212,175,55,0.52)',
+        }]}
+      />
+      {/* Tilt-reactive metallic shimmer */}
+      <Animated.View
+        pointerEvents="none"
+        style={[StyleSheet.absoluteFillObject, { borderRadius: 14, borderWidth: 1.5 }, shimmerStyle]}
+      />
+      {/* Inner inset — depth illusion */}
+      <View
+        pointerEvents="none"
+        style={{
+          position: 'absolute', top: 2, left: 2, right: 2, bottom: 2,
+          borderRadius: 12, borderWidth: 0.5,
+          borderColor: 'rgba(255,255,255,0.10)',
+        }}
+      />
+    </>
   );
 }
 
@@ -133,6 +172,54 @@ function HoloOverlay({ tiltX, tiltY }: { tiltX: SharedValue<number>; tiltY: Shar
     </View>
   );
 }
+
+
+/* ── Holographic surface — iridescent sheen that sweeps with tilt ── */
+function HoloSurface({ tiltX, tiltY }: { tiltX: SharedValue<number>; tiltY: SharedValue<number> }) {
+  const bandStyle = useAnimatedStyle(() => {
+    'worklet';
+    return {
+      transform: [
+        { translateX: tiltX.value * CARD_W * 0.55 },
+        { translateY: tiltY.value * CARD_H * 0.30 },
+      ],
+    };
+  });
+  return (
+    <View pointerEvents="none" style={[StyleSheet.absoluteFillObject, { borderRadius: 14, overflow: 'hidden' }]}>
+      <Animated.View style={[{
+        position: 'absolute',
+        top: -CARD_H * 0.6, bottom: -CARD_H * 0.6,
+        left: -CARD_W * 0.3, right: -CARD_W * 0.3,
+      }, bandStyle]}>
+        <LinearGradient
+          colors={['transparent', 'rgba(140,220,255,0.09)', 'rgba(255,255,255,0.11)', 'rgba(255,210,90,0.07)', 'rgba(255,130,190,0.05)', 'transparent']}
+          start={{ x: 0.15, y: 0 }}
+          end={{ x: 0.85, y: 1 }}
+          style={{ flex: 1 }}
+        />
+      </Animated.View>
+    </View>
+  );
+}
+
+/* ── Edge highlights — 1px lines simulate card edge catching light ── */
+function EdgeHighlights({ tiltX, tiltY }: { tiltX: SharedValue<number>; tiltY: SharedValue<number> }) {
+  const topStyle    = useAnimatedStyle(() => { 'worklet'; return { opacity: interpolate(tiltY.value, [-1,0,1], [0.06,0.18,0.65], Extrapolation.CLAMP) }; });
+  const bottomStyle = useAnimatedStyle(() => { 'worklet'; return { opacity: interpolate(tiltY.value, [-1,0,1], [0.60,0.14,0.05], Extrapolation.CLAMP) }; });
+  const leftStyle   = useAnimatedStyle(() => { 'worklet'; return { opacity: interpolate(tiltX.value, [-1,0,1], [0.06,0.15,0.60], Extrapolation.CLAMP) }; });
+  const rightStyle  = useAnimatedStyle(() => { 'worklet'; return { opacity: interpolate(tiltX.value, [-1,0,1], [0.55,0.12,0.05], Extrapolation.CLAMP) }; });
+  const E = 'rgba(255,255,255,0.92)';
+  return (
+    <>
+      <Animated.View pointerEvents="none" style={[{ position:'absolute', top:0,    left:14,   right:14,  height:1, backgroundColor:E }, topStyle]}    />
+      <Animated.View pointerEvents="none" style={[{ position:'absolute', bottom:0, left:14,   right:14,  height:1, backgroundColor:E }, bottomStyle]} />
+      <Animated.View pointerEvents="none" style={[{ position:'absolute', left:0,   top:14,    bottom:14, width:1,  backgroundColor:E }, leftStyle]}   />
+      <Animated.View pointerEvents="none" style={[{ position:'absolute', right:0,  top:14,    bottom:14, width:1,  backgroundColor:E }, rightStyle]}  />
+    </>
+  );
+}
+
 
 /* ── Security chip glint — diagonal sweep every ~4.5 s ── */
 function ChipGlint() {
@@ -166,35 +253,24 @@ function ChipGlint() {
 export default function FlippableCard() {
   const { profile, isGenerating } = useProfile();
 
-  const isFocused = useIsFocused();
   const flipProgress = useSharedValue(0);
   const flipTarget = useRef(0);
 
-  const rawTiltX = useSharedValue(0);
-  const rawTiltY = useSharedValue(0);
-
-  const tiltX = useDerivedValue(() => {
-    'worklet';
-    return withSpring(rawTiltX.value, { damping: 14, stiffness: 120, mass: 0.5 });
-  });
-  const tiltY = useDerivedValue(() => {
-    'worklet';
-    return withSpring(rawTiltY.value, { damping: 14, stiffness: 120, mass: 0.5 });
-  });
+  const tiltX = useSharedValue(0);
+  const tiltY = useSharedValue(0);
 
   useEffect(() => {
-    if (!isFocused) return;
     let sub: ReturnType<typeof Accelerometer.addListener> | null = null;
     Accelerometer.isAvailableAsync().then(available => {
       if (!available) return;
       Accelerometer.setUpdateInterval(32);
       sub = Accelerometer.addListener(({ x, y }) => {
-        rawTiltX.value = Math.max(-1, Math.min(1, x));
-        rawTiltY.value = Math.max(-1, Math.min(1, y - 0.5));
+        tiltX.value = withSpring(Math.max(-1, Math.min(1, x)), { damping: 18, stiffness: 100 });
+        tiltY.value = withSpring(Math.max(-1, Math.min(1, y - 0.5)), { damping: 18, stiffness: 100 });
       });
     });
     return () => { sub?.remove(); };
-  }, [isFocused]);
+  }, []);
 
   /* ── Success toast ── */
   const [showSuccess, setShowSuccess] = useState(false);
@@ -239,14 +315,14 @@ export default function FlippableCard() {
     });
   }, []);
 
-  /* ── 3D tilt + directional shadow ── */
+  /* ── 3D tilt ── */
   const bodyStyle = useAnimatedStyle(() => {
     'worklet';
     return {
       transform: [
         { perspective: 800 },
-        { rotateY: `${interpolate(tiltX.value, [-1, 1], [-5, 5])}deg` },
-        { rotateX: `${interpolate(tiltY.value, [-1, 1], [5, -5])}deg` },
+        { rotateY: `${interpolate(tiltX.value, [-1, 1], [-8, 8])}deg` },
+        { rotateX: `${interpolate(tiltY.value, [-1, 1], [8, -8])}deg` },
       ],
     };
   });
@@ -276,7 +352,7 @@ export default function FlippableCard() {
 
   return (
     <Pressable onPress={handleFlip} style={styles.container}>
-      <Animated.View style={[styles.shadowWrap, bodyStyle]}>
+<Animated.View style={[styles.shadowWrap, bodyStyle]}>
         {/* Single rotating container — one transform for the flip */}
         <Animated.View style={[StyleSheet.absoluteFillObject, { borderRadius: 14, backgroundColor: '#0C1526' }, flipStyle]}>
           {/* Front face */}
@@ -295,10 +371,16 @@ export default function FlippableCard() {
             <Image source={require('../../pics/2.png')} style={styles.cardImage} resizeMode="cover" />
           </Animated.View>
 
-          {/* Holo overlay — single instance, rotates with the card */}
+          {/* Holographic surface sheen */}
+          <HoloSurface tiltX={tiltX} tiltY={tiltY} />
+
+          {/* Holo overlay emblems */}
           <HoloOverlay tiltX={tiltX} tiltY={tiltY} />
 
-          {/* Holo border — outside HoloOverlay to avoid double overflow:hidden clipping at corners */}
+          {/* Edge highlights — physical card thickness illusion */}
+          <EdgeHighlights tiltX={tiltX} tiltY={tiltY} />
+
+          {/* Holo border */}
           <HoloBorder tiltX={tiltX} tiltY={tiltY} />
         </Animated.View>
 
@@ -336,14 +418,14 @@ const styles = StyleSheet.create({
   cardImage: { width: '100%', height: '100%', borderRadius: 14 },
 
   /* Security chip — position matches chip on card template (14% left, 38% top) */
-  chipArea: { position: 'absolute', top: '38%', left: '14%' },
+  chipArea: { position: 'absolute', top: '35.5%', left: '14.2%' },
   chipBody: {
-    width: 50, height: 38, borderRadius: 4, overflow: 'hidden',
+    width: CHIP_W, height: CHIP_H, borderRadius: 4, overflow: 'hidden',
     backgroundColor: 'rgba(212,175,55,0.12)',
     borderWidth: 1, borderColor: 'rgba(212,175,55,0.30)',
   },
   chipSweep: {
-    position: 'absolute', top: -10, width: 20, height: 56,
+    position: 'absolute', top: -10, width: 20, height: CHIP_H + 20,
     backgroundColor: 'rgba(255,255,255,0.58)',
     transform: [{ rotate: '-18deg' }],
   },

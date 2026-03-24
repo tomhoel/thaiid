@@ -15,7 +15,7 @@ export interface ColorPalette {
 }
 
 export const DarkColors: ColorPalette = {
-  bg: '#0C1526',
+  bg: '#080F1C',
   bgCard: '#131E33',
   bgElevated: '#1A2742',
   bgSurface: 'rgba(255,255,255,0.04)',
@@ -45,7 +45,7 @@ export const DarkColors: ColorPalette = {
 };
 
 export const LightColors: ColorPalette = {
-  bg: '#F5F7FA',
+  bg: '#E8ECF1',
   bgCard: '#FFFFFF',
   bgElevated: '#EDF0F5',
   bgSurface: 'rgba(0,0,0,0.03)',
@@ -65,9 +65,9 @@ export const LightColors: ColorPalette = {
   orange: '#D97706',
   red: '#DC2626',
   t1: '#0F172A',
-  t2: '#475569',
-  t3: '#94A3B8',
-  t4: '#CBD5E1',
+  t2: '#334155',
+  t3: '#64748B',
+  t4: '#94A3B8',
   b1: 'rgba(0,0,0,0.06)',
   b2: 'rgba(0,0,0,0.1)',
   divider: 'rgba(0,0,0,0.04)',

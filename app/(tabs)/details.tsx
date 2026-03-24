@@ -1,15 +1,17 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, View, Text, ScrollView, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
-import { Colors } from '../../src/constants/colors';
+import { useTheme } from '../../src/context/ThemeContext';
+import { type ColorPalette } from '../../src/constants/colors';
 import { useProfile } from '../../src/context/ProfileContext';
 
-function Row({ label, value, sub, copy, last }: {
-  label: string; value: string; sub?: string; copy?: boolean; last?: boolean;
+function Row({ label, value, sub, copy, last, colors }: {
+  label: string; value: string; sub?: string; copy?: boolean; last?: boolean; colors: ColorPalette;
 }) {
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const tap = async () => {
     await Clipboard.setStringAsync(value);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -25,14 +27,15 @@ function Row({ label, value, sub, copy, last }: {
         <Text style={styles.rVal}>{value}</Text>
         {sub && <Text style={styles.rSub}>{sub}</Text>}
       </View>
-      {copy && <Ionicons name="copy-outline" size={12} color={Colors.t4} style={{ marginLeft: 4 }} />}
+      {copy && <Ionicons name="copy-outline" size={12} color={colors.t4} style={{ marginLeft: 4 }} />}
     </Pressable>
   );
 }
 
-function Section({ title, icon, color, children }: {
-  title: string; icon: keyof typeof Ionicons.glyphMap; color: string; children: React.ReactNode;
+function Section({ title, icon, color, children, colors }: {
+  title: string; icon: keyof typeof Ionicons.glyphMap; color: string; children: React.ReactNode; colors: ColorPalette;
 }) {
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
     <View style={styles.sec}>
       <View style={styles.secHead}>
@@ -49,6 +52,8 @@ function Section({ title, icon, color, children }: {
 export default function DetailsScreen() {
   const { top } = useSafeAreaInsets();
   const { profile: cardData } = useProfile();
+  const { colors: Colors } = useTheme();
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
   return (
     <View style={[styles.screen, { paddingTop: top + 6 }]}>
       {/* Header */}
@@ -68,29 +73,29 @@ export default function DetailsScreen() {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
-        <Section title="Personal" icon="person" color={Colors.blue}>
-          <Row label="Name (TH)" value={cardData.nameThai} copy />
-          <Row label="Name (EN)" value={cardData.fullNameEnglish} copy />
-          <Row label="Date of Birth" value={cardData.dateOfBirth} sub={cardData.dateOfBirthThai} last />
+        <Section title="Personal" icon="person" color={Colors.blue} colors={Colors}>
+          <Row label="Name (TH)" value={cardData.nameThai} copy colors={Colors} />
+          <Row label="Name (EN)" value={cardData.fullNameEnglish} copy colors={Colors} />
+          <Row label="Date of Birth" value={cardData.dateOfBirth} sub={cardData.dateOfBirthThai} last colors={Colors} />
         </Section>
 
-        <Section title="Identification" icon="finger-print" color={Colors.gold}>
-          <Row label="ID Number" value={cardData.idNumber} copy />
-          <Row label="Laser Code" value={cardData.laserCode} copy />
-          <Row label="Reference" value={cardData.reference} copy last />
+        <Section title="Identification" icon="finger-print" color={Colors.gold} colors={Colors}>
+          <Row label="ID Number" value={cardData.idNumber} copy colors={Colors} />
+          <Row label="Laser Code" value={cardData.laserCode} copy colors={Colors} />
+          <Row label="Reference" value={cardData.reference} copy last colors={Colors} />
         </Section>
 
-        <Section title="Address" icon="location" color={Colors.flagRed}>
-          <Row label="Address" value={cardData.addressThai} copy />
-          <Row label="Province" value={cardData.province} />
-          <Row label="District" value={cardData.district} />
-          <Row label="Sub-district" value={cardData.subDistrict} last />
+        <Section title="Address" icon="location" color={Colors.flagRed} colors={Colors}>
+          <Row label="Address" value={cardData.addressThai} copy colors={Colors} />
+          <Row label="Province" value={cardData.province} colors={Colors} />
+          <Row label="District" value={cardData.district} colors={Colors} />
+          <Row label="Sub-district" value={cardData.subDistrict} last colors={Colors} />
         </Section>
 
-        <Section title="Validity" icon="calendar" color={Colors.green}>
-          <Row label="Issued" value={cardData.dateOfIssue} />
-          <Row label="Expires" value={cardData.dateOfExpiry} />
-          <Row label="Status" value="Active" last />
+        <Section title="Validity" icon="calendar" color={Colors.green} colors={Colors}>
+          <Row label="Issued" value={cardData.dateOfIssue} colors={Colors} />
+          <Row label="Expires" value={cardData.dateOfExpiry} colors={Colors} />
+          <Row label="Status" value="Active" last colors={Colors} />
         </Section>
 
         <View style={{ height: 30 }} />
@@ -99,7 +104,7 @@ export default function DetailsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (Colors: ColorPalette) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: Colors.bg },
   scroll: { paddingHorizontal: 16 },
 

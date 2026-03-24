@@ -7,8 +7,9 @@ export default function TabLayout() {
 
   return (
     <Tabs
-      screenOptions={{
+      screenOptions={{ lazy: false,
         headerShown: false,
+        animation: 'none',
         tabBarActiveTintColor: colors.goldLight,
         tabBarInactiveTintColor: theme === 'dark' ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.35)',
         tabBarStyle: {

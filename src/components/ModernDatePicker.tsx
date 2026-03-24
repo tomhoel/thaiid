@@ -1,8 +1,9 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { StyleSheet, View, Text, Pressable, Modal, ScrollView, Dimensions } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../constants/colors';
+import { useTheme } from '../context/ThemeContext';
+import { type ColorPalette } from '../constants/colors';
 
 interface ModernDatePickerProps {
   visible: boolean;
@@ -28,12 +29,15 @@ export default function ModernDatePicker({ visible, value, onClose, onApply, tit
   const monthRef = useRef<ScrollView>(null);
   const yearRef = useRef<ScrollView>(null);
 
+  const { colors: Colors } = useTheme();
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
+
   useEffect(() => {
     if (visible && value) {
       const parts = value.split(' ');
       if (parts.length === 3) {
         setDay(parts[0]);
-        setMonth(parts[1]);
+        setMonth(parts[1].replace('.', '')); // strip period — internal state uses "Dec" not "Dec."
         setYear(parts[2]);
 
         setTimeout(() => {
@@ -50,7 +54,7 @@ export default function ModernDatePicker({ visible, value, onClose, onApply, tit
   }, [visible, value]);
 
   const handleApply = () => {
-    onApply(`${day} ${month} ${year}`);
+    onApply(`${day} ${month}. ${year}`); // always output "Dec." format to match stored data
     onClose();
   };
 
@@ -59,7 +63,7 @@ export default function ModernDatePicker({ visible, value, onClose, onApply, tit
       <View style={styles.columnContainer}>
         {/* Selection Indicator Mask */}
         <View style={styles.selectionMask} pointerEvents="none" />
-        
+
         <ScrollView
           ref={svRef}
           showsVerticalScrollIndicator={false}
@@ -76,8 +80,8 @@ export default function ModernDatePicker({ visible, value, onClose, onApply, tit
           {data.map((item, i) => {
             const isSelected = item === selectedValue;
             return (
-              <Pressable 
-                key={i} 
+              <Pressable
+                key={i}
                 style={[styles.item, isSelected && styles.itemSelected]}
                 onPress={() => onSelect(item)}
               >
@@ -122,16 +126,16 @@ export default function ModernDatePicker({ visible, value, onClose, onApply, tit
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (Colors: ColorPalette) => StyleSheet.create({
   overlay: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
   modalContent: { width: '100%', backgroundColor: Colors.bgCard, borderRadius: 24, padding: 24, borderWidth: 1, borderColor: Colors.b1, shadowColor: '#000', shadowOffset: { width: 0, height: 20 }, shadowOpacity: 0.6, shadowRadius: 30, elevation: 15 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
   title: { fontSize: 18, fontWeight: '800', color: Colors.goldLight, letterSpacing: -0.3 },
   closeBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: Colors.bgElevated, alignItems: 'center', justifyContent: 'center' },
-  
+
   pickerMain: { flexDirection: 'row', height: ITEM_HEIGHT * 5, backgroundColor: Colors.bgElevated, borderRadius: 16, borderWidth: 1, borderColor: Colors.b1, overflow: 'hidden', marginBottom: 24 },
   columnContainer: { flex: 1, height: '100%', borderRightWidth: 1, borderRightColor: Colors.b1 },
-  
+
   selectionMask: { position: 'absolute', top: ITEM_HEIGHT * 2, left: 0, right: 0, height: ITEM_HEIGHT, backgroundColor: 'rgba(212, 175, 55, 0.1)', borderTopWidth: 1, borderBottomWidth: 1, borderColor: 'rgba(212, 175, 55, 0.3)', zIndex: -1 },
 
   item: { height: ITEM_HEIGHT, justifyContent: 'center', alignItems: 'center' },

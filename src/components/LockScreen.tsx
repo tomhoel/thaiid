@@ -1,14 +1,17 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import GarudaEmblem from './GarudaEmblem';
-import { Colors } from '../constants/colors';
+import { useTheme } from '../context/ThemeContext';
+import { type ColorPalette } from '../constants/colors';
 import { useBiometric } from '../context/BiometricContext';
 
 export default function LockScreen() {
   const { authenticate } = useBiometric();
   const { top, bottom } = useSafeAreaInsets();
+  const { colors: Colors } = useTheme();
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
 
   return (
     <View style={[styles.screen, { paddingTop: top, paddingBottom: bottom }]}>
@@ -32,7 +35,7 @@ export default function LockScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (Colors: ColorPalette) => StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: Colors.bg,

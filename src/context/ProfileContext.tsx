@@ -2,11 +2,13 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { cardData as defaultCardData } from '../constants/cardData';
 
-export type ProfileType = typeof defaultCardData & { pictureUri?: string };
+export type ProfileType = typeof defaultCardData & { pictureUri?: string; cardFrontUri?: string };
 
 interface ProfileContextType {
   profile: ProfileType;
   updateProfile: (updates: Partial<ProfileType>) => void;
+  isGenerating: boolean;
+  setGenerating: (v: boolean) => void;
 }
 
 const STORAGE_KEY = 'profile_data';
@@ -14,6 +16,7 @@ const ProfileContext = createContext<ProfileContextType | undefined>(undefined);
 
 export function ProfileProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<ProfileType>(defaultCardData);
+  const [isGenerating, setGenerating] = useState(false);
 
   useEffect(() => {
     AsyncStorage.getItem(STORAGE_KEY).then(saved => {
@@ -34,7 +37,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <ProfileContext.Provider value={{ profile, updateProfile }}>
+    <ProfileContext.Provider value={{ profile, updateProfile, isGenerating, setGenerating }}>
       {children}
     </ProfileContext.Provider>
   );
