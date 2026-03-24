@@ -26,6 +26,21 @@ if [ -z "$EXPO_PUBLIC_GEMINI_API_KEY" ]; then
   exit 1
 fi
 
+# Strip leading 'v' to get semver (v1.0.14 → 1.0.14)
+SEMVER="${VERSION#v}"
+
+echo "==> Bump version to $SEMVER"
+node -e "
+const fs = require('fs');
+const app = JSON.parse(fs.readFileSync('app.json', 'utf8'));
+app.expo.version = '$SEMVER';
+fs.writeFileSync('app.json', JSON.stringify(app, null, 2) + '\n');
+"
+
+echo "==> Commit version bump"
+git add app.json
+git commit -m "Bump version to $SEMVER"
+
 echo "==> Prebuild"
 ANDROID_HOME="$ANDROID_HOME" npx expo prebuild --platform android --no-install
 
