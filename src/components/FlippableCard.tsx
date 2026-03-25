@@ -14,7 +14,7 @@ import Animated, {
   withSequence,
   withDelay,
   interpolate,
-  interpolateColor,
+
   Easing,
   Extrapolation,
   type SharedValue,
@@ -103,62 +103,17 @@ function HoloEmblem({
 }
 
 
-/* ── Card border — always-on gold + tilt-reactive metallic shimmer ── */
-function HoloBorder({ tiltX, tiltY }: { tiltX: SharedValue<number>; tiltY: SharedValue<number> }) {
-  // Shifts between cool silver (one tilt direction) and bright gold (other)
-  const shimmerStyle = useAnimatedStyle(() => {
-    'worklet';
-    const combined = tiltX.value * 0.65 + tiltY.value * 0.35;
-    const color = interpolateColor(
-      combined,
-      [-1, -0.35, 0, 0.35, 1],
-      [
-        'rgba(210,240,255,0.95)',  // silver-white
-        'rgba(230,245,255,0.80)',
-        'rgba(212,175,55,0.72)',   // gold at rest
-        'rgba(255,215,80,0.85)',
-        'rgba(255,200,60,0.95)',   // bright gold
-      ],
-    );
-    return { borderColor: color };
-  });
-
+/* ── Card border — single clean hairline ── */
+function HoloBorder() {
   return (
-    <>
-      {/* Outer halo — barely-there warmth */}
-      <View
-        pointerEvents="none"
-        style={[StyleSheet.absoluteFillObject, {
-          borderRadius: 15,
-          borderWidth: 3,
-          borderColor: 'rgba(212,175,55,0.10)',
-          margin: -1.5,
-        }]}
-      />
-      {/* Base gold border — always visible */}
-      <View
-        pointerEvents="none"
-        style={[StyleSheet.absoluteFillObject, {
-          borderRadius: 14,
-          borderWidth: 1,
-          borderColor: 'rgba(212,175,55,0.52)',
-        }]}
-      />
-      {/* Tilt-reactive metallic shimmer */}
-      <Animated.View
-        pointerEvents="none"
-        style={[StyleSheet.absoluteFillObject, { borderRadius: 14, borderWidth: 1.5 }, shimmerStyle]}
-      />
-      {/* Inner inset — depth illusion */}
-      <View
-        pointerEvents="none"
-        style={{
-          position: 'absolute', top: 2, left: 2, right: 2, bottom: 2,
-          borderRadius: 12, borderWidth: 0.5,
-          borderColor: 'rgba(255,255,255,0.10)',
-        }}
-      />
-    </>
+    <View
+      pointerEvents="none"
+      style={[StyleSheet.absoluteFillObject, {
+        borderRadius: 14,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: 'rgba(255,255,255,0.12)',
+      }]}
+    />
   );
 }
 
@@ -381,7 +336,7 @@ export default function FlippableCard() {
           <EdgeHighlights tiltX={tiltX} tiltY={tiltY} />
 
           {/* Holo border */}
-          <HoloBorder tiltX={tiltX} tiltY={tiltY} />
+          <HoloBorder />
         </Animated.View>
 
         {/* Generating overlay — sits outside flip so it never rotates */}

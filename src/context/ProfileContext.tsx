@@ -9,6 +9,7 @@ interface ProfileContextType {
   updateProfile: (updates: Partial<ProfileType>) => void;
   isGenerating: boolean;
   setGenerating: (v: boolean) => void;
+  ready: boolean;
 }
 
 const STORAGE_KEY = 'profile_data';
@@ -17,6 +18,7 @@ const ProfileContext = createContext<ProfileContextType | undefined>(undefined);
 export function ProfileProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<ProfileType>(defaultCardData);
   const [isGenerating, setGenerating] = useState(false);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     AsyncStorage.getItem(STORAGE_KEY).then(saved => {
@@ -25,7 +27,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
           setProfile(JSON.parse(saved));
         } catch {}
       }
-    });
+    }).finally(() => setReady(true));
   }, []);
 
   const updateProfile = (updates: Partial<ProfileType>) => {
@@ -37,7 +39,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <ProfileContext.Provider value={{ profile, updateProfile, isGenerating, setGenerating }}>
+    <ProfileContext.Provider value={{ profile, updateProfile, isGenerating, setGenerating, ready }}>
       {children}
     </ProfileContext.Provider>
   );

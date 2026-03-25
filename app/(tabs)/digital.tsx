@@ -1,5 +1,4 @@
-import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
-import { useFocusEffect } from 'expo-router';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { Animated, StyleSheet, View, Text, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,13 +6,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Defs, Pattern, Image as SvgImage, Rect } from 'react-native-svg';
 import QRCodeDisplay from '../../src/components/QRCodeDisplay';
 import ScreenHeader from '../../src/components/ScreenHeader';
+import LivenessWatermark from '../../src/components/LivenessWatermark';
 import { useTheme } from '../../src/context/ThemeContext';
 import { type ColorPalette } from '../../src/constants/colors';
 import { useProfile } from '../../src/context/ProfileContext';
 import { useLang } from '../../src/i18n/LanguageContext';
 
 const { width: SW } = Dimensions.get('window');
-const REGEN_SECS = 60;
+const REGEN_SECS = 15;
 const QR_SIZE = Math.min(SW * 0.52, 240);
 const garudaAsset = require('../../assets/garuda.png');
 
@@ -43,18 +43,15 @@ export default function DigitalScreen() {
   const [remaining, setRemaining] = useState(REGEN_SECS);
   const [epoch, setEpoch] = useState(0);
 
-  useFocusEffect(
-    useCallback(() => {
-      setRemaining(REGEN_SECS);
-      const tick = setInterval(() => {
-        setRemaining(prev => {
-          if (prev <= 1) { setEpoch(e => e + 1); return REGEN_SECS; }
-          return prev - 1;
-        });
-      }, 1000);
-      return () => clearInterval(tick);
-    }, [])
-  );
+  useEffect(() => {
+    const tick = setInterval(() => {
+      setRemaining(prev => {
+        if (prev <= 1) { setEpoch(e => e + 1); return REGEN_SECS; }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(tick);
+  }, []);
 
   const spinAnim = useRef(new Animated.Value(0)).current;
   const qrFade = useRef(new Animated.Value(1)).current;
@@ -74,8 +71,8 @@ export default function DigitalScreen() {
   const spin = spinAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
   const qrScale = qrFade.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1] });
   const secs = remaining.toString().padStart(2, '0');
-  const isCritical = remaining <= 10;
-  const isWarning = remaining <= 25 && remaining > 10;
+  const isCritical = remaining <= 3;
+  const isWarning = remaining <= 7 && remaining > 3;
   const segColor = isCritical ? C.red : isWarning ? C.orange : C.green;
   const progress = remaining / REGEN_SECS;
 
@@ -87,6 +84,8 @@ export default function DigitalScreen() {
 
   return (
     <View style={[styles.screen, { paddingBottom: bottom }]}>
+
+      <LivenessWatermark showEmblem={false} />
 
       <ScreenHeader title={t('digital.title')} sub={t('digital.sub')} />
 
@@ -180,13 +179,14 @@ export default function DigitalScreen() {
         </View>
 
       </View>
+
     </View>
   );
 }
 
 const makeStyles = (C: ColorPalette) => StyleSheet.create({
-  screen: { flex: 1, backgroundColor: C.bg },
-  content: { flex: 1, paddingHorizontal: 16, paddingTop: 18 },
+  screen: { flex: 1, backgroundColor: '#F0F5FF' },
+  content: { flex: 1, paddingHorizontal: 20, paddingTop: 18 },
 
   qrCardWrap: {
     flex: 1, marginBottom: 10,

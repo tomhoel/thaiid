@@ -1,5 +1,5 @@
 import React, { useMemo, useEffect, useRef } from 'react';
-import { StyleSheet, View, Text, Pressable } from 'react-native';
+import { StyleSheet, View, Text, Pressable, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
@@ -8,6 +8,7 @@ import Animated, { useSharedValue, useDerivedValue, useAnimatedStyle, withSpring
 import { GestureDetector, Gesture } from 'react-native-gesture-handler';
 import FlippableCard from '../../src/components/FlippableCard';
 import GarudaEmblem from '../../src/components/GarudaEmblem';
+import LivenessWatermark from '../../src/components/LivenessWatermark';
 import ScreenHeader from '../../src/components/ScreenHeader';
 import { useTheme } from '../../src/context/ThemeContext';
 import { type ColorPalette } from '../../src/constants/colors';
@@ -17,6 +18,7 @@ import { useLang } from '../../src/i18n/LanguageContext';
 
 /* ── Helpers ──────────────────────────────────────────────────── */
 
+const { width: SW } = Dimensions.get('window');
 const PHOTO_SIZE = 52;
 
 function GrayPhoto({ uri, initials, C }: { uri?: string; initials: string; C: ColorPalette }) {
@@ -42,6 +44,21 @@ function GrayPhoto({ uri, initials, C }: { uri?: string; initials: string; C: Co
   return (
     <View style={{ width: PHOTO_SIZE, height: PHOTO_SIZE, borderRadius: r, backgroundColor: C.bgElevated, borderWidth: 1.5, borderColor: C.b2, alignItems: 'center', justifyContent: 'center' }}>
       <Text style={{ fontSize: 17, fontWeight: '700', color: C.t3 }}>{initials}</Text>
+    </View>
+  );
+}
+
+function ThaiFlagBadge({ status: _ }: { status: 'valid' | 'expiring' | 'expired' }) {
+  return (
+    <View style={{ alignItems: 'center', gap: 5 }}>
+      <View style={{ width: 36, height: 24, borderRadius: 3, overflow: 'hidden', borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.18)' }}>
+        <View style={{ flex: 1, backgroundColor: '#A51931' }} />
+        <View style={{ flex: 1, backgroundColor: '#F4F5F8' }} />
+        <View style={{ flex: 2, backgroundColor: '#2D2A4A' }} />
+        <View style={{ flex: 1, backgroundColor: '#F4F5F8' }} />
+        <View style={{ flex: 1, backgroundColor: '#A51931' }} />
+      </View>
+      <Text style={{ fontSize: 7, fontWeight: '700', color: '#D4AF37', letterSpacing: 0.3 }}>ไทย</Text>
     </View>
   );
 }
@@ -175,6 +192,8 @@ export default function HomeScreen() {
   return (
     <View style={styles.screen}>
 
+      <LivenessWatermark />
+
       {/* ── Header ── */}
       <View onLayout={e => { measured.current.header = e.nativeEvent.layout.height; recalc(); }}>
         <ScreenHeader title={t('header.title')} sub={t('header.sub')} />
@@ -217,15 +236,7 @@ export default function HomeScreen() {
                   {lang === 'en' ? cardData.nameThai : cardData.fullNameEnglish}
                 </Text>
               </View>
-              <Ionicons
-                name={validityStatus(cardData.isValid, cardData.dateOfExpiry) === 'expired' ? 'close-circle' : 'shield-checkmark'}
-                size={22}
-                color={
-                  validityStatus(cardData.isValid, cardData.dateOfExpiry) === 'valid' ? '#10B981'
-                  : validityStatus(cardData.isValid, cardData.dateOfExpiry) === 'expiring' ? '#F59E0B'
-                  : '#EF4444'
-                }
-              />
+              <ThaiFlagBadge status={validityStatus(cardData.isValid, cardData.dateOfExpiry)} />
             </View>
 
             <View style={styles.rule} />
@@ -261,9 +272,9 @@ export default function HomeScreen() {
                   <Ionicons name="hourglass-outline" size={11} color={colors.t3} />
                   <Text style={styles.fieldLabel}>{lang === 'en' ? 'AGE' : 'อายุ'}</Text>
                 </View>
-                <Text style={[styles.cellValue, { fontSize: 18, fontWeight: '800' }]}>
+                <Text style={styles.cellValue}>
                   {`${computeAge(cardData.dateOfBirth)}`}
-                  <Text style={{ fontSize: 10, fontWeight: '600', color: colors.t3 }}>
+                  <Text style={{ fontSize: 10, color: colors.t3 }}>
                     {lang === 'en' ? ' yrs' : ' ปี'}
                   </Text>
                 </Text>
@@ -298,16 +309,16 @@ export default function HomeScreen() {
             <View style={styles.rule} />
 
             {/* Address */}
-            <View style={styles.fieldRow}>
-              <Ionicons name="location-outline" size={13} color={colors.t3} />
-              <View style={{ flex: 1, marginLeft: 10 }}>
+            <View style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
+              <View style={styles.cellHead}>
+                <Ionicons name="location-outline" size={11} color={colors.t3} />
                 <Text style={styles.fieldLabel}>{lang === 'en' ? 'ADDRESS' : 'ที่อยู่'}</Text>
-                <Text style={styles.fieldValue} numberOfLines={2}>
-                  {lang === 'en'
-                    ? `${cardData.addressNumber} Moo ${cardData.moo}, ${cardData.subDistrict}, ${cardData.district}, ${cardData.province}`
-                    : cardData.addressThai}
-                </Text>
               </View>
+              <Text style={[styles.cellValue, { lineHeight: 16 }]} numberOfLines={2}>
+                {lang === 'en'
+                  ? `${cardData.addressNumber} Moo ${cardData.moo}, ${cardData.subDistrict}, ${cardData.district}, ${cardData.province}`
+                  : cardData.addressThai}
+              </Text>
             </View>
 
             {/* Garuda divider — always visible as separator */}
@@ -426,24 +437,25 @@ export default function HomeScreen() {
 /* ── Styles ────────────────────────────────────────────────────── */
 
 const makeStyles = (C: ColorPalette) => StyleSheet.create({
-  screen:   { flex: 1, backgroundColor: C.bg },
+  screen:   { flex: 1, backgroundColor: '#F0F5FF' },
   cardZone: { alignItems: 'center', paddingTop: 16, paddingBottom: 12, paddingHorizontal: 16 },
   flipHint: { fontSize: 11, color: C.t4, marginTop: 8 },
 
   /* Panel — top animated, bottom anchored to tab bar */
-  panel: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 12 },
+  panel: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 20, backgroundColor: 'transparent' },
 
   docPanel: {
     flex: 1, backgroundColor: C.bgCard,
     borderTopLeftRadius: 12, borderTopRightRadius: 12,
     overflow: 'hidden',
+    borderWidth: StyleSheet.hairlineWidth, borderColor: C.navy,
   },
 
   docHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: C.navy, paddingHorizontal: 16, paddingVertical: 10,
+    backgroundColor: C.navy, paddingHorizontal: 16, paddingVertical: 16,
   },
-  docHeaderTxt: { fontSize: 7.5, fontWeight: '800', color: 'rgba(255,255,255,0.70)', letterSpacing: 1.8 },
+  docHeaderTxt: { fontSize: 8.5, fontWeight: '800', color: 'rgba(255,255,255,0.75)', letterSpacing: 1.8 },
 
   identityRow: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 16, paddingVertical: 14 },
   nameValue:   { fontSize: 14, fontWeight: '700', color: C.t1, letterSpacing: 0.2 },
