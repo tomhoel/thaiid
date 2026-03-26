@@ -122,26 +122,26 @@ export default function SettingsScreen() {
     }
     if (Object.keys(shared).length === 0) return;
     const allCodes = ['TH', 'SG', 'BR', 'US'];
+    const configs: Record<string, any> = {
+      TH: require('../../src/countries/thailand').THAILAND_CONFIG,
+      SG: require('../../src/countries/singapore').SINGAPORE_CONFIG,
+      BR: require('../../src/countries/brazil').BRAZIL_CONFIG,
+      US: require('../../src/countries/usa').USA_CONFIG,
+    };
     for (const code of allCodes) {
       if (code === country) continue;
       const key = `profile_data_${code}`;
       try {
+        const targetConfig = configs[code];
         const saved = await AsyncStorage.getItem(key);
-        if (saved) {
-          const other = JSON.parse(saved);
-          // Convert dates to the target country's local format
-          const targetConfig = code === 'TH'
-            ? require('../../src/countries/thailand').THAILAND_CONFIG
-            : code === 'SG'
-            ? require('../../src/countries/singapore').SINGAPORE_CONFIG
-            : code === 'BR' ? require('../../src/countries/brazil').BRAZIL_CONFIG
-            : require('../../src/countries/usa').USA_CONFIG;
-          const converted = { ...shared };
-          if (converted.dateOfBirth) converted.dateOfBirthThai = targetConfig.dateFormat.toLocal(converted.dateOfBirth);
-          if (converted.dateOfIssue) converted.dateOfIssueThai = targetConfig.dateFormat.toLocal(converted.dateOfIssue);
-          if (converted.dateOfExpiry) converted.dateOfExpiryThai = targetConfig.dateFormat.toLocal(converted.dateOfExpiry);
-          await AsyncStorage.setItem(key, JSON.stringify({ ...other, ...converted }));
-        }
+        // Use saved profile or defaults if country hasn't been visited yet
+        const other = saved ? JSON.parse(saved) : { ...targetConfig.defaultCardData };
+        // Convert dates to the target country's local format
+        const converted = { ...shared };
+        if (converted.dateOfBirth) converted.dateOfBirthThai = targetConfig.dateFormat.toLocal(converted.dateOfBirth);
+        if (converted.dateOfIssue) converted.dateOfIssueThai = targetConfig.dateFormat.toLocal(converted.dateOfIssue);
+        if (converted.dateOfExpiry) converted.dateOfExpiryThai = targetConfig.dateFormat.toLocal(converted.dateOfExpiry);
+        await AsyncStorage.setItem(key, JSON.stringify({ ...other, ...converted }));
       } catch (e) { console.warn('[Sync]', e); }
     }
   };
