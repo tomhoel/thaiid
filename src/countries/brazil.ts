@@ -25,8 +25,8 @@ export const BRAZIL_CONFIG: CountryConfig = {
 
   emblemAsset: require('../../assets/br-emblem.png'),
   cardImages: {
-    front: require('../../pics/br-front.png'),
-    back: require('../../pics/br-back.png'),
+    front: require('../../assets/cards/br-front.webp'),
+    back: require('../../assets/cards/br-back.webp'),
   },
 
   flagLabel: 'Brasil',

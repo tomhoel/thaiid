@@ -25,8 +25,8 @@ export const USA_CONFIG: CountryConfig = {
 
   emblemAsset: require('../../assets/us-emblem.png'),
   cardImages: {
-    front: require('../../pics/us-front.png'),
-    back: require('../../pics/us-back.png'),
+    front: require('../../assets/cards/us-front.webp'),
+    back: require('../../assets/cards/us-back.webp'),
   },
 
   flagLabel: 'NYC',

@@ -25,8 +25,8 @@ export const SINGAPORE_CONFIG: CountryConfig = {
 
   emblemAsset: require('../../assets/sg-emblem.png'),
   cardImages: {
-    front: require('../../pics/sg-front.png'),
-    back: require('../../pics/sg-back.png'),
+    front: require('../../assets/cards/sg-front.webp'),
+    back: require('../../assets/cards/sg-back.webp'),
   },
 
   flagLabel: 'SG',

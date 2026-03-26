@@ -381,9 +381,6 @@ export default function HomeScreen() {
                 <View style={styles.swipePill} />
               </Animated.View>
 
-              </Animated.View>
-            </GestureDetector>
-
             {/* ── Expanded details ── */}
             <Animated.View style={detailsStyle}>
 
@@ -452,6 +449,9 @@ export default function HomeScreen() {
               </View>
 
             </Animated.View>
+
+            </Animated.View>
+            </GestureDetector>
 
           </View>
         </Animated.View>

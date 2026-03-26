@@ -28,8 +28,8 @@ export const THAILAND_CONFIG: CountryConfig = {
 
   emblemAsset: require('../../assets/garuda.png'),
   cardImages: {
-    front: require('../../pics/1.png'),
-    back: require('../../pics/2.png'),
+    front: require('../../assets/cards/th-front.png'),
+    back: require('../../assets/cards/th-back.png'),
   },
 
   flagLabel: 'ไทย',
