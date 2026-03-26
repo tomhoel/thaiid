@@ -2,7 +2,7 @@
   "expo": {
     "name": "Thai ID",
     "slug": "thaiid",
-    "version": "2.1.1",
+    "version": "3.0.0",
     "scheme": "thaiid",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
