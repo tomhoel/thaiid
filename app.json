@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "Thai ID",
+    "name": "Digital ID",
     "slug": "thaiid",
-    "version": "3.0.0",
+    "version": "3.0.1",
     "scheme": "thaiid",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
