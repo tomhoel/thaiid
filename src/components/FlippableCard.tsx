@@ -24,6 +24,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Accelerometer } from 'expo-sensors';
 import * as Haptics from 'expo-haptics';
 import { useProfile } from '../context/ProfileContext';
+import { useCountry } from '../context/CountryContext';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const CARD_W = SCREEN_W - 40;
@@ -43,9 +44,9 @@ const EMBLEMS = [
 
 /* ── Color layer ── */
 function ColorLayer({
-  color, colorIndex, combined, size,
+  color, colorIndex, combined, size, emblemSource,
 }: {
-  color: string; colorIndex: number; combined: SharedValue<number>; size: number;
+  color: string; colorIndex: number; combined: SharedValue<number>; size: number; emblemSource: any;
 }) {
   const style = useAnimatedStyle(() => {
     'worklet';
@@ -58,7 +59,7 @@ function ColorLayer({
   return (
     <Animated.View style={[StyleSheet.absoluteFillObject, style]}>
       <Image
-        source={require('../../assets/garuda.png')}
+        source={emblemSource}
         style={{ width: size, height: size, tintColor: color }}
         resizeMode="contain"
       />
@@ -68,10 +69,10 @@ function ColorLayer({
 
 /* ── Holographic emblem ── */
 function HoloEmblem({
-  top, left, size, tiltX, tiltY, index,
+  top, left, size, tiltX, tiltY, index, emblemSource,
 }: {
   top: string; left: string; size: number;
-  tiltX: SharedValue<number>; tiltY: SharedValue<number>; index: number;
+  tiltX: SharedValue<number>; tiltY: SharedValue<number>; index: number; emblemSource: any;
 }) {
   const xW = index % 2 === 0 ? 1 : -1;
   const yW = index < 2 ? 1 : -1;
@@ -96,7 +97,7 @@ function HoloEmblem({
   return (
     <Animated.View style={[{ position: 'absolute', top, left, width: size, height: size }, containerStyle]}>
       {HOLO_COLORS.map((color, ci) => (
-        <ColorLayer key={ci} color={color} colorIndex={ci} combined={combined} size={size} />
+        <ColorLayer key={ci} color={color} colorIndex={ci} combined={combined} size={size} emblemSource={emblemSource} />
       ))}
     </Animated.View>
   );
@@ -118,11 +119,11 @@ function HoloBorder() {
 }
 
 /* ── Holo overlay (only rendered once — shared by both faces via parent rotation) ── */
-function HoloOverlay({ tiltX, tiltY }: { tiltX: SharedValue<number>; tiltY: SharedValue<number> }) {
+function HoloOverlay({ tiltX, tiltY, emblemSource }: { tiltX: SharedValue<number>; tiltY: SharedValue<number>; emblemSource: any }) {
   return (
     <View pointerEvents="none" style={[StyleSheet.absoluteFillObject, { borderRadius: 14, overflow: 'hidden' }]}>
       {EMBLEMS.map((e, i) => (
-        <HoloEmblem key={i} top={e.top} left={e.left} size={e.size} tiltX={tiltX} tiltY={tiltY} index={i} />
+        <HoloEmblem key={i} top={e.top} left={e.left} size={e.size} tiltX={tiltX} tiltY={tiltY} index={i} emblemSource={emblemSource} />
       ))}
     </View>
   );
@@ -155,6 +156,54 @@ function HoloSurface({ tiltX, tiltY }: { tiltX: SharedValue<number>; tiltY: Shar
         />
       </Animated.View>
     </View>
+  );
+}
+
+/* ── Holographic security strip — rainbow band that shifts on tilt ── */
+function HoloStrip({ tiltX, tiltY, side, offset }: { tiltX: SharedValue<number>; tiltY: SharedValue<number>; side: 'left' | 'right'; offset: number }) {
+  const bandStyle = useAnimatedStyle(() => {
+    'worklet';
+    const shift = (tiltX.value * 0.5 + tiltY.value * 0.5) * CARD_H * 0.7;
+    return {
+      transform: [{ translateY: shift }],
+    };
+  });
+
+  const opacityStyle = useAnimatedStyle(() => {
+    'worklet';
+    const tiltFactor = side === 'right' ? -tiltX.value : tiltX.value;
+    return {
+      opacity: interpolate(tiltFactor, [-1, -0.2, 0, 0.3, 1], [0.12, 0.2, 0.35, 0.55, 0.4], Extrapolation.CLAMP),
+    };
+  });
+
+  const posStyle = side === 'right'
+    ? { right: CARD_W * offset, top: 8, bottom: 8 }
+    : { left: CARD_W * offset, top: 8, bottom: 8 };
+
+  return (
+    <Animated.View pointerEvents="none" style={[{
+      position: 'absolute', width: 22, borderRadius: 11, overflow: 'hidden', ...posStyle,
+    }, opacityStyle]}>
+      <Animated.View style={[{ position: 'absolute', top: -CARD_H, bottom: -CARD_H, left: 0, right: 0 }, bandStyle]}>
+        <LinearGradient
+          colors={[
+            'transparent',
+            'rgba(255,80,80,0.7)',
+            'rgba(255,210,50,0.7)',
+            'rgba(80,255,120,0.7)',
+            'rgba(50,180,255,0.7)',
+            'rgba(160,80,255,0.7)',
+            'rgba(255,80,180,0.7)',
+            'rgba(255,210,50,0.5)',
+            'transparent',
+          ]}
+          start={{ x: 0.5, y: 0 }}
+          end={{ x: 0.5, y: 1 }}
+          style={{ flex: 1 }}
+        />
+      </Animated.View>
+    </Animated.View>
   );
 }
 
@@ -204,9 +253,48 @@ function ChipGlint() {
   );
 }
 
+/* ── Entrance shimmer — single sweep on mount ── */
+function EntranceShimmer() {
+  const sweepX = useSharedValue(-CARD_W * 0.3);
+
+  useEffect(() => {
+    sweepX.value = withDelay(550, withTiming(CARD_W * 1.4, {
+      duration: 650,
+      easing: Easing.inOut(Easing.quad),
+    }));
+  }, []);
+
+  const style = useAnimatedStyle(() => {
+    'worklet';
+    return {
+      transform: [{ translateX: sweepX.value }, { rotate: '18deg' }],
+      opacity: interpolate(
+        sweepX.value,
+        [-CARD_W * 0.3, CARD_W * 0.4, CARD_W * 1.4],
+        [0, 0.45, 0],
+        Extrapolation.CLAMP,
+      ),
+    };
+  });
+
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={[{
+        position: 'absolute',
+        top: -30, bottom: -30,
+        width: 55,
+        backgroundColor: 'rgba(255,255,255,0.3)',
+        borderRadius: 25,
+      }, style]}
+    />
+  );
+}
+
 /* ── Main component ── */
 export default function FlippableCard() {
   const { profile, isGenerating } = useProfile();
+  const { config } = useCountry();
 
   const flipProgress = useSharedValue(0);
   const flipTarget = useRef(0);
@@ -309,34 +397,37 @@ export default function FlippableCard() {
     <Pressable onPress={handleFlip} style={styles.container}>
 <Animated.View style={[styles.shadowWrap, bodyStyle]}>
         {/* Single rotating container — one transform for the flip */}
-        <Animated.View style={[StyleSheet.absoluteFillObject, { borderRadius: 14, backgroundColor: '#0C1526' }, flipStyle]}>
+        <Animated.View style={[StyleSheet.absoluteFillObject, { borderRadius: 14, backgroundColor: 'transparent' }, flipStyle]}>
           {/* Front face */}
           <Animated.View style={[styles.face, frontOpacityStyle]}>
             <Image
-              source={profile.cardFrontUri ? { uri: profile.cardFrontUri } : require('../../pics/1.png')}
+              source={profile.cardFrontUri ? { uri: profile.cardFrontUri } : config.cardImages.front}
               style={styles.cardImage}
               resizeMode="cover"
             />
             {/* Security chip glint — front face only */}
-            <ChipGlint />
+            {/* ChipGlint removed */}
           </Animated.View>
 
           {/* Back face — pre-rotated 180° so it reads correctly when flipped */}
           <Animated.View style={[styles.face, { transform: [{ rotateY: '180deg' }] }, backOpacityStyle]}>
-            <Image source={require('../../pics/2.png')} style={styles.cardImage} resizeMode="cover" />
+            <Image source={config.cardImages.back} style={styles.cardImage} resizeMode="cover" />
           </Animated.View>
 
           {/* Holographic surface sheen */}
           <HoloSurface tiltX={tiltX} tiltY={tiltY} />
 
           {/* Holo overlay emblems */}
-          <HoloOverlay tiltX={tiltX} tiltY={tiltY} />
+          {/* Holographic strip removed */}
 
           {/* Edge highlights — physical card thickness illusion */}
           <EdgeHighlights tiltX={tiltX} tiltY={tiltY} />
 
           {/* Holo border */}
           <HoloBorder />
+
+          {/* Entrance shimmer */}
+          <EntranceShimmer />
         </Animated.View>
 
         {/* Generating overlay — sits outside flip so it never rotates */}

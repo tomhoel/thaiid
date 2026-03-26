@@ -4,16 +4,17 @@ import Animated, {
   useSharedValue, useAnimatedStyle,
   withRepeat, withTiming, Easing,
 } from 'react-native-reanimated';
+import { useCountry } from '../context/CountryContext';
 
 const { width: SW, height: SH } = Dimensions.get('window');
 const WATERMARK_SIZE = SW * 0.60;
-const garudaAsset = require('../../assets/garuda.png');
 
 /**
  * Slowly rotating Garuda watermark — identity tab only.
  * Rendered behind all content via StyleSheet.absoluteFill + pointerEvents="none".
  */
 const LivenessWatermark = React.memo(function LivenessWatermark({ showEmblem = true }: { showEmblem?: boolean }) {
+  const { config } = useCountry();
   const rotation = useSharedValue(0);
 
   useEffect(() => {
@@ -37,7 +38,7 @@ const LivenessWatermark = React.memo(function LivenessWatermark({ showEmblem = t
         left: (SW - WATERMARK_SIZE) / 2,
       }, emblemStyle]}>
         <Image
-          source={garudaAsset}
+          source={config.emblemAsset}
           style={{ width: WATERMARK_SIZE, height: WATERMARK_SIZE, tintColor: '#D4AF37', opacity: 0.10 }}
           resizeMode="contain"
         />

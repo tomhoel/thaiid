@@ -42,7 +42,7 @@ export default function ModernDatePicker({ visible, value, onClose, onApply, tit
 
         setTimeout(() => {
           const dIdx = DAYS.indexOf(parts[0]);
-          const mIdx = MONTHS.indexOf(parts[1]);
+          const mIdx = MONTHS.indexOf(parts[1].replace('.', ''));
           const yIdx = YEARS.indexOf(parts[2]);
 
           if (dIdx !== -1) dayRef.current?.scrollTo({ y: dIdx * ITEM_HEIGHT, animated: false });

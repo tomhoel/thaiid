@@ -1,16 +1,21 @@
-import React, { useMemo, useEffect, useRef } from 'react';
-import { StyleSheet, View, Text, Pressable, Dimensions } from 'react-native';
+import React, { useMemo, useEffect, useRef, useState } from 'react';
+import { StyleSheet, View, Text, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import Svg, { Image as SvgImage, Defs, Filter, FeColorMatrix, ClipPath, Circle } from 'react-native-svg';
-import Animated, { useSharedValue, useDerivedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
+import Animated, { useSharedValue, useDerivedValue, useAnimatedStyle, withSpring, withDelay, withTiming, Easing, interpolate, Extrapolation, runOnJS } from 'react-native-reanimated';
 import { GestureDetector, Gesture } from 'react-native-gesture-handler';
 import FlippableCard from '../../src/components/FlippableCard';
-import GarudaEmblem from '../../src/components/GarudaEmblem';
+import NationalEmblem from '../../src/components/NationalEmblem';
 import LivenessWatermark from '../../src/components/LivenessWatermark';
 import ScreenHeader from '../../src/components/ScreenHeader';
+import SingaporeFlag from '../../src/components/SingaporeFlag';
+import ThaiFlag from '../../src/components/ThaiFlag';
+import BrazilFlag from '../../src/components/BrazilFlag';
+import USFlag from '../../src/components/USFlag';
 import { useTheme } from '../../src/context/ThemeContext';
+import { useCountry } from '../../src/context/CountryContext';
 import { type ColorPalette } from '../../src/constants/colors';
 import { useProfile } from '../../src/context/ProfileContext';
 import { CARD_TEMPLATE_BASE64 } from '../../src/constants/cardTemplate';
@@ -18,7 +23,6 @@ import { useLang } from '../../src/i18n/LanguageContext';
 
 /* ── Helpers ──────────────────────────────────────────────────── */
 
-const { width: SW } = Dimensions.get('window');
 const PHOTO_SIZE = 52;
 
 function GrayPhoto({ uri, initials, C }: { uri?: string; initials: string; C: ColorPalette }) {
@@ -48,17 +52,17 @@ function GrayPhoto({ uri, initials, C }: { uri?: string; initials: string; C: Co
   );
 }
 
-function ThaiFlagBadge({ status: _ }: { status: 'valid' | 'expiring' | 'expired' }) {
+function CountryFlagBadge({ status: _ }: { status: 'valid' | 'expiring' | 'expired' }) {
+  const { config } = useCountry();
   return (
     <View style={{ alignItems: 'center', gap: 5 }}>
-      <View style={{ width: 36, height: 24, borderRadius: 3, overflow: 'hidden', borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.18)' }}>
-        <View style={{ flex: 1, backgroundColor: '#A51931' }} />
-        <View style={{ flex: 1, backgroundColor: '#F4F5F8' }} />
-        <View style={{ flex: 2, backgroundColor: '#2D2A4A' }} />
-        <View style={{ flex: 1, backgroundColor: '#F4F5F8' }} />
-        <View style={{ flex: 1, backgroundColor: '#A51931' }} />
+      <View style={{ width: 36, height: 24, borderRadius: 3, overflow: 'hidden', borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.12)' }}>
+        {config.code === 'TH' ? <ThaiFlag width={36} height={24} />
+          : config.code === 'SG' ? <SingaporeFlag width={36} height={24} />
+          : config.code === 'BR' ? <BrazilFlag width={36} height={24} />
+          : <USFlag width={36} height={24} />}
       </View>
-      <Text style={{ fontSize: 7, fontWeight: '700', color: '#D4AF37', letterSpacing: 0.3 }}>ไทย</Text>
+      <Text style={{ fontSize: 7, fontWeight: '700', color: '#D4AF37', letterSpacing: 0.3 }}>{config.flagLabel}</Text>
     </View>
   );
 }
@@ -99,6 +103,7 @@ function computeAge(dobEn: string): number {
 
 export default function HomeScreen() {
   const { lang, t } = useLang();
+  const { config } = useCountry();
   const { profile: cardData, updateProfile } = useProfile();
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
@@ -110,6 +115,46 @@ export default function HomeScreen() {
   const expansion = useSharedValue(0);
   const startExp  = useSharedValue(0);
   const measured  = useRef({ header: 0, cardZone: 0 });
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  /* ── Entrance animations (GPU-composited, UI thread) ── */
+  const headerEnter = useSharedValue(0);
+  const cardEnter = useSharedValue(0);
+  const panelEnter = useSharedValue(0);
+  const rowReveal = useSharedValue(0);
+
+  useEffect(() => {
+    headerEnter.value = withDelay(50, withTiming(1, { duration: 500, easing: Easing.out(Easing.cubic) }));
+    cardEnter.value = withDelay(200, withTiming(1, { duration: 450, easing: Easing.out(Easing.cubic) }));
+    panelEnter.value = withDelay(480, withTiming(1, { duration: 380, easing: Easing.out(Easing.cubic) }));
+    rowReveal.value = withDelay(580, withTiming(4, { duration: 400, easing: Easing.out(Easing.cubic) }));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const headerEnterStyle = useAnimatedStyle(() => ({
+    opacity: headerEnter.value,
+    transform: [{ translateY: interpolate(headerEnter.value, [0, 1], [-10, 0]) }],
+  }));
+
+  const cardEnterStyle = useAnimatedStyle(() => ({
+    opacity: cardEnter.value,
+    transform: [
+      { scale: interpolate(cardEnter.value, [0, 1], [0.88, 1]) },
+      { translateY: interpolate(cardEnter.value, [0, 1], [-16, 0]) },
+    ],
+  }));
+
+  const r0 = useAnimatedStyle(() => {
+    const p = Math.max(0, Math.min(1, rowReveal.value));
+    return { opacity: p, transform: [{ translateY: (1 - p) * 12 }] };
+  });
+  const r1 = useAnimatedStyle(() => {
+    const p = Math.max(0, Math.min(1, rowReveal.value - 1.3));
+    return { opacity: p, transform: [{ translateY: (1 - p) * 12 }] };
+  });
+  const r2 = useAnimatedStyle(() => {
+    const p = Math.max(0, Math.min(1, rowReveal.value - 2.6));
+    return { opacity: p, transform: [{ translateY: (1 - p) * 12 }] };
+  });
 
   function recalc() {
     const { header: h, cardZone: cz } = measured.current;
@@ -137,6 +182,7 @@ export default function HomeScreen() {
       'worklet';
       const snap = (expansion.value > 0.4 || e.velocityY < -400) ? 1 : 0;
       expansion.value = withSpring(snap, { damping: 28, stiffness: 340, overshootClamping: true });
+      runOnJS(setIsExpanded)(snap === 1);
     });
 
   // Panel: layout props (top/bottom) are static during animation;
@@ -144,7 +190,8 @@ export default function HomeScreen() {
   const panelStyle = useAnimatedStyle(() => ({
     top: cardBotY.value,
     bottom: -dragRange.value,
-    transform: [{ translateY: translateY.value }],
+    transform: [{ translateY: translateY.value + (1 - panelEnter.value) * 40 }],
+    opacity: interpolate(panelEnter.value, [0, 0.15], [0, 1], Extrapolation.CLAMP),
   }));
 
   // Only the swipe pill fades out; Garuda divider stays visible as separator
@@ -154,9 +201,6 @@ export default function HomeScreen() {
     opacity: expansion.value,
     transform: [{ translateY: -expansion.value * 24 }],
   }));
-
-  // ID number analysis
-  const id = cardData.idNumberCompact;
 
   // Auto-extract face portrait
   useEffect(() => {
@@ -173,7 +217,7 @@ export default function HomeScreen() {
         body: JSON.stringify({
           contents: [{ role: 'user', parts: [
             { inlineData: { mimeType: mime, data: base64 } },
-            { text: 'Extract ONLY the portrait photo of the person from this Thai ID card. Return just the face and shoulders cropped tightly, with a plain white background. No card text, borders, or design elements.' },
+            { text: `Extract ONLY the portrait photo of the person from this ${config.cardDescription}. Return just the face and shoulders cropped tightly, with a plain white background. No card text, borders, or design elements.` },
           ]}],
           generationConfig: { responseModalities: ['TEXT', 'IMAGE'] },
         }),
@@ -195,143 +239,150 @@ export default function HomeScreen() {
       <LivenessWatermark />
 
       {/* ── Header ── */}
-      <View onLayout={e => { measured.current.header = e.nativeEvent.layout.height; recalc(); }}>
+      <Animated.View style={headerEnterStyle} onLayout={e => { measured.current.header = e.nativeEvent.layout.height; recalc(); }}>
         <ScreenHeader title={t('header.title')} sub={t('header.sub')} />
-      </View>
+      </Animated.View>
 
       {/* ── Card zone ── */}
       <View style={styles.cardZone} onLayout={e => { measured.current.cardZone = e.nativeEvent.layout.height; recalc(); }}>
-        <FlippableCard />
-        <Text style={styles.flipHint}>{t('card.flipHint')}</Text>
+        <Animated.View style={cardEnterStyle}>
+          <FlippableCard />
+          <Text style={styles.flipHint}>{t('card.flipHint')}</Text>
+        </Animated.View>
       </View>
 
       {/* ── Panel — top animates, bottom anchored ── */}
-      <GestureDetector gesture={panGesture}>
         <Animated.View style={[styles.panel, panelStyle]} renderToHardwareTextureAndroid>
           <View style={styles.docPanel}>
 
-            {/* Official header */}
-            <View style={styles.docHeader}>
-              <Text style={styles.docHeaderTxt}>KINGDOM OF THAILAND</Text>
-              <GarudaEmblem size={20} opacity={0.9} />
-              <Text style={styles.docHeaderTxt}>ราชอาณาจักรไทย</Text>
-            </View>
+            {/* ═══ Sticky header — gesture target for expand/collapse ═══ */}
+            <GestureDetector gesture={panGesture}>
+              <Animated.View>
 
-            {/* ── Default content ── */}
-
-            {/* Identity */}
-            <View style={styles.identityRow}>
-              <GrayPhoto
-                uri={cardData.pictureUri}
-                initials={`${cardData.firstName.charAt(0)}${cardData.lastName.charAt(0)}`}
-                C={colors}
-              />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.nameValue} numberOfLines={1} adjustsFontSizeToFit>
-                  {lang === 'en'
-                    ? `${cardData.firstName.toUpperCase()}  ${cardData.lastName.toUpperCase()}`
-                    : cardData.nameThai}
-                </Text>
-                <Text style={styles.nameAlt}>
-                  {lang === 'en' ? cardData.nameThai : cardData.fullNameEnglish}
-                </Text>
+              {/* Official header */}
+              <View style={styles.docHeader}>
+                <Text style={styles.docHeaderTxt}>{config.name.english}</Text>
+                <NationalEmblem size={20} opacity={0.9} />
+                <Text style={styles.docHeaderTxt}>{config.name.primary}</Text>
               </View>
-              <ThaiFlagBadge status={validityStatus(cardData.isValid, cardData.dateOfExpiry)} />
-            </View>
 
-            <View style={styles.rule} />
-
-            {/* ID number */}
-            <View style={styles.idRow}>
-              <Ionicons name="finger-print" size={13} color={colors.goldLight} />
-              <View style={{ flex: 1, marginLeft: 10 }}>
-                <Text style={styles.fieldLabel}>{lang === 'en' ? 'PERSONAL NO.' : 'เลขประจำตัว'}</Text>
-                <Text style={styles.idNumber}>{cardData.idNumber}</Text>
-              </View>
-              <Pressable style={styles.copyBtn} onPress={() => copyValue(cardData.idNumber)} accessibilityLabel="Copy ID number">
-                <Ionicons name="copy-outline" size={12} color={colors.goldLight} />
-              </Pressable>
-            </View>
-
-            <View style={styles.rule} />
-
-            {/* DOB + Age */}
-            <View style={styles.gridRow}>
-              <View style={styles.cell}>
-                <View style={styles.cellHead}>
-                  <Ionicons name="calendar-outline" size={11} color={colors.t3} />
-                  <Text style={styles.fieldLabel}>{lang === 'en' ? 'DATE OF BIRTH' : 'วันเกิด'}</Text>
-                </View>
-                <Text style={styles.cellValue}>
-                  {lang === 'en' ? cardData.dateOfBirth : cardData.dateOfBirthThai}
-                </Text>
-              </View>
-              <View style={styles.vRule} />
-              <View style={styles.cell}>
-                <View style={styles.cellHead}>
-                  <Ionicons name="hourglass-outline" size={11} color={colors.t3} />
-                  <Text style={styles.fieldLabel}>{lang === 'en' ? 'AGE' : 'อายุ'}</Text>
-                </View>
-                <Text style={styles.cellValue}>
-                  {`${computeAge(cardData.dateOfBirth)}`}
-                  <Text style={{ fontSize: 10, color: colors.t3 }}>
-                    {lang === 'en' ? ' yrs' : ' ปี'}
+              <Animated.View style={r0}>
+              {/* Identity */}
+              <View style={styles.identityRow}>
+                <GrayPhoto
+                  uri={cardData.pictureUri}
+                  initials={`${cardData.firstName.charAt(0)}${cardData.lastName.charAt(0)}`}
+                  C={colors}
+                />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.nameValue} numberOfLines={1} adjustsFontSizeToFit>
+                    {lang === 'en'
+                      ? `${cardData.firstName.toUpperCase()}  ${cardData.lastName.toUpperCase()}`
+                      : cardData.nameThai}
                   </Text>
-                </Text>
-              </View>
-            </View>
-
-            <View style={styles.rule} />
-
-            {/* Issue + Expiry */}
-            <View style={styles.gridRow}>
-              <View style={styles.cell}>
-                <View style={styles.cellHead}>
-                  <Ionicons name="ribbon-outline" size={11} color={colors.t3} />
-                  <Text style={styles.fieldLabel}>{lang === 'en' ? 'DATE OF ISSUE' : 'ออกบัตร'}</Text>
+                  <Text style={styles.nameAlt}>
+                    {lang === 'en' ? cardData.nameThai : cardData.fullNameEnglish}
+                  </Text>
                 </View>
-                <Text style={styles.cellValue}>
-                  {lang === 'en' ? cardData.dateOfIssue : cardData.dateOfIssueThai}
-                </Text>
+                <CountryFlagBadge status={validityStatus(cardData.isValid, cardData.dateOfExpiry)} />
               </View>
-              <View style={styles.vRule} />
-              <View style={styles.cell}>
-                <View style={styles.cellHead}>
-                  <Ionicons name="time-outline" size={11} color={colors.t3} />
-                  <Text style={styles.fieldLabel}>{lang === 'en' ? 'DATE OF EXPIRY' : 'หมดอายุ'}</Text>
+
+              <View style={styles.rule} />
+
+              {/* ID number */}
+              <View style={styles.idRow}>
+                <Ionicons name="finger-print" size={13} color={colors.goldLight} />
+                <View style={{ flex: 1, marginLeft: 10 }}>
+                  <Text style={styles.fieldLabel}>{t('id.personalNo')}</Text>
+                  <Text style={styles.idNumber}>{cardData.idNumber}</Text>
                 </View>
-                <Text style={styles.cellValue}>
-                  {lang === 'en' ? cardData.dateOfExpiry : cardData.dateOfExpiryThai}
+                <Pressable style={styles.copyBtn} onPress={() => copyValue(cardData.idNumber)} accessibilityLabel="Copy ID number">
+                  <Ionicons name="copy-outline" size={12} color={colors.goldLight} />
+                </Pressable>
+              </View>
+              <View style={styles.rule} />
+              </Animated.View>
+
+              <Animated.View style={r1}>
+              {/* DOB + Age */}
+              <View style={styles.gridRow}>
+                <View style={styles.cell}>
+                  <View style={styles.cellHead}>
+                    <Ionicons name="calendar-outline" size={11} color={colors.t3} />
+                    <Text style={styles.fieldLabel}>{t('info.dob')}</Text>
+                  </View>
+                  <Text style={styles.cellValue}>
+                    {lang === 'en' ? cardData.dateOfBirth : cardData.dateOfBirthThai}
+                  </Text>
+                </View>
+                <View style={styles.vRule} />
+                <View style={styles.cell}>
+                  <View style={styles.cellHead}>
+                    <Ionicons name="hourglass-outline" size={11} color={colors.t3} />
+                    <Text style={styles.fieldLabel}>{t('info.age')}</Text>
+                  </View>
+                  <Text style={styles.cellValue}>
+                    {`${computeAge(cardData.dateOfBirth)}`}
+                    <Text style={{ fontSize: 10, color: colors.t3 }}>
+                      {t('info.ageUnit')}
+                    </Text>
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.rule} />
+
+              {/* Issue + Expiry */}
+              <View style={styles.gridRow}>
+                <View style={styles.cell}>
+                  <View style={styles.cellHead}>
+                    <Ionicons name="ribbon-outline" size={11} color={colors.t3} />
+                    <Text style={styles.fieldLabel}>{t('info.issued')}</Text>
+                  </View>
+                  <Text style={styles.cellValue}>
+                    {lang === 'en' ? cardData.dateOfIssue : cardData.dateOfIssueThai}
+                  </Text>
+                </View>
+                <View style={styles.vRule} />
+                <View style={styles.cell}>
+                  <View style={styles.cellHead}>
+                    <Ionicons name="time-outline" size={11} color={colors.t3} />
+                    <Text style={styles.fieldLabel}>{t('info.expires')}</Text>
+                  </View>
+                  <Text style={styles.cellValue}>
+                    {lang === 'en' ? cardData.dateOfExpiry : cardData.dateOfExpiryThai}
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.rule} />
+              </Animated.View>
+
+              <Animated.View style={r2}>
+              {/* Address */}
+              <View style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
+                <View style={styles.cellHead}>
+                  <Ionicons name="location-outline" size={11} color={colors.t3} />
+                  <Text style={styles.fieldLabel}>{t('info.address')}</Text>
+                </View>
+                <Text style={[styles.cellValue, { lineHeight: 16 }]} numberOfLines={2}>
+                  {config.addressFormatter(cardData, lang)}
                 </Text>
               </View>
-            </View>
+              </Animated.View>
 
-            <View style={styles.rule} />
-
-            {/* Address */}
-            <View style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
-              <View style={styles.cellHead}>
-                <Ionicons name="location-outline" size={11} color={colors.t3} />
-                <Text style={styles.fieldLabel}>{lang === 'en' ? 'ADDRESS' : 'ที่อยู่'}</Text>
+              {/* Garuda divider + swipe pill */}
+              <View style={styles.expandDivider}>
+                <View style={styles.expandLine} />
+                <NationalEmblem size={14} opacity={0.25} />
+                <View style={styles.expandLine} />
               </View>
-              <Text style={[styles.cellValue, { lineHeight: 16 }]} numberOfLines={2}>
-                {lang === 'en'
-                  ? `${cardData.addressNumber} Moo ${cardData.moo}, ${cardData.subDistrict}, ${cardData.district}, ${cardData.province}`
-                  : cardData.addressThai}
-              </Text>
-            </View>
 
-            {/* Garuda divider — always visible as separator */}
-            <View style={styles.expandDivider}>
-              <View style={styles.expandLine} />
-              <GarudaEmblem size={14} opacity={0.25} />
-              <View style={styles.expandLine} />
-            </View>
+              <Animated.View style={[styles.swipeHint, pillStyle]} pointerEvents="none">
+                <View style={styles.swipePill} />
+              </Animated.View>
 
-            {/* Swipe pill — fades out on expand */}
-            <Animated.View style={[styles.swipeHint, pillStyle]} pointerEvents="none">
-              <View style={styles.swipePill} />
-            </Animated.View>
+              </Animated.View>
+            </GestureDetector>
 
             {/* ── Expanded details ── */}
             <Animated.View style={detailsStyle}>
@@ -339,23 +390,23 @@ export default function HomeScreen() {
               {/* ── Smart Card ── */}
               <View style={styles.sectionHeader}>
                 <Ionicons name="hardware-chip-outline" size={12} color={colors.goldLight} />
-                <Text style={styles.sectionTitle}>{lang === 'en' ? 'SMART CARD' : 'สมาร์ทการ์ด'}</Text>
+                <Text style={styles.sectionTitle}>{t('expanded.smartCard')}</Text>
               </View>
               <View style={styles.specGrid}>
                 <View style={styles.specItem}>
-                  <Text style={styles.specLabel}>{lang === 'en' ? 'CHIP SERIAL' : 'ชิปซีเรียล'}</Text>
-                  <Text style={styles.specMono}>THC-4A2B-7F91-E3D0</Text>
+                  <Text style={styles.specLabel}>{t('expanded.chipSerial')}</Text>
+                  <Text style={styles.specMono}>{config.chipSerial}</Text>
                 </View>
                 <View style={styles.specItem}>
-                  <Text style={styles.specLabel}>{lang === 'en' ? 'GENERATION' : 'รุ่น'}</Text>
-                  <Text style={styles.specValue}>Gen 4 · Smart Card</Text>
+                  <Text style={styles.specLabel}>{t('expanded.generation')}</Text>
+                  <Text style={styles.specValue}>{t('expanded.genValue')}</Text>
                 </View>
                 <View style={styles.specItem}>
-                  <Text style={styles.specLabel}>{lang === 'en' ? 'INTERFACE' : 'อินเตอร์เฟส'}</Text>
-                  <Text style={styles.specValue}>Contact + RFID</Text>
+                  <Text style={styles.specLabel}>{t('expanded.interface')}</Text>
+                  <Text style={styles.specValue}>{t('expanded.interfaceValue')}</Text>
                 </View>
                 <View style={styles.specItem}>
-                  <Text style={styles.specLabel}>{lang === 'en' ? 'STANDARD' : 'มาตรฐาน'}</Text>
+                  <Text style={styles.specLabel}>{t('expanded.standard')}</Text>
                   <Text style={styles.specMono}>ISO/IEC 7816-4</Text>
                 </View>
               </View>
@@ -365,62 +416,38 @@ export default function HomeScreen() {
               {/* ── Biometric Data ── */}
               <View style={styles.sectionHeader}>
                 <Ionicons name="body-outline" size={12} color={colors.goldLight} />
-                <Text style={styles.sectionTitle}>{lang === 'en' ? 'BIOMETRIC DATA' : 'ข้อมูลไบโอเมตริก'}</Text>
+                <Text style={styles.sectionTitle}>{t('expanded.biometric')}</Text>
               </View>
               <View style={{ gap: 2 }}>
                 <View style={styles.bioRow}>
                   <Ionicons name="finger-print" size={14} color={colors.green} />
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.specLabel}>{lang === 'en' ? 'FINGERPRINT' : 'ลายนิ้วมือ'}</Text>
+                    <Text style={styles.specLabel}>{t('expanded.fingerprint')}</Text>
                     <Text style={styles.specMono}>a7f2c934...6d3f8e2a</Text>
                   </View>
                   <View style={styles.bioTag}>
-                    <Text style={styles.bioTagTxt}>{lang === 'en' ? 'ENROLLED' : 'ลงทะเบียน'}</Text>
+                    <Text style={styles.bioTagTxt}>{t('expanded.enrolled')}</Text>
                   </View>
                 </View>
                 <View style={styles.bioRow}>
                   <Ionicons name="scan-outline" size={14} color={colors.green} />
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.specLabel}>{lang === 'en' ? 'FACE TEMPLATE' : 'แม่แบบใบหน้า'}</Text>
+                    <Text style={styles.specLabel}>{t('expanded.faceTemplate')}</Text>
                     <Text style={styles.specMono}>fc91b2e8...04a7d1c3</Text>
                   </View>
                   <View style={styles.bioTag}>
-                    <Text style={styles.bioTagTxt}>{lang === 'en' ? 'ENROLLED' : 'ลงทะเบียน'}</Text>
+                    <Text style={styles.bioTagTxt}>{t('expanded.enrolled')}</Text>
                   </View>
                 </View>
                 <View style={styles.bioRow}>
                   <Ionicons name="eye-outline" size={14} color={colors.t4} />
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.specLabel}>{lang === 'en' ? 'IRIS SCAN' : 'สแกนม่านตา'}</Text>
+                    <Text style={styles.specLabel}>{t('expanded.irisScan')}</Text>
                     <Text style={[styles.specMono, { color: colors.t4 }]}>—</Text>
                   </View>
                   <View style={[styles.bioTag, { borderColor: colors.b2 }]}>
-                    <Text style={[styles.bioTagTxt, { color: colors.t4 }]}>{lang === 'en' ? 'N/A' : 'ไม่มี'}</Text>
+                    <Text style={[styles.bioTagTxt, { color: colors.t4 }]}>{t('expanded.na')}</Text>
                   </View>
-                </View>
-              </View>
-
-              {/* ── Card Specifications ── */}
-              <View style={styles.sectionHeader}>
-                <Ionicons name="card-outline" size={12} color={colors.goldLight} />
-                <Text style={styles.sectionTitle}>{lang === 'en' ? 'CARD SPECIFICATIONS' : 'ข้อมูลจำเพาะบัตร'}</Text>
-              </View>
-              <View style={styles.specGrid}>
-                <View style={styles.specItem}>
-                  <Text style={styles.specLabel}>{lang === 'en' ? 'MATERIAL' : 'วัสดุ'}</Text>
-                  <Text style={styles.specValue}>Polycarbonate</Text>
-                </View>
-                <View style={styles.specItem}>
-                  <Text style={styles.specLabel}>{lang === 'en' ? 'DIMENSIONS' : 'ขนาด'}</Text>
-                  <Text style={styles.specMono}>85.6 × 53.98 mm</Text>
-                </View>
-                <View style={styles.specItem}>
-                  <Text style={styles.specLabel}>{lang === 'en' ? 'FORMAT' : 'รูปแบบ'}</Text>
-                  <Text style={styles.specMono}>ISO/IEC 7810 ID-1</Text>
-                </View>
-                <View style={styles.specItem}>
-                  <Text style={styles.specLabel}>{lang === 'en' ? 'SECURITY' : 'ความปลอดภัย'}</Text>
-                  <Text style={styles.specValue}>UV + Hologram</Text>
                 </View>
               </View>
 
@@ -428,7 +455,6 @@ export default function HomeScreen() {
 
           </View>
         </Animated.View>
-      </GestureDetector>
 
     </View>
   );
@@ -437,9 +463,9 @@ export default function HomeScreen() {
 /* ── Styles ────────────────────────────────────────────────────── */
 
 const makeStyles = (C: ColorPalette) => StyleSheet.create({
-  screen:   { flex: 1, backgroundColor: '#F0F5FF' },
+  screen:   { flex: 1, backgroundColor: C.bg },
   cardZone: { alignItems: 'center', paddingTop: 16, paddingBottom: 12, paddingHorizontal: 16 },
-  flipHint: { fontSize: 11, color: C.t4, marginTop: 8 },
+  flipHint: { fontSize: 11, color: C.t4, marginTop: 8, textAlign: 'center' },
 
   /* Panel — top animated, bottom anchored to tab bar */
   panel: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 20, backgroundColor: 'transparent' },
@@ -449,6 +475,7 @@ const makeStyles = (C: ColorPalette) => StyleSheet.create({
     borderTopLeftRadius: 12, borderTopRightRadius: 12,
     overflow: 'hidden',
     borderWidth: StyleSheet.hairlineWidth, borderColor: C.navy,
+    borderBottomWidth: 0,
   },
 
   docHeader: {
@@ -465,7 +492,7 @@ const makeStyles = (C: ColorPalette) => StyleSheet.create({
   idNumber: { fontSize: 15, color: C.goldLight, letterSpacing: 0.8, fontFamily: 'IBMPlexMono_500Medium' },
   copyBtn: {
     width: 26, height: 26, borderRadius: 5,
-    backgroundColor: 'rgba(212,175,55,0.10)', borderWidth: 1, borderColor: C.goldBorder,
+    backgroundColor: C.goldBg, borderWidth: 1, borderColor: C.goldBorder,
     alignItems: 'center', justifyContent: 'center',
   },
 
@@ -474,9 +501,7 @@ const makeStyles = (C: ColorPalette) => StyleSheet.create({
   cellHead:  { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 4 },
   cellValue: { fontSize: 12, fontWeight: '600', color: C.t1 },
 
-  fieldRow:   { flexDirection: 'row', alignItems: 'flex-start', paddingHorizontal: 16, paddingVertical: 12 },
   fieldLabel: { fontSize: 8.5, fontWeight: '700', color: C.t4, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 3 },
-  fieldValue: { fontSize: 11.5, color: C.t1, lineHeight: 16 },
 
   /* Garuda divider */
   expandDivider: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, gap: 10 },
@@ -504,13 +529,6 @@ const makeStyles = (C: ColorPalette) => StyleSheet.create({
     borderWidth: 1, borderColor: C.greenBorder,
   },
   bioTagTxt: { fontSize: 7, fontWeight: '800', color: C.green, letterSpacing: 0.6 },
-
-  /* Verification footer */
-  verifyRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 6, paddingVertical: 14,
-  },
-  verifyTxt: { fontSize: 10, fontWeight: '600', color: C.t3, letterSpacing: 0.3 },
 
   rule:  { height: StyleSheet.hairlineWidth, backgroundColor: C.b2 },
   vRule: { width: StyleSheet.hairlineWidth, backgroundColor: C.b2 },

@@ -1,11 +1,14 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, Image, StyleSheet, Animated } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-const NAVY = '#0C1526';
-const GOLD = '#D4AF37';
+import { useCountry } from '../context/CountryContext';
+import { useTheme } from '../context/ThemeContext';
 
 export default function AppSplash() {
+  const { config } = useCountry();
+  const { colors } = useTheme();
+  const NAVY = colors.navy;
+  const GOLD = colors.goldLight;
   const { top, bottom } = useSafeAreaInsets();
   const pulse = useRef(new Animated.Value(0.6)).current;
   const bar = useRef(new Animated.Value(0)).current;
@@ -26,29 +29,29 @@ export default function AppSplash() {
   }, []);
 
   return (
-    <View style={[styles.screen, { paddingTop: top, paddingBottom: bottom }]}>
+    <View style={[styles.screen, { paddingTop: top, paddingBottom: bottom, backgroundColor: NAVY }]}>
       <View style={styles.content}>
         <Animated.View style={{ opacity: pulse }}>
           <Image
-            source={require('../../assets/garuda.png')}
-            style={styles.emblem}
+            source={config.emblemAsset}
+            style={[styles.emblem, { tintColor: GOLD }]}
             resizeMode="contain"
           />
         </Animated.View>
 
-        <Text style={styles.title}>KINGDOM OF THAILAND</Text>
-        <Text style={styles.titleTh}>ราชอาณาจักรไทย</Text>
-        <Text style={styles.dept}>Department of Provincial Administration</Text>
-        <Text style={styles.deptTh}>กรมการปกครอง</Text>
+        <Text style={styles.title}>{config.name.english}</Text>
+        <Text style={styles.titleTh}>{config.name.primary}</Text>
+        <Text style={styles.dept}>{config.issuer.english}</Text>
+        <Text style={styles.deptTh}>{config.issuer.primary}</Text>
       </View>
 
       <View style={styles.barTrack}>
         <Animated.View
-          style={[styles.barFill, { width: bar.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }) }]}
+          style={[styles.barFill, { backgroundColor: GOLD, width: bar.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }) }]}
         />
       </View>
 
-      <Text style={styles.footer}>ระบบบัตรประจำตัวประชาชน</Text>
+      <Text style={styles.footer}>{config.splashFooter}</Text>
     </View>
   );
 }
@@ -56,7 +59,7 @@ export default function AppSplash() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: NAVY,
+    backgroundColor: '#0C1526',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 0,
@@ -70,7 +73,7 @@ const styles = StyleSheet.create({
   emblem: {
     width: 90,
     height: 90,
-    tintColor: GOLD,
+    tintColor: '#D4AF37',
     marginBottom: 20,
   },
   title: {
@@ -107,7 +110,7 @@ const styles = StyleSheet.create({
   },
   barFill: {
     height: '100%',
-    backgroundColor: GOLD,
+    backgroundColor: '#D4AF37',
     borderRadius: 1,
   },
   footer: {

@@ -1,8 +1,8 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { cardData as defaultCardData } from '../constants/cardData';
+import { useCountry } from './CountryContext';
 
-export type ProfileType = typeof defaultCardData & { pictureUri?: string; cardFrontUri?: string };
+export type ProfileType = Record<string, any> & { pictureUri?: string; cardFrontUri?: string };
 
 interface ProfileContextType {
   profile: ProfileType;
@@ -12,28 +12,65 @@ interface ProfileContextType {
   ready: boolean;
 }
 
-const STORAGE_KEY = 'profile_data';
+const LEGACY_KEY = 'profile_data';
+const storageKey = (code: string) => `profile_data_${code}`;
+
 const ProfileContext = createContext<ProfileContextType | undefined>(undefined);
 
 export function ProfileProvider({ children }: { children: ReactNode }) {
-  const [profile, setProfile] = useState<ProfileType>(defaultCardData);
+  const { country, config } = useCountry();
+  const [profile, setProfile] = useState<ProfileType>(config.defaultCardData as ProfileType);
   const [isGenerating, setGenerating] = useState(false);
   const [ready, setReady] = useState(false);
+  const countryRef = useRef(country);
 
+  // Migrate legacy `profile_data` -> `profile_data_TH` on first load
   useEffect(() => {
-    AsyncStorage.getItem(STORAGE_KEY).then(saved => {
-      if (saved) {
-        try {
-          setProfile(JSON.parse(saved));
-        } catch {}
-      }
-    }).finally(() => setReady(true));
+    (async () => {
+      try {
+        const thKey = storageKey('TH');
+        const [legacy, thExists] = await Promise.all([
+          AsyncStorage.getItem(LEGACY_KEY),
+          AsyncStorage.getItem(thKey),
+        ]);
+        if (legacy && !thExists) {
+          await AsyncStorage.setItem(thKey, legacy);
+        }
+      } catch {}
+    })();
   }, []);
+
+  // Load profile whenever country changes
+  useEffect(() => {
+    countryRef.current = country;
+    setReady(false);
+
+    const key = storageKey(country);
+    const defaults = config.defaultCardData as ProfileType;
+
+    AsyncStorage.getItem(key)
+      .then(saved => {
+        // Guard against stale async if country changed again
+        if (countryRef.current !== country) return;
+        if (saved) {
+          try {
+            setProfile(JSON.parse(saved));
+          } catch {
+            setProfile(defaults);
+          }
+        } else {
+          setProfile(defaults);
+        }
+      })
+      .finally(() => {
+        if (countryRef.current === country) setReady(true);
+      });
+  }, [country, config]);
 
   const updateProfile = (updates: Partial<ProfileType>) => {
     setProfile(prev => {
       const next = { ...prev, ...updates };
-      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      AsyncStorage.setItem(storageKey(country), JSON.stringify(next));
       return next;
     });
   };

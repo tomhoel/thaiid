@@ -50,12 +50,17 @@ export function BiometricProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Lock on cold start
+  // Lock on cold start — only when biometric was previously enabled (from storage)
+  // Depends only on `ready`, not `enabled`, to avoid competing with setEnabled's own auth flow
   useEffect(() => {
     if (ready && enabled) authenticate();
-  }, [ready, enabled]);
+  }, [ready]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Lock when app goes to background, re-prompt when it returns
+  // Grace period: brief backgrounding (image picker, camera, share sheet) doesn't lock
+  const bgTimestamp = useRef(0);
+  const GRACE_MS = 30000; // 30 seconds — covers image picker, camera, crop, share sheet
+
   useEffect(() => {
     const sub = AppState.addEventListener('change', nextState => {
       const prev = appStateRef.current;
@@ -64,9 +69,13 @@ export function BiometricProvider({ children }: { children: React.ReactNode }) {
       if (!enabled) return;
 
       if (prev === 'active' && nextState.match(/inactive|background/)) {
-        setAuthenticated(false);
+        bgTimestamp.current = Date.now();
       } else if (prev.match(/inactive|background/) && nextState === 'active') {
-        authenticate();
+        const elapsed = Date.now() - bgTimestamp.current;
+        if (elapsed > GRACE_MS) {
+          setAuthenticated(false);
+          authenticate();
+        }
       }
     });
     return () => sub.remove();
@@ -83,7 +92,6 @@ export function BiometricProvider({ children }: { children: React.ReactNode }) {
     // Check hardware + enrollment before showing the prompt
     const hasHardware = await LocalAuthentication.hasHardwareAsync();
     const isEnrolled = await LocalAuthentication.isEnrolledAsync();
-
     if (!hasHardware || !isEnrolled) {
       Alert.alert(
         'Biometric unavailable',

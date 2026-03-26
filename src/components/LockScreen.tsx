@@ -1,34 +1,41 @@
 import React, { useMemo } from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Image, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import GarudaEmblem from './GarudaEmblem';
 import { useTheme } from '../context/ThemeContext';
 import { type ColorPalette } from '../constants/colors';
 import { useBiometric } from '../context/BiometricContext';
+import { useCountry } from '../context/CountryContext';
+import { useLang } from '../i18n/LanguageContext';
 
 export default function LockScreen() {
   const { authenticate } = useBiometric();
   const { top, bottom } = useSafeAreaInsets();
   const { colors: Colors } = useTheme();
+  const { config } = useCountry();
+  const { t } = useLang();
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
 
   return (
     <View style={[styles.screen, { paddingTop: top, paddingBottom: bottom }]}>
       <View style={styles.content}>
-        <GarudaEmblem size={52} opacity={0.7} />
-        <Text style={styles.title}>Thai National ID</Text>
-        <Text style={styles.sub}>กรมการปกครอง</Text>
+        <Image
+          source={config.emblemAsset}
+          style={{ width: 52, height: 52, tintColor: Colors.goldLight, opacity: 0.7 }}
+          resizeMode="contain"
+        />
+        <Text style={styles.title}>{t('lock.title')}</Text>
+        <Text style={styles.sub}>{config.issuer.primary}</Text>
 
         <View style={styles.lockIcon}>
           <Ionicons name="lock-closed" size={28} color={Colors.goldLight} />
         </View>
 
-        <Text style={styles.message}>Authentication required{'\n'}to access your ID card</Text>
+        <Text style={styles.message}>{t('lock.message')}</Text>
 
         <Pressable style={styles.btn} onPress={authenticate}>
           <Ionicons name="finger-print-outline" size={20} color={Colors.navy} />
-          <Text style={styles.btnText}>Authenticate</Text>
+          <Text style={styles.btnText}>{t('lock.button')}</Text>
         </Pressable>
       </View>
     </View>
