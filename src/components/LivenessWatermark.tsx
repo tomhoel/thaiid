@@ -5,6 +5,7 @@ import Animated, {
   withRepeat, withTiming, Easing,
 } from 'react-native-reanimated';
 import { useCountry } from '../context/CountryContext';
+import { useTheme } from '../context/ThemeContext';
 
 const { width: SW, height: SH } = Dimensions.get('window');
 const WATERMARK_SIZE = SW * 0.60;
@@ -15,6 +16,7 @@ const WATERMARK_SIZE = SW * 0.60;
  */
 const LivenessWatermark = React.memo(function LivenessWatermark({ showEmblem = true }: { showEmblem?: boolean }) {
   const { config } = useCountry();
+  const { colors } = useTheme();
   const rotation = useSharedValue(0);
 
   useEffect(() => {
@@ -39,7 +41,7 @@ const LivenessWatermark = React.memo(function LivenessWatermark({ showEmblem = t
       }, emblemStyle]}>
         <Image
           source={config.emblemAsset}
-          style={{ width: WATERMARK_SIZE, height: WATERMARK_SIZE, tintColor: '#D4AF37', opacity: 0.10 }}
+          style={{ width: WATERMARK_SIZE, height: WATERMARK_SIZE, tintColor: colors.goldLight, opacity: 0.10 }}
           resizeMode="contain"
         />
       </Animated.View>

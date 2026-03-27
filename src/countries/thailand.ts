@@ -7,7 +7,7 @@ const THAI_MONTHS: Record<string, string> = {
 };
 
 function toThaiDate(en: string): string {
-  const parts = en.replace('.', '').split(' ');
+  const parts = en.replace(/\./g, '').split(' ');
   if (parts.length !== 3) return en;
   const day = parts[0];
   const month = THAI_MONTHS[parts[1]] ?? parts[1];
@@ -25,6 +25,7 @@ export const THAILAND_CONFIG: CountryConfig = {
   systemReference: 'TH-DPA-BORA',
   chipSerial: 'THC-4A2B-7F91-E3D0',
   cardDescription: 'Thai National ID card',
+  cardPromptHint: 'This is a horizontal ID card. The portrait photo is on the RIGHT side. Text fields (name, dates) are on the LEFT side. The card has a blue-to-navy gradient background with a Garuda emblem watermark. There is a gold chip on the lower left.',
 
   emblemAsset: require('../../assets/garuda.png'),
   cardImages: {
@@ -43,7 +44,7 @@ export const THAILAND_CONFIG: CountryConfig = {
   holoStripSide: 'left',
   holoStripOffset: 0.08,
 
-  addressFormatter: (data: any, lang: string) => {
+  addressFormatter: (data: Record<string, any>, lang: string) => {
     if (lang === 'en') {
       return `${data.addressNumber} Moo ${data.moo}, ${data.subDistrict}, ${data.district}, ${data.province}`;
     }
@@ -54,6 +55,7 @@ export const THAILAND_CONFIG: CountryConfig = {
     'header.title': { en: 'Thai National ID', th: 'บัตรประจำตัวประชาชน' },
     'header.sub': { en: 'บัตรประจำตัวประชาชน', th: 'Thai National ID Card' },
     'card.flipHint': { en: 'Tap card to flip', th: 'แตะเพื่อพลิกบัตร' },
+    'card.updated': { en: 'ID Card Updated', th: 'อัปเดตบัตรแล้ว' },
     'section.cardholder': { en: 'Cardholder', th: 'ผู้ถือบัตร' },
     'section.cardInfo': { en: 'Card Information', th: 'ข้อมูลบัตร' },
     'section.qrDetails': { en: 'QR Details', th: 'รายละเอียด QR' },
@@ -99,7 +101,7 @@ export const THAILAND_CONFIG: CountryConfig = {
     'settings.privacyPolicy': { en: 'Privacy', th: 'นโยบายส่วนตัว' },
     'settings.support': { en: 'Support', th: 'ช่วยเหลือ' },
     'settings.dark': { en: 'Dark', th: 'มืด' },
-    'tab.identity': { en: 'Identity', th: 'บัตร' },
+    'tab.identity': { en: 'Identity', th: 'บัตรประจำตัว' },
     'tab.qr': { en: 'QR Code', th: 'คิวอาร์โค้ด' },
     'tab.settings': { en: 'Settings', th: 'ตั้งค่า' },
     'lock.title': { en: 'Thai National ID', th: 'บัตรประจำตัวประชาชน' },
@@ -118,6 +120,21 @@ export const THAILAND_CONFIG: CountryConfig = {
     'expanded.na': { en: 'N/A', th: 'ไม่มี' },
     'expanded.genValue': { en: 'Gen 4 · Smart Card', th: 'รุ่น 4 · สมาร์ทการ์ด' },
     'expanded.interfaceValue': { en: 'Contact + RFID', th: 'สัมผัส + RFID' },
+    'details.cardDetails': { en: 'Card Details', th: 'รายละเอียดบัตร' },
+    'details.personal': { en: 'Personal', th: 'ข้อมูลส่วนตัว' },
+    'details.identification': { en: 'Identification', th: 'การระบุตัวตน' },
+    'details.validity': { en: 'Validity', th: 'อายุบัตร' },
+    'details.name': { en: 'Name', th: 'ชื่อ' },
+    'details.dob': { en: 'Date of Birth', th: 'วันเกิด' },
+    'details.idNumber': { en: 'ID Number', th: 'เลขประจำตัว' },
+    'details.reference': { en: 'Reference', th: 'อ้างอิง' },
+    'details.subDistrict': { en: 'Sub-district', th: 'ตำบล' },
+    'details.issued': { en: 'Issued', th: 'ออกบัตร' },
+    'details.expires': { en: 'Expires', th: 'หมดอายุ' },
+    'details.status': { en: 'Status', th: 'สถานะ' },
+    'details.statusActive': { en: 'Active', th: 'ใช้งานได้' },
+    'details.statusExpiring': { en: 'Expiring Soon', th: 'ใกล้หมดอายุ' },
+    'details.statusExpired': { en: 'Expired', th: 'หมดอายุแล้ว' },
     'attribution.dept': { en: 'DEPARTMENT OF PROVINCIAL ADMINISTRATION', th: 'กรมการปกครอง' },
     'attribution.note': { en: 'Authorized digital identification application\nสำหรับใช้งานอย่างเป็นทางการเท่านั้น', th: 'แอปพลิเคชันยืนยันตัวตนดิจิทัลอย่างเป็นทางการ\nAuthorized digital identification application' },
   },

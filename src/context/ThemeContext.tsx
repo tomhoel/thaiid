@@ -7,7 +7,6 @@ type Theme = 'dark' | 'light';
 interface ThemeCtx {
   theme: Theme;
   colors: ColorPalette;
-  toggleTheme: () => void;
   setTheme: (t: Theme) => void;
   themeLoaded: boolean;
 }
@@ -15,7 +14,6 @@ interface ThemeCtx {
 const ThemeContext = createContext<ThemeCtx>({
   theme: 'light',
   colors: LightColors,
-  toggleTheme: () => {},
   setTheme: () => {},
   themeLoaded: false,
 });
@@ -38,17 +36,18 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   const setTheme = useCallback((t: Theme) => {
     setThemeState(t);
-    AsyncStorage.setItem(KEY, t);
+    AsyncStorage.setItem(KEY, t).catch(console.warn);
   }, []);
-
-  const toggleTheme = useCallback(() => {
-    setTheme(theme === 'dark' ? 'light' : 'dark');
-  }, [theme, setTheme]);
 
   const baseColors = theme === 'dark' ? DarkColors : LightColors;
 
+  const value = useMemo(
+    () => ({ theme, colors: baseColors, setTheme, themeLoaded }),
+    [theme, baseColors, setTheme, themeLoaded],
+  );
+
   return (
-    <ThemeContext.Provider value={{ theme, colors: baseColors, toggleTheme, setTheme, themeLoaded }}>
+    <ThemeContext.Provider value={value}>
       {children}
     </ThemeContext.Provider>
   );
@@ -82,5 +81,5 @@ export function useTheme() {
     return { ...base.colors, ...accent } as ColorPalette;
   }, [base.colors, accent]);
 
-  return { ...base, colors };
+  return useMemo(() => ({ ...base, colors }), [base, colors]);
 }

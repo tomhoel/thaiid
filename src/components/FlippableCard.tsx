@@ -3,7 +3,7 @@
  * All animations on UI thread via react-native-reanimated.
  */
 import React, { useRef, useCallback, useEffect, useState } from 'react';
-import { StyleSheet, View, Image, Pressable, Dimensions, ActivityIndicator, Text } from 'react-native';
+import { StyleSheet, View, Image, Pressable, Dimensions, Text, type ImageSourcePropType } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -11,7 +11,6 @@ import Animated, {
   withSpring,
   withTiming,
   withRepeat,
-  withSequence,
   withDelay,
   interpolate,
 
@@ -25,12 +24,11 @@ import { Accelerometer } from 'expo-sensors';
 import * as Haptics from 'expo-haptics';
 import { useProfile } from '../context/ProfileContext';
 import { useCountry } from '../context/CountryContext';
+import { useLang } from '../i18n/LanguageContext';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const CARD_W = SCREEN_W - 40;
 const CARD_H = CARD_W * 0.63;
-const CHIP_W = Math.round(CARD_W * 0.14);
-const CHIP_H = Math.round(CARD_H * 0.22);
 
 /* ── 3 colors instead of 5 — halves the Image count ── */
 const HOLO_COLORS = ['#50E8FF', '#FFD750', '#FF70C0'];
@@ -46,7 +44,7 @@ const EMBLEMS = [
 function ColorLayer({
   color, colorIndex, combined, size, emblemSource,
 }: {
-  color: string; colorIndex: number; combined: SharedValue<number>; size: number; emblemSource: any;
+  color: string; colorIndex: number; combined: SharedValue<number>; size: number; emblemSource: ImageSourcePropType;
 }) {
   const style = useAnimatedStyle(() => {
     'worklet';
@@ -72,7 +70,7 @@ function HoloEmblem({
   top, left, size, tiltX, tiltY, index, emblemSource,
 }: {
   top: string; left: string; size: number;
-  tiltX: SharedValue<number>; tiltY: SharedValue<number>; index: number; emblemSource: any;
+  tiltX: SharedValue<number>; tiltY: SharedValue<number>; index: number; emblemSource: ImageSourcePropType;
 }) {
   const xW = index % 2 === 0 ? 1 : -1;
   const yW = index < 2 ? 1 : -1;
@@ -119,7 +117,7 @@ function HoloBorder() {
 }
 
 /* ── Holo overlay (only rendered once — shared by both faces via parent rotation) ── */
-function HoloOverlay({ tiltX, tiltY, emblemSource }: { tiltX: SharedValue<number>; tiltY: SharedValue<number>; emblemSource: any }) {
+function HoloOverlay({ tiltX, tiltY, emblemSource }: { tiltX: SharedValue<number>; tiltY: SharedValue<number>; emblemSource: ImageSourcePropType }) {
   return (
     <View pointerEvents="none" style={[StyleSheet.absoluteFillObject, { borderRadius: 14, overflow: 'hidden' }]}>
       {EMBLEMS.map((e, i) => (
@@ -159,54 +157,6 @@ function HoloSurface({ tiltX, tiltY }: { tiltX: SharedValue<number>; tiltY: Shar
   );
 }
 
-/* ── Holographic security strip — rainbow band that shifts on tilt ── */
-function HoloStrip({ tiltX, tiltY, side, offset }: { tiltX: SharedValue<number>; tiltY: SharedValue<number>; side: 'left' | 'right'; offset: number }) {
-  const bandStyle = useAnimatedStyle(() => {
-    'worklet';
-    const shift = (tiltX.value * 0.5 + tiltY.value * 0.5) * CARD_H * 0.7;
-    return {
-      transform: [{ translateY: shift }],
-    };
-  });
-
-  const opacityStyle = useAnimatedStyle(() => {
-    'worklet';
-    const tiltFactor = side === 'right' ? -tiltX.value : tiltX.value;
-    return {
-      opacity: interpolate(tiltFactor, [-1, -0.2, 0, 0.3, 1], [0.12, 0.2, 0.35, 0.55, 0.4], Extrapolation.CLAMP),
-    };
-  });
-
-  const posStyle = side === 'right'
-    ? { right: CARD_W * offset, top: 8, bottom: 8 }
-    : { left: CARD_W * offset, top: 8, bottom: 8 };
-
-  return (
-    <Animated.View pointerEvents="none" style={[{
-      position: 'absolute', width: 22, borderRadius: 11, overflow: 'hidden', ...posStyle,
-    }, opacityStyle]}>
-      <Animated.View style={[{ position: 'absolute', top: -CARD_H, bottom: -CARD_H, left: 0, right: 0 }, bandStyle]}>
-        <LinearGradient
-          colors={[
-            'transparent',
-            'rgba(255,80,80,0.7)',
-            'rgba(255,210,50,0.7)',
-            'rgba(80,255,120,0.7)',
-            'rgba(50,180,255,0.7)',
-            'rgba(160,80,255,0.7)',
-            'rgba(255,80,180,0.7)',
-            'rgba(255,210,50,0.5)',
-            'transparent',
-          ]}
-          start={{ x: 0.5, y: 0 }}
-          end={{ x: 0.5, y: 1 }}
-          style={{ flex: 1 }}
-        />
-      </Animated.View>
-    </Animated.View>
-  );
-}
-
 /* ── Edge highlights — 1px lines simulate card edge catching light ── */
 function EdgeHighlights({ tiltX, tiltY }: { tiltX: SharedValue<number>; tiltY: SharedValue<number> }) {
   const topStyle    = useAnimatedStyle(() => { 'worklet'; return { opacity: interpolate(tiltY.value, [-1,0,1], [0.06,0.18,0.65], Extrapolation.CLAMP) }; });
@@ -224,34 +174,6 @@ function EdgeHighlights({ tiltX, tiltY }: { tiltX: SharedValue<number>; tiltY: S
   );
 }
 
-
-/* ── Security chip glint — diagonal sweep every ~4.5 s ── */
-function ChipGlint() {
-  const glintX = useSharedValue(-30);
-
-  useEffect(() => {
-    glintX.value = withRepeat(
-      withSequence(
-        withDelay(4500, withTiming(52, { duration: 380, easing: Easing.inOut(Easing.quad) })),
-        withTiming(-30, { duration: 0 }),
-      ),
-      -1,
-      false,
-    );
-  }, []);
-
-  const sweepStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: glintX.value }],
-  }));
-
-  return (
-    <View pointerEvents="none" style={styles.chipArea}>
-      <View style={styles.chipBody}>
-        <Animated.View style={[styles.chipSweep, sweepStyle]} />
-      </View>
-    </View>
-  );
-}
 
 /* ── Entrance shimmer — single sweep on mount ── */
 function EntranceShimmer() {
@@ -295,6 +217,7 @@ function EntranceShimmer() {
 export default function FlippableCard() {
   const { profile, isGenerating } = useProfile();
   const { config } = useCountry();
+  const { t } = useLang();
 
   const flipProgress = useSharedValue(0);
   const flipTarget = useRef(0);
@@ -321,30 +244,49 @@ export default function FlippableCard() {
   useEffect(() => {
     if (prevIsGenerating.current && !isGenerating) {
       setShowSuccess(true);
-      const t = setTimeout(() => setShowSuccess(false), 2500);
-      return () => clearTimeout(t);
+      const timer = setTimeout(() => setShowSuccess(false), 2500);
+      return () => clearTimeout(timer);
     }
     prevIsGenerating.current = isGenerating;
   }, [isGenerating]);
 
-  /* ── Generating shimmer sweep ── */
-  const genProgress = useSharedValue(0);
+  /* ── Generating overlay — percentage progress ── */
+  const genPulse = useSharedValue(0);
+  const [genPercent, setGenPercent] = useState(0);
+
   useEffect(() => {
     if (isGenerating) {
-      genProgress.value = withRepeat(
-        withTiming(1, { duration: 900, easing: Easing.linear }),
+      setGenPercent(0);
+      genPulse.value = withRepeat(
+        withTiming(1, { duration: 1400, easing: Easing.inOut(Easing.sin) }),
         -1,
-        false,
+        true,
       );
+      // Simulate progress: fast start, slow middle, fast finish
+      let pct = 0;
+      const tick = setInterval(() => {
+        if (pct < 30) pct += Math.random() * 4 + 2;
+        else if (pct < 70) pct += Math.random() * 1.5 + 0.3;
+        else if (pct < 90) pct += Math.random() * 0.8 + 0.2;
+        else pct += Math.random() * 0.3 + 0.05;
+        pct = Math.min(pct, 95);
+        setGenPercent(Math.floor(pct));
+      }, 200);
+      return () => clearInterval(tick);
     } else {
-      genProgress.value = 0;
+      if (genPercent > 0) {
+        setGenPercent(100);
+        const done = setTimeout(() => setGenPercent(0), 300);
+        return () => clearTimeout(done);
+      }
+      genPulse.value = 0;
     }
   }, [isGenerating]);
 
-  const genShimmerStyle = useAnimatedStyle(() => {
+  const progressBarStyle = useAnimatedStyle(() => {
     'worklet';
     return {
-      transform: [{ translateX: interpolate(genProgress.value, [0, 1], [-CARD_W, CARD_W * 1.5]) }],
+      opacity: interpolate(genPulse.value, [0, 1], [0.7, 1]),
     };
   });
 
@@ -405,23 +347,16 @@ export default function FlippableCard() {
               style={styles.cardImage}
               resizeMode="cover"
             />
-            {/* Security chip glint — front face only */}
-            {/* ChipGlint removed */}
+            {/* Holographic surface sheen — front face only */}
+            <HoloSurface tiltX={tiltX} tiltY={tiltY} />
+            {/* Edge highlights — physical card thickness illusion */}
+            <EdgeHighlights tiltX={tiltX} tiltY={tiltY} />
           </Animated.View>
 
           {/* Back face — pre-rotated 180° so it reads correctly when flipped */}
           <Animated.View style={[styles.face, { transform: [{ rotateY: '180deg' }] }, backOpacityStyle]}>
             <Image source={config.cardImages.back} style={styles.cardImage} resizeMode="cover" />
           </Animated.View>
-
-          {/* Holographic surface sheen */}
-          <HoloSurface tiltX={tiltX} tiltY={tiltY} />
-
-          {/* Holo overlay emblems */}
-          {/* Holographic strip removed */}
-
-          {/* Edge highlights — physical card thickness illusion */}
-          <EdgeHighlights tiltX={tiltX} tiltY={tiltY} />
 
           {/* Holo border */}
           <HoloBorder />
@@ -430,12 +365,17 @@ export default function FlippableCard() {
           <EntranceShimmer />
         </Animated.View>
 
-        {/* Generating overlay — sits outside flip so it never rotates */}
+        {/* Generating overlay — percentage progress */}
         {isGenerating && (
           <View pointerEvents="none" style={styles.genOverlay}>
-            <Animated.View style={[styles.genShimmer, genShimmerStyle]} />
-            <ActivityIndicator color="#D4AF37" size="small" />
-            <Text style={styles.genText}>GENERATING</Text>
+            <View style={styles.genCenter}>
+              <Text style={styles.genPercent}>{genPercent}%</Text>
+              <Text style={styles.genLabel}>PROCESSING</Text>
+              {/* Progress bar */}
+              <View style={styles.genBarTrack}>
+                <Animated.View style={[styles.genBarFill, { width: `${genPercent}%` }, progressBarStyle]} />
+              </View>
+            </View>
           </View>
         )}
 
@@ -443,7 +383,7 @@ export default function FlippableCard() {
         {showSuccess && (
           <View pointerEvents="none" style={styles.successBadge}>
             <Text style={styles.successIcon}>✓</Text>
-            <Text style={styles.successText}>ID Card Updated</Text>
+            <Text style={styles.successText}>{t('card.updated')}</Text>
           </View>
         )}
       </Animated.View>
@@ -463,35 +403,34 @@ const styles = StyleSheet.create({
   },
   cardImage: { width: '100%', height: '100%', borderRadius: 14 },
 
-  /* Security chip — position matches chip on card template (14% left, 38% top) */
-  chipArea: { position: 'absolute', top: '35.5%', left: '14.2%' },
-  chipBody: {
-    width: CHIP_W, height: CHIP_H, borderRadius: 4, overflow: 'hidden',
-    backgroundColor: 'rgba(212,175,55,0.12)',
-    borderWidth: 1, borderColor: 'rgba(212,175,55,0.30)',
-  },
-  chipSweep: {
-    position: 'absolute', top: -10, width: 20, height: CHIP_H + 20,
-    backgroundColor: 'rgba(255,255,255,0.58)',
-    transform: [{ rotate: '-18deg' }],
-  },
-
   genOverlay: {
     ...StyleSheet.absoluteFillObject,
     borderRadius: 14, overflow: 'hidden',
-    backgroundColor: 'rgba(0,0,0,0.55)',
-    alignItems: 'center', justifyContent: 'center', gap: 10,
+    backgroundColor: 'rgba(6,10,20,0.92)',
+    alignItems: 'center', justifyContent: 'center',
   },
-  genShimmer: {
-    position: 'absolute',
-    top: -20, bottom: -20, width: 80,
-    backgroundColor: 'rgba(212,175,55,0.28)',
-    transform: [{ rotate: '12deg' }],
+  genCenter: {
+    alignItems: 'center',
   },
-  genText: {
-    color: '#D4AF37',
-    fontSize: 10, fontWeight: '800',
-    letterSpacing: 2.5, textTransform: 'uppercase',
+  genPercent: {
+    color: '#fff',
+    fontSize: 38, fontWeight: '200',
+    letterSpacing: 2,
+    fontVariant: ['tabular-nums'],
+  },
+  genLabel: {
+    color: 'rgba(255,255,255,0.45)',
+    fontSize: 10, fontWeight: '600',
+    letterSpacing: 4, marginTop: 4, marginBottom: 16,
+  },
+  genBarTrack: {
+    width: CARD_W * 0.55, height: 3, borderRadius: 1.5,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    overflow: 'hidden',
+  },
+  genBarFill: {
+    height: '100%', borderRadius: 1.5,
+    backgroundColor: 'rgba(255,255,255,0.6)',
   },
 
   successBadge: {

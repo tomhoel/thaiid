@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { Image, View } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { useCountry } from '../context/CountryContext';
@@ -8,7 +8,7 @@ interface Props {
   opacity?: number;
 }
 
-export default function NationalEmblem({ size = 80, opacity = 1 }: Props) {
+export default memo(function NationalEmblem({ size = 80, opacity = 1 }: Props) {
   const { colors } = useTheme();
   const { config } = useCountry();
   return (
@@ -20,4 +20,4 @@ export default function NationalEmblem({ size = 80, opacity = 1 }: Props) {
       />
     </View>
   );
-}
+});

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { type ImageSourcePropType } from 'react-native';
 
@@ -14,6 +14,7 @@ export interface CountryConfig {
   systemReference: string;
   chipSerial: string;
   cardDescription: string;
+  cardPromptHint: string;
 
   emblemAsset: ImageSourcePropType;
   cardImages: { front: ImageSourcePropType; back: ImageSourcePropType };
@@ -81,13 +82,18 @@ export function CountryProvider({ children }: { children: React.ReactNode }) {
 
   const setCountry = useCallback((c: CountryCode) => {
     setCountryState(c);
-    AsyncStorage.setItem(KEY, c);
+    AsyncStorage.setItem(KEY, c).catch(console.warn);
   }, []);
 
-  const config = getConfig(country);
+  const config = useMemo(() => getConfig(country), [country]);
+
+  const value = useMemo(
+    () => ({ country, config, setCountry, countryLoaded }),
+    [country, config, setCountry, countryLoaded],
+  );
 
   return (
-    <CountryContext.Provider value={{ country, config, setCountry, countryLoaded }}>
+    <CountryContext.Provider value={value}>
       {children}
     </CountryContext.Provider>
   );

@@ -9,16 +9,16 @@ interface BiometricContextType {
   enabled: boolean;
   authenticated: boolean;
   ready: boolean;
-  setEnabled: (val: boolean) => void;
-  authenticate: () => Promise<void>;
+  setEnabled: (val: boolean) => Promise<void>;
+  authenticate: () => Promise<boolean>;
 }
 
 const BiometricContext = createContext<BiometricContextType>({
   enabled: false,
   authenticated: true,
   ready: false,
-  setEnabled: () => {},
-  authenticate: async () => {},
+  setEnabled: async () => {},
+  authenticate: async () => false,
 });
 
 export function BiometricProvider({ children }: { children: React.ReactNode }) {
@@ -36,17 +36,22 @@ export function BiometricProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  const authenticate = useCallback(async () => {
+  const authenticate = useCallback(async (): Promise<boolean> => {
     try {
       const result = await LocalAuthentication.authenticateAsync({
         promptMessage: 'Authenticate to access your ID',
         fallbackLabel: 'Use passcode',
         cancelLabel: 'Cancel',
       });
-      if (result.success) setAuthenticated(true);
+      if (result.success) {
+        setAuthenticated(true);
+        return true;
+      }
+      return false;
     } catch {
-      // Hardware unavailable — unlock anyway
-      setAuthenticated(true);
+      // Hardware unavailable — deny access for security
+      setAuthenticated(false);
+      return false;
     }
   }, []);
 
@@ -59,6 +64,8 @@ export function BiometricProvider({ children }: { children: React.ReactNode }) {
   // Lock when app goes to background, re-prompt when it returns
   // Grace period: brief backgrounding (image picker, camera, share sheet) doesn't lock
   const bgTimestamp = useRef(0);
+  const enabledRef = useRef(enabled);
+  enabledRef.current = enabled;
   const GRACE_MS = 30000; // 30 seconds — covers image picker, camera, crop, share sheet
 
   useEffect(() => {
@@ -66,7 +73,7 @@ export function BiometricProvider({ children }: { children: React.ReactNode }) {
       const prev = appStateRef.current;
       appStateRef.current = nextState;
 
-      if (!enabled) return;
+      if (!enabledRef.current) return;
 
       if (prev === 'active' && nextState.match(/inactive|background/)) {
         bgTimestamp.current = Date.now();
@@ -79,7 +86,7 @@ export function BiometricProvider({ children }: { children: React.ReactNode }) {
       }
     });
     return () => sub.remove();
-  }, [enabled, authenticate]);
+  }, [authenticate]);
 
   const setEnabled = useCallback(async (val: boolean) => {
     if (!val) {
@@ -100,9 +107,6 @@ export function BiometricProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // Optimistically show switch ON
-    setEnabledState(true);
-
     try {
       const result = await LocalAuthentication.authenticateAsync({
         promptMessage: 'Authenticate to enable biometric lock',
@@ -111,14 +115,14 @@ export function BiometricProvider({ children }: { children: React.ReactNode }) {
       });
 
       if (!result.success) {
-        setEnabledState(false);
         return;
       }
     } catch {
-      setEnabledState(false);
       return;
     }
 
+    // Only update state after confirmed successful authentication
+    setEnabledState(true);
     await AsyncStorage.setItem(STORAGE_KEY, 'true');
     setAuthenticated(true);
   }, []);

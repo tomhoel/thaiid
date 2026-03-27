@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { StyleSheet, View, Text, Pressable, Modal, ScrollView, Dimensions } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
@@ -20,6 +20,22 @@ const YEARS = Array.from({ length: 100 }, (_, i) => (currentYear - 80 + i).toStr
 
 const ITEM_HEIGHT = 44;
 
+/** Return the maximum valid day for a given month (1-indexed) and year. */
+function maxDayForMonth(monthStr: string, yearStr: string): number {
+  const mIdx = MONTHS.indexOf(monthStr);
+  if (mIdx === -1) return 31;
+  // Use Date overflow trick: day 0 of next month = last day of current month
+  const y = parseInt(yearStr, 10) || 2000;
+  return new Date(y, mIdx + 1, 0).getDate();
+}
+
+/** Clamp a day string to the max valid day for the given month/year. */
+function clampDay(dayStr: string, monthStr: string, yearStr: string): string {
+  const d = parseInt(dayStr, 10) || 1;
+  const max = maxDayForMonth(monthStr, yearStr);
+  return Math.min(d, max).toString();
+}
+
 export default function ModernDatePicker({ visible, value, onClose, onApply, title = "Select Date" }: ModernDatePickerProps) {
   const [day, setDay] = useState('1');
   const [month, setMonth] = useState('Jan');
@@ -32,33 +48,80 @@ export default function ModernDatePicker({ visible, value, onClose, onApply, tit
   const { colors: Colors } = useTheme();
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
 
+  /** Scroll a ScrollView ref so that the item at `index` is centered in the selection band. */
+  const scrollToIndex = useCallback((ref: React.RefObject<ScrollView | null>, index: number) => {
+    if (index >= 0) {
+      ref.current?.scrollTo({ y: index * ITEM_HEIGHT, animated: true });
+    }
+  }, []);
+
+  // When month or year changes, clamp the day if it exceeds the max for that month/year
+  useEffect(() => {
+    const clamped = clampDay(day, month, year);
+    if (clamped !== day) {
+      setDay(clamped);
+      const dIdx = DAYS.indexOf(clamped);
+      scrollToIndex(dayRef, dIdx);
+    }
+  }, [month, year]); // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     if (visible && value) {
       const parts = value.split(' ');
       if (parts.length === 3) {
-        setDay(parts[0]);
-        setMonth(parts[1].replace('.', '')); // strip period — internal state uses "Dec" not "Dec."
-        setYear(parts[2]);
+        const parsedMonth = parts[1].replace('.', '');
+        const parsedYear = parts[2];
+        const parsedDay = clampDay(parts[0], parsedMonth, parsedYear);
 
-        setTimeout(() => {
-          const dIdx = DAYS.indexOf(parts[0]);
-          const mIdx = MONTHS.indexOf(parts[1].replace('.', ''));
-          const yIdx = YEARS.indexOf(parts[2]);
+        setDay(parsedDay);
+        setMonth(parsedMonth); // strip period -- internal state uses "Dec" not "Dec."
+        setYear(parsedYear);
+
+        const timer = setTimeout(() => {
+          const dIdx = DAYS.indexOf(parsedDay);
+          const mIdx = MONTHS.indexOf(parsedMonth);
+          const yIdx = YEARS.indexOf(parsedYear);
 
           if (dIdx !== -1) dayRef.current?.scrollTo({ y: dIdx * ITEM_HEIGHT, animated: false });
           if (mIdx !== -1) monthRef.current?.scrollTo({ y: mIdx * ITEM_HEIGHT, animated: false });
           if (yIdx !== -1) yearRef.current?.scrollTo({ y: yIdx * ITEM_HEIGHT, animated: false });
         }, 50);
+        return () => clearTimeout(timer);
       }
     }
   }, [visible, value]);
 
   const handleApply = () => {
-    onApply(`${day} ${month}. ${year}`); // always output "Dec." format to match stored data
+    // Final clamp before emitting — safety net
+    const safeDay = clampDay(day, month, year);
+    onApply(`${safeDay} ${month}. ${year}`); // always output "Dec." format to match stored data
     onClose();
   };
 
-  const renderColumn = (data: string[], selectedValue: string, onSelect: (val: string) => void, svRef: React.RefObject<ScrollView | null>) => {
+  const handleDaySelect = useCallback((val: string) => {
+    setDay(val);
+    const idx = DAYS.indexOf(val);
+    scrollToIndex(dayRef, idx);
+  }, [scrollToIndex]);
+
+  const handleMonthSelect = useCallback((val: string) => {
+    setMonth(val);
+    const idx = MONTHS.indexOf(val);
+    scrollToIndex(monthRef, idx);
+  }, [scrollToIndex]);
+
+  const handleYearSelect = useCallback((val: string) => {
+    setYear(val);
+    const idx = YEARS.indexOf(val);
+    scrollToIndex(yearRef, idx);
+  }, [scrollToIndex]);
+
+  const renderColumn = (
+    data: string[],
+    selectedValue: string,
+    onSelect: (val: string) => void,
+    svRef: React.RefObject<ScrollView | null>,
+  ) => {
     return (
       <View style={styles.columnContainer}>
         {/* Selection Indicator Mask */}
@@ -111,9 +174,9 @@ export default function ModernDatePicker({ visible, value, onClose, onApply, tit
           </View>
 
           <View style={styles.pickerMain}>
-             {renderColumn(DAYS, day, setDay, dayRef)}
-             {renderColumn(MONTHS, month, setMonth, monthRef)}
-             {renderColumn(YEARS, year, setYear, yearRef)}
+             {renderColumn(DAYS, day, handleDaySelect, dayRef)}
+             {renderColumn(MONTHS, month, handleMonthSelect, monthRef)}
+             {renderColumn(YEARS, year, handleYearSelect, yearRef)}
           </View>
 
           <Pressable style={styles.applyBtn} onPress={handleApply}>

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { StyleSheet, View, Text, Image, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
@@ -10,7 +10,7 @@ interface Props {
   sub: string;
 }
 
-export default function ScreenHeader({ title, sub }: Props) {
+export default memo(function ScreenHeader({ title, sub }: Props) {
   const { top } = useSafeAreaInsets();
   const { colors } = useTheme();
   const { lang, toggle, secondaryLangLabel } = useLang();
@@ -39,7 +39,7 @@ export default function ScreenHeader({ title, sub }: Props) {
       </Pressable>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   bar: {

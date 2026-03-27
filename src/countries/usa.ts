@@ -7,7 +7,7 @@ function toUsDate(en: string): string {
     Jan: '01', Feb: '02', Mar: '03', Apr: '04', May: '05', Jun: '06',
     Jul: '07', Aug: '08', Sep: '09', Oct: '10', Nov: '11', Dec: '12',
   };
-  const parts = en.replace('.', '').split(' ');
+  const parts = en.replace(/\./g, '').split(' ');
   if (parts.length !== 3) return en;
   return `${months[parts[1]] ?? '01'}/${parts[0].padStart(2, '0')}/${parts[2]}`;
 }
@@ -22,6 +22,7 @@ export const USA_CONFIG: CountryConfig = {
   systemReference: 'US-NYC-IDNYC',
   chipSerial: 'NYC-3B8F-7E21-A4D6',
   cardDescription: 'NYC IDNYC Identification Card',
+  cardPromptHint: 'This is a horizontal NYC IDNYC municipal ID card. The portrait photo is on the LEFT side. Text fields (name, dates) are on the RIGHT side. The card has a blue header with the NYC skyline silhouette and the Statue of Liberty. Note: the layout is REVERSED from most ID cards — photo is LEFT, text is RIGHT.',
 
   emblemAsset: require('../../assets/us-emblem.png'),
   cardImages: {
@@ -40,7 +41,7 @@ export const USA_CONFIG: CountryConfig = {
   holoStripSide: 'right',
   holoStripOffset: 0.06,
 
-  addressFormatter: (data: any, lang: string) => {
+  addressFormatter: (data: Record<string, any>, lang: string) => {
     if (lang === 'en') {
       return `${data.addressNumber} ${data.subDistrict}, ${data.district}, NY ${data.province}`;
     }
@@ -69,6 +70,7 @@ export const USA_CONFIG: CountryConfig = {
     'header.title': { en: 'NYC ID Card', es: 'Tarjeta de ID NYC' },
     'header.sub': { en: 'Tarjeta de Identificación', es: 'NYC Identification Card' },
     'card.flipHint': { en: 'Tap card to flip', es: 'Toca para voltear' },
+    'card.updated': { en: 'ID Card Updated', es: 'Tarjeta Actualizada' },
     'section.cardholder': { en: 'Cardholder', es: 'Titular' },
     'section.cardInfo': { en: 'Card Information', es: 'Información de Tarjeta' },
     'section.qrDetails': { en: 'QR Details', es: 'Detalles QR' },
@@ -116,7 +118,7 @@ export const USA_CONFIG: CountryConfig = {
     'settings.dark': { en: 'Dark', es: 'Oscuro' },
     'tab.identity': { en: 'Identity', es: 'Identidad' },
     'tab.qr': { en: 'QR Code', es: 'Código QR' },
-    'tab.settings': { en: 'Settings', es: 'Ajustes' },
+    'tab.settings': { en: 'Settings', es: 'Configuración' },
     'lock.title': { en: 'NYC ID Card', es: 'Tarjeta de ID NYC' },
     'lock.message': { en: 'Authentication required\nto access your ID card', es: 'Se requiere autenticación\npara acceder a su tarjeta' },
     'lock.button': { en: 'Authenticate', es: 'Autenticar' },
@@ -133,6 +135,21 @@ export const USA_CONFIG: CountryConfig = {
     'expanded.na': { en: 'N/A', es: 'N/D' },
     'expanded.genValue': { en: 'Gen 2 · Smart Card', es: 'Gen 2 · Tarjeta Inteligente' },
     'expanded.interfaceValue': { en: 'Contact + NFC', es: 'Contacto + NFC' },
+    'details.cardDetails': { en: 'Card Details', es: 'Detalles de la Tarjeta' },
+    'details.personal': { en: 'Personal', es: 'Personal' },
+    'details.identification': { en: 'Identification', es: 'Identificacion' },
+    'details.validity': { en: 'Validity', es: 'Vigencia' },
+    'details.name': { en: 'Name', es: 'Nombre' },
+    'details.dob': { en: 'Date of Birth', es: 'Fecha de Nacimiento' },
+    'details.idNumber': { en: 'ID Number', es: 'Numero de ID' },
+    'details.reference': { en: 'Reference', es: 'Referencia' },
+    'details.subDistrict': { en: 'Street', es: 'Calle' },
+    'details.issued': { en: 'Issued', es: 'Emitido' },
+    'details.expires': { en: 'Expires', es: 'Vence' },
+    'details.status': { en: 'Status', es: 'Estado' },
+    'details.statusActive': { en: 'Active', es: 'Activo' },
+    'details.statusExpiring': { en: 'Expiring Soon', es: 'Por Vencer' },
+    'details.statusExpired': { en: 'Expired', es: 'Vencido' },
     'attribution.dept': { en: 'HUMAN RESOURCES ADMINISTRATION', es: 'ADMINISTRACIÓN DE RECURSOS HUMANOS' },
     'attribution.note': { en: 'Authorized municipal identification application\nFor official use only', es: 'Aplicación autorizada de identificación municipal\nPara uso oficial solamente' },
   },

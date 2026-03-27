@@ -7,7 +7,7 @@ function toSgDate(en: string): string {
     Jan: '01', Feb: '02', Mar: '03', Apr: '04', May: '05', Jun: '06',
     Jul: '07', Aug: '08', Sep: '09', Oct: '10', Nov: '11', Dec: '12',
   };
-  const parts = en.replace('.', '').split(' ');
+  const parts = en.replace(/\./g, '').split(' ');
   if (parts.length !== 3) return en;
   return `${parts[0].padStart(2, '0')}/${months[parts[1]] ?? '01'}/${parts[2]}`;
 }
@@ -22,6 +22,7 @@ export const SINGAPORE_CONFIG: CountryConfig = {
   systemReference: 'SG-ICA-NRIC',
   chipSerial: 'SGC-8E3F-2A17-B5C4',
   cardDescription: 'Singapore NRIC card',
+  cardPromptHint: 'This is a horizontal NRIC card. The portrait photo is on the RIGHT side. Text fields (name, race, dates) are on the LEFT side. The card has a red gradient header bar and light grey body. There is a chip on the lower left.',
 
   emblemAsset: require('../../assets/sg-emblem.png'),
   cardImages: {
@@ -40,7 +41,7 @@ export const SINGAPORE_CONFIG: CountryConfig = {
   holoStripSide: 'right',
   holoStripOffset: 0.06,
 
-  addressFormatter: (data: any, lang: string) => {
+  addressFormatter: (data: Record<string, any>, lang: string) => {
     if (lang === 'en') {
       return `Blk ${data.addressNumber}, ${data.subDistrict}, ${data.district}, Singapore ${data.province}`;
     }
@@ -51,6 +52,7 @@ export const SINGAPORE_CONFIG: CountryConfig = {
     'header.title': { en: 'Singapore NRIC', zh: '新加坡身份证' },
     'header.sub': { en: '新加坡身份证', zh: 'Singapore NRIC' },
     'card.flipHint': { en: 'Tap card to flip', zh: '点击翻转' },
+    'card.updated': { en: 'ID Card Updated', zh: '身份证已更新' },
     'section.cardholder': { en: 'Cardholder', zh: '持卡人' },
     'section.cardInfo': { en: 'Card Information', zh: '卡片信息' },
     'section.qrDetails': { en: 'QR Details', zh: 'QR 详情' },
@@ -96,7 +98,7 @@ export const SINGAPORE_CONFIG: CountryConfig = {
     'settings.privacyPolicy': { en: 'Privacy', zh: '隐私政策' },
     'settings.support': { en: 'Support', zh: '支持' },
     'settings.dark': { en: 'Dark', zh: '暗色' },
-    'tab.identity': { en: 'Identity', zh: '身份' },
+    'tab.identity': { en: 'Identity', zh: '身份证' },
     'tab.qr': { en: 'QR Code', zh: '二维码' },
     'tab.settings': { en: 'Settings', zh: '设置' },
     'lock.title': { en: 'Singapore NRIC', zh: '新加坡身份证' },
@@ -115,6 +117,21 @@ export const SINGAPORE_CONFIG: CountryConfig = {
     'expanded.na': { en: 'N/A', zh: '无' },
     'expanded.genValue': { en: 'Gen 5 · Smart Card', zh: '第5代 · 智能卡' },
     'expanded.interfaceValue': { en: 'Contact + NFC', zh: '接触 + NFC' },
+    'details.cardDetails': { en: 'Card Details', zh: '卡片详情' },
+    'details.personal': { en: 'Personal', zh: '个人信息' },
+    'details.identification': { en: 'Identification', zh: '身份识别' },
+    'details.validity': { en: 'Validity', zh: '有效期' },
+    'details.name': { en: 'Name', zh: '姓名' },
+    'details.dob': { en: 'Date of Birth', zh: '出生日期' },
+    'details.idNumber': { en: 'NRIC Number', zh: '身份证号码' },
+    'details.reference': { en: 'Reference', zh: '参考编号' },
+    'details.subDistrict': { en: 'Street', zh: '街道' },
+    'details.issued': { en: 'Issued', zh: '签发' },
+    'details.expires': { en: 'Expires', zh: '到期' },
+    'details.status': { en: 'Status', zh: '状态' },
+    'details.statusActive': { en: 'Active', zh: '有效' },
+    'details.statusExpiring': { en: 'Expiring Soon', zh: '即将到期' },
+    'details.statusExpired': { en: 'Expired', zh: '已过期' },
     'attribution.dept': { en: 'IMMIGRATION & CHECKPOINTS AUTHORITY', zh: '移民与关卡局' },
     'attribution.note': { en: 'Authorized digital identification application\nFor official use only', zh: '官方授权数字身份验证应用\nAuthorized digital identification application' },
   },
@@ -146,7 +163,7 @@ export const SINGAPORE_CONFIG: CountryConfig = {
     namePrefix: 'Mr.',
     firstName: 'Wei Liang',
     lastName: 'Tan',
-    fullNameEnglish: 'Mr. Marcus Tan Wei Liang',
+    fullNameEnglish: 'Mr. Tan Wei Liang',
     dateOfBirthThai: '27/12/1996',
     dateOfBirth: '27 Dec. 1996',
     addressThai: 'Blk 65, Orchard Rd, #02-03, Singapore 238839',

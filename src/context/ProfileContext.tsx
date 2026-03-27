@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCountry } from './CountryContext';
 
@@ -36,12 +36,15 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         if (legacy && !thExists) {
           await AsyncStorage.setItem(thKey, legacy);
         }
-      } catch {}
+      } catch (e) {
+        console.warn('Legacy migration failed:', e);
+      }
     })();
   }, []);
 
   // Load profile whenever country changes
   useEffect(() => {
+    let stale = false;
     countryRef.current = country;
     setReady(false);
 
@@ -50,11 +53,12 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
 
     AsyncStorage.getItem(key)
       .then(saved => {
-        // Guard against stale async if country changed again
-        if (countryRef.current !== country) return;
+        if (stale) return;
         if (saved) {
           try {
-            setProfile(JSON.parse(saved));
+            const loaded = JSON.parse(saved);
+            const merged = { ...defaults, ...loaded };
+            setProfile(merged);
           } catch {
             setProfile(defaults);
           }
@@ -63,17 +67,20 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         }
       })
       .finally(() => {
-        if (countryRef.current === country) setReady(true);
+        if (!stale) setReady(true);
       });
+
+    return () => { stale = true; };
   }, [country, config]);
 
-  const updateProfile = (updates: Partial<ProfileType>) => {
-    setProfile(prev => {
-      const next = { ...prev, ...updates };
-      AsyncStorage.setItem(storageKey(country), JSON.stringify(next));
-      return next;
-    });
-  };
+  const profileRef = useRef(profile);
+  profileRef.current = profile;
+
+  const updateProfile = useCallback((updates: Partial<ProfileType>) => {
+    const next = { ...profileRef.current, ...updates };
+    setProfile(next);
+    AsyncStorage.setItem(storageKey(countryRef.current), JSON.stringify(next)).catch(console.warn);
+  }, []);
 
   return (
     <ProfileContext.Provider value={{ profile, updateProfile, isGenerating, setGenerating, ready }}>

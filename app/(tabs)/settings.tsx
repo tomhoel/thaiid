@@ -1,11 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { StyleSheet, View, Text, Pressable, Switch, Platform, TextInput, ScrollView, Modal, Image, Alert } from 'react-native';
 import { BlurView } from 'expo-blur';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { CARD_TEMPLATE_BASE64 } from '../../src/constants/cardTemplate';
-import { SG_CARD_TEMPLATE_BASE64 } from '../../src/constants/sgCardTemplate';
-import { BR_CARD_TEMPLATE_BASE64 } from '../../src/constants/brCardTemplate';
-import { US_CARD_TEMPLATE_BASE64 } from '../../src/constants/usCardTemplate';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import ModernDatePicker from '../../src/components/ModernDatePicker';
@@ -19,6 +15,16 @@ import { useCountry } from '../../src/context/CountryContext';
 import NationalEmblem from '../../src/components/NationalEmblem';
 import Constants from 'expo-constants';
 import { setAppIcon } from '../../src/modules/DynamicIcon';
+import { saveCardImage, savePortraitImage, clearCardImages } from '../../src/utils/cardImageStore';
+
+function getCardTemplate(countryCode: string): string {
+  switch (countryCode) {
+    case 'SG': return require('../../src/constants/sgCardTemplate').SG_CARD_TEMPLATE_BASE64;
+    case 'BR': return require('../../src/constants/brCardTemplate').BR_CARD_TEMPLATE_BASE64;
+    case 'US': return require('../../src/constants/usCardTemplate').US_CARD_TEMPLATE_BASE64;
+    default: return require('../../src/constants/cardTemplate').CARD_TEMPLATE_BASE64;
+  }
+}
 
 function Item({ icon, label, value, toggle, onToggle, last, onPress, colors, styles }: {
   icon: keyof typeof Ionicons.glyphMap; label: string; value?: string;
@@ -66,11 +72,37 @@ export default function SettingsScreen() {
   const { enabled: bio, setEnabled: setBio } = useBiometric();
   const { theme, setTheme, colors: Colors } = useTheme();
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
-  const [notif, setNotif] = useState(true);
   const [showDemoModal, setShowDemoModal] = useState(false);
   const [syncAll, setSyncAll] = useState(false);
+  const [notif, setNotif] = useState(true);
+
+  // Load persisted preferences on mount
+  useEffect(() => {
+    (async () => {
+      try {
+        const [savedNotif, savedSync] = await Promise.all([
+          AsyncStorage.getItem('@notifications'),
+          AsyncStorage.getItem('@sync_all'),
+        ]);
+        if (savedNotif !== null) setNotif(savedNotif === 'true');
+        if (savedSync !== null) setSyncAll(savedSync === 'true');
+      } catch (e) { console.warn('[Settings] load prefs', e); }
+    })();
+  }, []);
+
+  const handleToggleNotif = async (v: boolean) => {
+    setNotif(v);
+    try { await AsyncStorage.setItem('@notifications', String(v)); } catch {}
+  };
+
+  const handleToggleSyncAll = async (v: boolean) => {
+    setSyncAll(v);
+    try { await AsyncStorage.setItem('@sync_all', String(v)); } catch {}
+  };
   const [picker, setPicker] = useState<{ title: string; options: { key: string; label: string; icon?: string }[]; selected: string; onSelect: (key: string) => void } | null>(null);
   const { profile: cardData, updateProfile, isGenerating, setGenerating } = useProfile();
+  const cardDataRef = useRef(cardData);
+  useEffect(() => { cardDataRef.current = cardData; }, [cardData]);
   const [tempData, setTempData] = useState(cardData);
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
   const [selectedPhotoMime, setSelectedPhotoMime] = useState<string | null>(null);
@@ -78,16 +110,14 @@ export default function SettingsScreen() {
 
   const handleOpenDemo = () => {
     setTempData(cardData);
-    setSelectedPhoto(null);
-    setSelectedPhotoMime(null);
     setShowDemoModal(true);
   };
 
   const handleDateChange = (formatted: string) => {
     const thai = config.dateFormat.toLocal(formatted);
-    if (showDatePicker === 'dob') setTempData({ ...tempData, dateOfBirth: formatted, dateOfBirthThai: thai });
-    if (showDatePicker === 'issue') setTempData({ ...tempData, dateOfIssue: formatted, dateOfIssueThai: thai });
-    if (showDatePicker === 'expiry') setTempData({ ...tempData, dateOfExpiry: formatted, dateOfExpiryThai: thai });
+    if (showDatePicker === 'dob') setTempData(prev => ({ ...prev, dateOfBirth: formatted, dateOfBirthThai: thai }));
+    if (showDatePicker === 'issue') setTempData(prev => ({ ...prev, dateOfIssue: formatted, dateOfIssueThai: thai }));
+    if (showDatePicker === 'expiry') setTempData(prev => ({ ...prev, dateOfExpiry: formatted, dateOfExpiryThai: thai }));
     setShowDatePicker(null);
   };
 
@@ -115,7 +145,7 @@ export default function SettingsScreen() {
   // Sync shared fields to all other countries
   const syncSharedToOthers = async (updates: Record<string, any>) => {
     if (!syncAll) return;
-    const sharedKeys = ['dateOfBirth', 'dateOfBirthThai', 'dateOfIssue', 'dateOfIssueThai', 'dateOfExpiry', 'dateOfExpiryThai', 'pictureUri', 'cardFrontUri'];
+    const sharedKeys = ['dateOfBirth', 'dateOfBirthThai', 'dateOfIssue', 'dateOfIssueThai', 'dateOfExpiry', 'dateOfExpiryThai', 'pictureUri'];
     const shared: Record<string, any> = {};
     for (const k of sharedKeys) {
       if (k in updates) shared[k] = updates[k];
@@ -146,8 +176,27 @@ export default function SettingsScreen() {
     }
   };
 
-  const handleRevert = () => {
-    updateProfile({ ...config.defaultCardData, pictureUri: undefined, cardFrontUri: undefined });
+  const handleRevert = async () => {
+    // Clear saved card image files
+    await clearCardImages().catch(console.warn);
+    // Reset current country
+    updateProfile({ ...config.defaultCardData, cardFrontUri: undefined, pictureUri: config.defaultCardData.pictureUri });
+
+    // Reset all other countries too
+    const allCodes = ['TH', 'SG', 'BR', 'US'];
+    const configs: Record<string, any> = {
+      TH: require('../../src/countries/thailand').THAILAND_CONFIG,
+      SG: require('../../src/countries/singapore').SINGAPORE_CONFIG,
+      BR: require('../../src/countries/brazil').BRAZIL_CONFIG,
+      US: require('../../src/countries/usa').USA_CONFIG,
+    };
+    for (const code of allCodes) {
+      if (code === country) continue;
+      const key = `profile_data_${code}`;
+      const defaults = configs[code].defaultCardData;
+      await AsyncStorage.setItem(key, JSON.stringify({ ...defaults })).catch(console.warn);
+    }
+
     setShowDemoModal(false);
   };
 
@@ -163,112 +212,168 @@ export default function SettingsScreen() {
     const photoMime = selectedPhotoMime;
 
     updateProfile({ ...snap });
-    syncSharedToOthers(snap);
+    const { pictureUri: _p, cardFrontUri: _c, ...snapWithoutImages } = snap;
     setShowDemoModal(false);
     setGenerating(true);
 
     (async () => {
       try {
+        // Await sync so AsyncStorage has updated dates before generation reads them
+        await syncSharedToOthers(snapWithoutImages);
+
+        const savedData = cardDataRef.current;
         const hasTextChanges =
-          snap.fullNameEnglish !== cardData.fullNameEnglish ||
-          snap.dateOfBirth !== cardData.dateOfBirth ||
-          snap.dateOfIssue !== cardData.dateOfIssue ||
-          snap.dateOfExpiry !== cardData.dateOfExpiry;
+          snap.fullNameEnglish !== savedData.fullNameEnglish ||
+          snap.dateOfBirth !== savedData.dateOfBirth ||
+          snap.dateOfIssue !== savedData.dateOfIssue ||
+          snap.dateOfExpiry !== savedData.dateOfExpiry;
 
-        const templateBase64 = country === 'TH' ? CARD_TEMPLATE_BASE64 : country === 'SG' ? SG_CARD_TEMPLATE_BASE64 : country === 'BR' ? BR_CARD_TEMPLATE_BASE64 : US_CARD_TEMPLATE_BASE64;
-        let finalParts: any[] = [
-          { inlineData: { mimeType: "image/png", data: templateBase64 } }
-        ];
-
-        let finalPrompt: string;
-
-        if (photo && !hasTextChanges) {
-          // Photo-only change — don't touch text at all
-          finalPrompt = `Edit this ${config.cardDescription} image. ONLY replace the portrait photograph on the right side of the card with the person from the SECOND image. Crop and fit the new face naturally into the existing photo area. CRITICAL: Do NOT alter, redraw, or modify ANY text, numbers, dates, fonts, or colors anywhere on the card. Every single character must remain pixel-perfect identical to the original. Only the portrait photo area changes.`;
-          finalParts.push({ inlineData: { mimeType: photoMime || 'image/jpeg', data: photo } });
-        } else if (photo && hasTextChanges) {
-          // Both photo and text changes
-          finalPrompt = `Edit this ${config.cardDescription} image. Make these specific changes ONLY:
-1. Replace the portrait photograph on the right side with the person from the SECOND image, cropped to fit the photo area naturally.
-2. Replace ONLY these text fields with new values — match the EXACT original font, size, weight, color, and position for each field:
-   - English name: ${snap.fullNameEnglish}
-   - Date of Birth: ${snap.dateOfBirth}
-   - Date of Issue: ${snap.dateOfIssue}
-   - Date of Expiry: ${snap.dateOfExpiry}
-CRITICAL: All other text, numbers, logos, the national emblem, background patterns, card gradient, chip, and height measurement lines must remain COMPLETELY UNCHANGED. Do not redraw or re-render any element that is not listed above.`;
-          finalParts.push({ inlineData: { mimeType: photoMime || 'image/jpeg', data: photo } });
-        } else {
-          // Text-only changes — no photo change
-          finalPrompt = `Edit this ${config.cardDescription} image. Replace ONLY these specific text fields with new values — you MUST match the EXACT original font typeface, size, weight, color, and pixel position for each field:
-   - English name: ${snap.fullNameEnglish}
-   - Date of Birth: ${snap.dateOfBirth}
-   - Date of Issue: ${snap.dateOfIssue}
-   - Date of Expiry: ${snap.dateOfExpiry}
-CRITICAL: Everything else on the card must remain PIXEL-PERFECT identical — the portrait photo, all non-English text, ID number, national emblem, background gradient, chip, patterns, and all other elements. Only the 4 fields listed above should change.`;
-        }
-
-        finalParts.push({ text: finalPrompt });
-
-        const response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image-preview:generateContent?key=${apiKey}`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contents: [{ role: "user", parts: finalParts }],
-              generationConfig: { responseModalities: ["TEXT", "IMAGE"] }
-            })
-          }
-        );
-        const data = await response.json();
-
-        if (!response.ok) {
-          Alert.alert('Generation Failed', data.error?.message || `HTTP ${response.status}`);
-          return;
-        }
-
-        let newCardFrontUri = snap.cardFrontUri;
-        let newFaceUri: string | undefined = snap.pictureUri;
-
-        if (data.candidates?.[0]?.content?.parts) {
-          const inlinePart = data.candidates[0].content.parts.find((p: any) => p.inlineData);
-          if (inlinePart?.inlineData?.data) {
-            newCardFrontUri = `data:${inlinePart.inlineData.mimeType || 'image/png'};base64,${inlinePart.inlineData.data}`;
-          }
-        }
-
-        const faceSource = photo
-          ? { mimeType: photoMime || 'image/jpeg', data: photo }
-          : newCardFrontUri
-            ? { mimeType: newCardFrontUri.split(';')[0].split(':')[1], data: newCardFrontUri.split(',')[1] }
-            : null;
-
-        if (faceSource) {
-          try {
-            const faceResp = await fetch(
-              `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image-preview:generateContent?key=${apiKey}`,
-              {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  contents: [{ role: 'user', parts: [
-                    { inlineData: faceSource },
-                    { text: 'Create a clean passport-style portrait from this image. Crop tightly to the face and shoulders, center the face perfectly in the frame, and replace the entire background with a plain white background. Remove all text, watermarks, card elements, and any objects that are not the person. The face must be centered and fill most of the frame.' },
-                  ]}],
-                  generationConfig: { responseModalities: ['TEXT', 'IMAGE'] },
-                }),
-              }
-            );
-            const faceData = await faceResp.json();
-            const facePart = faceData.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData);
-            if (facePart?.inlineData?.data) {
-              newFaceUri = `data:${facePart.inlineData.mimeType || 'image/png'};base64,${facePart.inlineData.data}`;
+        // Helper: call Gemini with retry on rate limit
+        const callGemini = async (parts: any[], attempt = 1): Promise<any> => {
+          const resp = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent`,
+            {
+              method: 'POST',
+              headers: { 'x-goog-api-key': apiKey, 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                contents: [{ role: 'user', parts }],
+                generationConfig: { responseModalities: ['TEXT', 'IMAGE'] },
+              }),
             }
-          } catch (e) { console.warn('[FaceExtract]', e); }
-        }
+          );
+          const json = await resp.json();
+          if (!resp.ok) {
+            const errMsg = json.error?.message || `HTTP ${resp.status}`;
+            const errCode = json.error?.code || resp.status;
+            console.warn(`[Gemini] Error ${errCode} (attempt ${attempt}):`, errMsg);
+            if (attempt < 3 && (resp.status === 429 || resp.status >= 500)) {
+              const delay = resp.status === 429 ? 5000 * attempt : 2000 * attempt;
+              console.log(`[Gemini] Retrying in ${delay}ms...`);
+              await new Promise(r => setTimeout(r, delay));
+              return callGemini(parts, attempt + 1);
+            }
+            throw new Error(errMsg);
+          }
+          return json;
+        };
 
-        updateProfile({ cardFrontUri: newCardFrontUri, pictureUri: newFaceUri });
-        syncSharedToOthers({ pictureUri: newFaceUri });
+        const extractImageUri = (data: any): string | null => {
+          const part = data.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData);
+          if (part?.inlineData?.data) return `data:${part.inlineData.mimeType || 'image/png'};base64,${part.inlineData.data}`;
+          return null;
+        };
+
+        // If user picked a photo, use it directly as the portrait (no face extraction needed)
+        // If no photo, keep the existing portrait
+        const portraitUri = photo
+          ? `data:${photoMime || 'image/jpeg'};base64,${photo}`
+          : snap.pictureUri;
+
+        // Build card generation parts for a given country
+        // Always uses the clean template + photo (if available) for consistent quality
+        const buildCardParts = (
+          templateBase64: string,
+          targetConfig: Record<string, any>,
+          profileData: Record<string, any>,
+        ) => {
+          const hasPhoto = !!photo;
+          const cardDesc = targetConfig.cardDescription;
+          const layoutHint = targetConfig.cardPromptHint || '';
+
+          const parts: any[] = [{ inlineData: { mimeType: 'image/png', data: templateBase64 } }];
+
+          // Always include the photo if available — ensures consistent portrait across edits
+          if (hasPhoto) {
+            parts.push({ inlineData: { mimeType: photoMime || 'image/jpeg', data: photo } });
+          }
+
+          let prompt: string;
+          if (hasPhoto) {
+            prompt = `Edit this ${cardDesc} image. ${layoutHint}
+
+Make these specific changes ONLY:
+1. Replace the portrait photograph with the person from the SECOND image, cropped to fit the photo area naturally.
+2. Replace ONLY these text fields — match the EXACT original font, size, weight, color, and position:
+   - English name: ${profileData.fullNameEnglish}
+   - Date of Birth: ${profileData.dateOfBirth}
+   - Date of Issue: ${profileData.dateOfIssue}
+   - Date of Expiry: ${profileData.dateOfExpiry}
+CRITICAL: All other text, numbers, logos, emblems, background patterns, gradient, chip, and other elements must remain COMPLETELY UNCHANGED. Do not redraw or re-render any element that is not listed above.`;
+          } else {
+            prompt = `Edit this ${cardDesc} image. ${layoutHint}
+
+Replace ONLY these text fields — match the EXACT original font, size, weight, color, and position:
+   - English name: ${profileData.fullNameEnglish}
+   - Date of Birth: ${profileData.dateOfBirth}
+   - Date of Issue: ${profileData.dateOfIssue}
+   - Date of Expiry: ${profileData.dateOfExpiry}
+CRITICAL: Everything else must remain PIXEL-PERFECT identical — portrait photo, all other text, ID number, emblems, background, chip, patterns. Only the 4 fields listed above should change.`;
+          }
+          parts.push({ text: prompt });
+          return parts;
+        };
+
+        // ── Generate ALL countries in parallel ──
+        const allCodes = ['TH', 'SG', 'BR', 'US'];
+        const allConfigs: Record<string, any> = {
+          TH: require('../../src/countries/thailand').THAILAND_CONFIG,
+          SG: require('../../src/countries/singapore').SINGAPORE_CONFIG,
+          BR: require('../../src/countries/brazil').BRAZIL_CONFIG,
+          US: require('../../src/countries/usa').USA_CONFIG,
+        };
+
+        // Current country generation
+        const currentGen = (async () => {
+          const parts = buildCardParts(
+            getCardTemplate(country),
+            config,
+            snap,
+          );
+          const data = await callGemini(parts);
+          const rawCardUri = extractImageUri(data);
+
+          // Save to file system instead of AsyncStorage
+          let cardFileUri = snap.cardFrontUri;
+          if (rawCardUri) cardFileUri = await saveCardImage(country, rawCardUri);
+
+          let portraitFileUri = portraitUri;
+          if (portraitUri?.startsWith('data:')) portraitFileUri = await savePortraitImage(country, portraitUri);
+
+          updateProfile({ cardFrontUri: cardFileUri, pictureUri: portraitFileUri });
+          if (portraitFileUri) syncSharedToOthers({ pictureUri: portraitFileUri });
+        })();
+
+        // Other countries generation — truly parallel, no waiting for current country
+        const otherGens = syncAll ? allCodes
+          .filter(c => c !== country)
+          .map((code) => (async () => {
+            const targetConfig = allConfigs[code];
+            const targetKey = `profile_data_${code}`;
+            const savedRaw = await AsyncStorage.getItem(targetKey);
+            const targetProfile = savedRaw ? JSON.parse(savedRaw) : { ...targetConfig.defaultCardData };
+
+            const parts = buildCardParts(
+              getCardTemplate(code),
+              targetConfig,
+              targetProfile,
+            );
+            console.log(`[SyncGen:${code}] Generating with DOB=${targetProfile.dateOfBirth}`);
+            const genData = await callGemini(parts);
+            const rawUri = extractImageUri(genData);
+            if (rawUri) {
+              // Save image to file system, store file path in AsyncStorage
+              const fileUri = await saveCardImage(code, rawUri);
+              console.log(`[SyncGen:${code}] Success`);
+              await AsyncStorage.setItem(targetKey, JSON.stringify({ ...targetProfile, cardFrontUri: fileUri }));
+            } else {
+              console.warn(`[SyncGen:${code}] No image returned`);
+            }
+          })().catch(e => console.warn(`[SyncGen:${code}] FAILED:`, e?.message || e)))
+          : [];
+
+        // Wait for ALL to complete
+        await Promise.all([currentGen, ...otherGens]);
+
       } catch (err: any) {
         Alert.alert('Generation Failed', err?.message || String(err));
       } finally {
@@ -316,14 +421,14 @@ CRITICAL: Everything else on the card must remain PIXEL-PERFECT identical — th
         {/* ── Security ── */}
         <Text style={styles.sectionLabel}>{t('settings.security')}</Text>
         <Item icon="finger-print-outline" label={t('settings.biometric')} toggle={bio} onToggle={setBio} colors={Colors} styles={styles} />
-        <Item icon="lock-closed-outline" label={t('settings.pin')} colors={Colors} styles={styles} />
-        <Item icon="eye-off-outline" label={t('settings.privacy')} last colors={Colors} styles={styles} />
+        <Item icon="lock-closed-outline" label={t('settings.pin')} onPress={() => Alert.alert('Coming Soon', 'This feature is not yet available.')} colors={Colors} styles={styles} />
+        <Item icon="eye-off-outline" label={t('settings.privacy')} last onPress={() => Alert.alert('Coming Soon', 'This feature is not yet available.')} colors={Colors} styles={styles} />
 
         <View style={styles.gap} />
 
         {/* ── Preferences ── */}
         <Text style={styles.sectionLabel}>{t('settings.preferences')}</Text>
-        <Item icon="notifications-outline" label={t('settings.notifications')} toggle={notif} onToggle={setNotif} colors={Colors} styles={styles} />
+        <Item icon="notifications-outline" label={t('settings.notifications')} toggle={notif} onToggle={handleToggleNotif} colors={Colors} styles={styles} />
         <Item icon="language-outline" label={t('settings.language')} value={lang === 'en' ? 'English' : config.secondaryLanguage.langName} onPress={() => setPicker({
           title: 'Language',
           options: [
@@ -463,12 +568,12 @@ CRITICAL: Everything else on the card must remain PIXEL-PERFECT identical — th
               </View>
 
               {/* Sync toggle */}
-              <Pressable style={styles.syncToggle} onPress={() => setSyncAll(!syncAll)}>
+              <Pressable style={styles.syncToggle} onPress={() => handleToggleSyncAll(!syncAll)}>
                 <View style={[styles.syncDot, syncAll && { backgroundColor: Colors.goldLight }]} />
                 <Text style={[styles.syncLabel, syncAll && { color: Colors.t1 }]}>Apply changes to all countries</Text>
                 <Switch
                   value={syncAll}
-                  onValueChange={setSyncAll}
+                  onValueChange={handleToggleSyncAll}
                   trackColor={{ false: Colors.b2, true: Colors.goldLight }}
                   thumbColor="#fff"
                   style={Platform.OS === 'android' ? { transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] } : undefined}

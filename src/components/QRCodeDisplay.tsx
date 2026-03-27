@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, memo } from 'react';
 import { View, StyleSheet } from 'react-native';
 import Svg, { Rect } from 'react-native-svg';
 import QRCodeLib from 'qrcode';
@@ -10,7 +10,7 @@ interface Props {
   bgColor?: string;
 }
 
-export default function QRCodeDisplay({
+export default memo(function QRCodeDisplay({
   value,
   size = 180,
   color = '#FFFFFF',
@@ -63,4 +63,4 @@ export default function QRCodeDisplay({
       </Svg>
     </View>
   );
-}
+});

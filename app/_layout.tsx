@@ -1,11 +1,12 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { View, Animated, StyleSheet } from 'react-native';
+import { View, Text, Pressable, Animated, StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as SystemUI from 'expo-system-ui';
 import { useFonts, IBMPlexMono_500Medium } from '@expo-google-fonts/ibm-plex-mono';
 import { Asset } from 'expo-asset';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
 import { BiometricProvider, useBiometric } from '../src/context/BiometricContext';
 import { ProfileProvider, useProfile } from '../src/context/ProfileContext';
@@ -13,6 +14,44 @@ import { ThemeProvider, ThemeAccentBridge, useTheme } from '../src/context/Theme
 import { CountryProvider, useCountry } from '../src/context/CountryContext';
 import LockScreen from '../src/components/LockScreen';
 import AppSplash from '../src/components/AppSplash';
+
+class ErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean; error: Error | null }
+> {
+  state = { hasError: false, error: null as Error | null };
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  handleReset = async () => {
+    await AsyncStorage.clear();
+    this.setState({ hasError: false, error: null });
+  };
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20, backgroundColor: '#0C1526' }}>
+          <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold', marginBottom: 10 }}>
+            Something went wrong
+          </Text>
+          <Text style={{ color: '#aaa', fontSize: 14, textAlign: 'center', marginBottom: 20 }}>
+            {this.state.error?.message}
+          </Text>
+          <Pressable
+            onPress={this.handleReset}
+            style={{ backgroundColor: '#2563EB', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8 }}
+          >
+            <Text style={{ color: '#fff', fontSize: 16 }}>Reset App</Text>
+          </Pressable>
+        </View>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 const SPLASH_MIN_MS = 800;
 
@@ -53,7 +92,7 @@ function AppShell() {
     Asset.loadAsync(preloadAssets)
       .then(() => setAssetsReady(true))
       .catch(() => setAssetsReady(true));
-  }, []);
+  }, [preloadAssets]);
 
   // Wait for auth to complete before revealing — biometric prompt fires during splash,
   // so the user authenticates behind the splash and goes straight to the main app
@@ -93,20 +132,22 @@ function AppShell() {
 
 export default function RootLayout() {
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <ThemeProvider>
-        <CountryProvider>
-          <ThemeAccentBridge>
-          <LanguageProvider>
-            <ProfileProvider>
-              <BiometricProvider>
-                <AppShell />
-              </BiometricProvider>
-            </ProfileProvider>
-          </LanguageProvider>
-          </ThemeAccentBridge>
-        </CountryProvider>
-      </ThemeProvider>
-    </GestureHandlerRootView>
+    <ErrorBoundary>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <ThemeProvider>
+          <CountryProvider>
+            <ThemeAccentBridge>
+            <LanguageProvider>
+              <ProfileProvider>
+                <BiometricProvider>
+                  <AppShell />
+                </BiometricProvider>
+              </ProfileProvider>
+            </LanguageProvider>
+            </ThemeAccentBridge>
+          </CountryProvider>
+        </ThemeProvider>
+      </GestureHandlerRootView>
+    </ErrorBoundary>
   );
 }

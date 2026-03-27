@@ -1,11 +1,12 @@
-import React, { useMemo, useEffect, useRef, useState } from 'react';
+import React, { memo, useMemo, useEffect, useRef } from 'react';
 import { StyleSheet, View, Text, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import Svg, { Image as SvgImage, Defs, Filter, FeColorMatrix, ClipPath, Circle } from 'react-native-svg';
-import Animated, { useSharedValue, useDerivedValue, useAnimatedStyle, withSpring, withDelay, withTiming, Easing, interpolate, Extrapolation, runOnJS } from 'react-native-reanimated';
+import Animated, { useSharedValue, useDerivedValue, useAnimatedStyle, withSpring, withDelay, withTiming, Easing, interpolate, Extrapolation } from 'react-native-reanimated';
 import { GestureDetector, Gesture } from 'react-native-gesture-handler';
+import { useRouter } from 'expo-router';
 import FlippableCard from '../../src/components/FlippableCard';
 import NationalEmblem from '../../src/components/NationalEmblem';
 import LivenessWatermark from '../../src/components/LivenessWatermark';
@@ -18,14 +19,13 @@ import { useTheme } from '../../src/context/ThemeContext';
 import { useCountry } from '../../src/context/CountryContext';
 import { type ColorPalette } from '../../src/constants/colors';
 import { useProfile } from '../../src/context/ProfileContext';
-import { CARD_TEMPLATE_BASE64 } from '../../src/constants/cardTemplate';
 import { useLang } from '../../src/i18n/LanguageContext';
 
 /* ── Helpers ──────────────────────────────────────────────────── */
 
 const PHOTO_SIZE = 52;
 
-function GrayPhoto({ uri, initials, C }: { uri?: string; initials: string; C: ColorPalette }) {
+const GrayPhoto = memo(function GrayPhoto({ uri, initials, C }: { uri?: string; initials: string; C: ColorPalette }) {
   const r = PHOTO_SIZE / 2;
   if (uri) {
     return (
@@ -50,10 +50,12 @@ function GrayPhoto({ uri, initials, C }: { uri?: string; initials: string; C: Co
       <Text style={{ fontSize: 17, fontWeight: '700', color: C.t3 }}>{initials}</Text>
     </View>
   );
-}
+});
 
-function CountryFlagBadge({ status: _ }: { status: 'valid' | 'expiring' | 'expired' }) {
+const CountryFlagBadge = memo(function CountryFlagBadge({ status }: { status: 'valid' | 'expiring' | 'expired' }) {
   const { config } = useCountry();
+  const { colors } = useTheme();
+  const dotColor = status === 'valid' ? colors.green : status === 'expiring' ? colors.orange : colors.red;
   return (
     <View style={{ alignItems: 'center', gap: 5 }}>
       <View style={{ width: 36, height: 24, borderRadius: 3, overflow: 'hidden', borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.12)' }}>
@@ -62,10 +64,15 @@ function CountryFlagBadge({ status: _ }: { status: 'valid' | 'expiring' | 'expir
           : config.code === 'BR' ? <BrazilFlag width={36} height={24} />
           : <USFlag width={36} height={24} />}
       </View>
-      <Text style={{ fontSize: 7, fontWeight: '700', color: '#D4AF37', letterSpacing: 0.3 }}>{config.flagLabel}</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+        {status !== 'valid' && (
+          <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: dotColor }} />
+        )}
+        <Text style={{ fontSize: 7, fontWeight: '700', color: '#D4AF37', letterSpacing: 0.3 }}>{config.flagLabel}</Text>
+      </View>
     </View>
   );
-}
+});
 
 function copyValue(val: string) {
   Clipboard.setStringAsync(val);
@@ -77,7 +84,7 @@ const MONTHS: Record<string, number> = {
 };
 
 function parseDateEn(s: string) {
-  const p = s.replace('.', '').split(' ');
+  const p = s.replace(/\./g, '').split(' ');
   return new Date(Number(p[2]), MONTHS[p[1]] ?? 0, Number(p[0]));
 }
 
@@ -89,8 +96,9 @@ function validityStatus(isValid: boolean, expiryEn: string) {
   return 'valid' as const;
 }
 
-function computeAge(dobEn: string): number {
+function computeAge(dobEn: string): number | string {
   const dob = parseDateEn(dobEn);
+  if (isNaN(dob.getTime())) return '--';
   const now = new Date();
   let age = now.getFullYear() - dob.getFullYear();
   const m = now.getMonth() - dob.getMonth();
@@ -106,6 +114,7 @@ export default function HomeScreen() {
   const { config } = useCountry();
   const { profile: cardData, updateProfile } = useProfile();
   const { colors } = useTheme();
+  const router = useRouter();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
   // Panel top animates; bottom is always anchored to the tab bar.
@@ -115,7 +124,6 @@ export default function HomeScreen() {
   const expansion = useSharedValue(0);
   const startExp  = useSharedValue(0);
   const measured  = useRef({ header: 0, cardZone: 0 });
-  const [isExpanded, setIsExpanded] = useState(false);
 
   /* ── Entrance animations (GPU-composited, UI thread) ── */
   const headerEnter = useSharedValue(0);
@@ -182,7 +190,6 @@ export default function HomeScreen() {
       'worklet';
       const snap = (expansion.value > 0.4 || e.velocityY < -400) ? 1 : 0;
       expansion.value = withSpring(snap, { damping: 28, stiffness: 340, overshootClamping: true });
-      runOnJS(setIsExpanded)(snap === 1);
     });
 
   // Panel: layout props (top/bottom) are static during animation;
@@ -202,36 +209,9 @@ export default function HomeScreen() {
     transform: [{ translateY: -expansion.value * 24 }],
   }));
 
-  // Auto-extract face portrait
-  useEffect(() => {
-    if (cardData.pictureUri) return;
-    const apiKey = process.env.EXPO_PUBLIC_GEMINI_API_KEY;
-    if (!apiKey) return;
-    const base64 = cardData.cardFrontUri ? cardData.cardFrontUri.split(',')[1] : CARD_TEMPLATE_BASE64;
-    const mime = cardData.cardFrontUri ? cardData.cardFrontUri.split(';')[0].split(':')[1] : 'image/png';
-    fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image-preview:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ role: 'user', parts: [
-            { inlineData: { mimeType: mime, data: base64 } },
-            { text: `Extract ONLY the portrait photo of the person from this ${config.cardDescription}. Return just the face and shoulders cropped tightly, with a plain white background. No card text, borders, or design elements.` },
-          ]}],
-          generationConfig: { responseModalities: ['TEXT', 'IMAGE'] },
-        }),
-      }
-    )
-    .then(r => r.json())
-    .then(data => {
-      const part = data.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData);
-      if (part?.inlineData?.data) {
-        updateProfile({ pictureUri: `data:${part.inlineData.mimeType || 'image/png'};base64,${part.inlineData.data}` });
-      }
-    })
-    .catch(() => {});
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const status = useMemo(() => validityStatus(cardData.isValid, cardData.dateOfExpiry), [cardData.isValid, cardData.dateOfExpiry]);
+  const age = useMemo(() => computeAge(cardData.dateOfBirth), [cardData.dateOfBirth]);
 
   return (
     <View style={styles.screen}>
@@ -284,7 +264,7 @@ export default function HomeScreen() {
                     {lang === 'en' ? cardData.nameThai : cardData.fullNameEnglish}
                   </Text>
                 </View>
-                <CountryFlagBadge status={validityStatus(cardData.isValid, cardData.dateOfExpiry)} />
+                <CountryFlagBadge status={status} />
               </View>
 
               <View style={styles.rule} />
@@ -322,7 +302,7 @@ export default function HomeScreen() {
                     <Text style={styles.fieldLabel}>{t('info.age')}</Text>
                   </View>
                   <Text style={styles.cellValue}>
-                    {`${computeAge(cardData.dateOfBirth)}`}
+                    {`${age}`}
                     <Text style={{ fontSize: 10, color: colors.t3 }}>
                       {t('info.ageUnit')}
                     </Text>
@@ -448,6 +428,18 @@ export default function HomeScreen() {
                 </View>
               </View>
 
+              <View style={styles.rule} />
+
+              {/* Card Details link */}
+              <Pressable
+                style={styles.cardDetailsBtn}
+                onPress={() => router.push('/details')}
+              >
+                <Ionicons name="document-text-outline" size={14} color={colors.goldLight} />
+                <Text style={styles.cardDetailsBtnTxt}>{t('details.cardDetails')}</Text>
+                <Ionicons name="chevron-forward" size={14} color={colors.t4} style={{ marginLeft: 'auto' }} />
+              </Pressable>
+
             </Animated.View>
 
             </Animated.View>
@@ -532,4 +524,19 @@ const makeStyles = (C: ColorPalette) => StyleSheet.create({
 
   rule:  { height: StyleSheet.hairlineWidth, backgroundColor: C.b2 },
   vRule: { width: StyleSheet.hairlineWidth, backgroundColor: C.b2 },
+
+  /* Card Details link */
+  cardDetailsBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  cardDetailsBtnTxt: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: C.goldLight,
+    letterSpacing: 0.4,
+  },
 });

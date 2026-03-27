@@ -7,7 +7,7 @@ function toBrDate(en: string): string {
     Jan: '01', Feb: '02', Mar: '03', Apr: '04', May: '05', Jun: '06',
     Jul: '07', Aug: '08', Sep: '09', Oct: '10', Nov: '11', Dec: '12',
   };
-  const parts = en.replace('.', '').split(' ');
+  const parts = en.replace(/\./g, '').split(' ');
   if (parts.length !== 3) return en;
   return `${parts[0].padStart(2, '0')}/${months[parts[1]] ?? '01'}/${parts[2]}`;
 }
@@ -22,6 +22,7 @@ export const BRAZIL_CONFIG: CountryConfig = {
   systemReference: 'BR-MJC-CIN',
   chipSerial: 'BRC-7D4A-1F82-C9E3',
   cardDescription: 'Brazilian Carteira de Identidade Nacional (CIN)',
+  cardPromptHint: 'This is a horizontal identity card. The portrait photo is on the RIGHT side. Text fields (name, CPF, dates) are on the LEFT side. The card has a green and yellow color scheme with the Brazilian coat of arms.',
 
   emblemAsset: require('../../assets/br-emblem.png'),
   cardImages: {
@@ -40,7 +41,7 @@ export const BRAZIL_CONFIG: CountryConfig = {
   holoStripSide: 'right',
   holoStripOffset: 0.18,
 
-  addressFormatter: (data: any, lang: string) => {
+  addressFormatter: (data: Record<string, any>, lang: string) => {
     if (lang === 'en') {
       return `Rua ${data.subDistrict}, ${data.addressNumber}, ${data.district}, ${data.province}`;
     }
@@ -69,6 +70,7 @@ export const BRAZIL_CONFIG: CountryConfig = {
     'header.title': { en: 'Brazil CIN', pt: 'Carteira de Identidade' },
     'header.sub': { en: 'Carteira de Identidade Nacional', pt: 'National Identity Card' },
     'card.flipHint': { en: 'Tap card to flip', pt: 'Toque para virar' },
+    'card.updated': { en: 'ID Card Updated', pt: 'Carteira Atualizada' },
     'section.cardholder': { en: 'Cardholder', pt: 'Titular' },
     'section.cardInfo': { en: 'Card Information', pt: 'Informações do Cartão' },
     'section.qrDetails': { en: 'QR Details', pt: 'Detalhes QR' },
@@ -115,8 +117,8 @@ export const BRAZIL_CONFIG: CountryConfig = {
     'settings.support': { en: 'Support', pt: 'Suporte' },
     'settings.dark': { en: 'Dark', pt: 'Escuro' },
     'tab.identity': { en: 'Identity', pt: 'Identidade' },
-    'tab.qr': { en: 'QR Code', pt: 'QR Code' },
-    'tab.settings': { en: 'Settings', pt: 'Ajustes' },
+    'tab.qr': { en: 'QR Code', pt: 'Código QR' },
+    'tab.settings': { en: 'Settings', pt: 'Configurações' },
     'lock.title': { en: 'Brazil CIN', pt: 'Carteira de Identidade' },
     'lock.message': { en: 'Authentication required\nto access your ID card', pt: 'Autenticação necessária\npara acessar sua identidade' },
     'lock.button': { en: 'Authenticate', pt: 'Autenticar' },
@@ -133,6 +135,21 @@ export const BRAZIL_CONFIG: CountryConfig = {
     'expanded.na': { en: 'N/A', pt: 'N/D' },
     'expanded.genValue': { en: 'Gen 3 · Smart Card', pt: 'Geração 3 · Cartão Inteligente' },
     'expanded.interfaceValue': { en: 'Contact + NFC', pt: 'Contato + NFC' },
+    'details.cardDetails': { en: 'Card Details', pt: 'Detalhes do Cartao' },
+    'details.personal': { en: 'Personal', pt: 'Pessoal' },
+    'details.identification': { en: 'Identification', pt: 'Identificacao' },
+    'details.validity': { en: 'Validity', pt: 'Validade' },
+    'details.name': { en: 'Name', pt: 'Nome' },
+    'details.dob': { en: 'Date of Birth', pt: 'Data de Nascimento' },
+    'details.idNumber': { en: 'CPF Number', pt: 'Numero do CPF' },
+    'details.reference': { en: 'Reference', pt: 'Referencia' },
+    'details.subDistrict': { en: 'Street', pt: 'Rua' },
+    'details.issued': { en: 'Issued', pt: 'Emitido' },
+    'details.expires': { en: 'Expires', pt: 'Validade' },
+    'details.status': { en: 'Status', pt: 'Status' },
+    'details.statusActive': { en: 'Active', pt: 'Ativo' },
+    'details.statusExpiring': { en: 'Expiring Soon', pt: 'Vencendo em Breve' },
+    'details.statusExpired': { en: 'Expired', pt: 'Expirado' },
     'attribution.dept': { en: 'MINISTRY OF JUSTICE AND PUBLIC SECURITY', pt: 'MINISTÉRIO DA JUSTIÇA E SEGURANÇA PÚBLICA' },
     'attribution.note': { en: 'Authorized digital identification application\nFor official use only', pt: 'Aplicação autorizada de identificação digital\nPara uso oficial apenas' },
   },

@@ -7,6 +7,29 @@ import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../src/context/ThemeContext';
 import { type ColorPalette } from '../../src/constants/colors';
 import { useProfile } from '../../src/context/ProfileContext';
+import { useLang } from '../../src/i18n/LanguageContext';
+import { useCountry } from '../../src/context/CountryContext';
+
+/* ── Helpers ── */
+
+const MONTHS: Record<string, number> = {
+  Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11,
+};
+
+function parseDateEn(s: string) {
+  const p = s.replace(/\./g, '').split(' ');
+  return new Date(Number(p[2]), MONTHS[p[1]] ?? 0, Number(p[0]));
+}
+
+function validityStatus(isValid: boolean, expiryEn: string) {
+  if (!isValid) return 'expired' as const;
+  const diffDays = (parseDateEn(expiryEn).getTime() - Date.now()) / 86_400_000;
+  if (diffDays < 0) return 'expired' as const;
+  if (diffDays < 180) return 'expiring' as const;
+  return 'valid' as const;
+}
+
+/* ── Sub-components ── */
 
 function Row({ label, value, sub, copy, last, colors }: {
   label: string; value: string; sub?: string; copy?: boolean; last?: boolean; colors: ColorPalette;
@@ -49,17 +72,41 @@ function Section({ title, icon, color, children, colors }: {
   );
 }
 
+/* ── Screen ── */
+
 export default function DetailsScreen() {
   const { top } = useSafeAreaInsets();
   const { profile: cardData } = useProfile();
   const { colors: Colors } = useTheme();
+  const { t, lang } = useLang();
+  const { config } = useCountry();
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
+
+  const title = lang === 'en' ? 'Card Details' : t('details.cardDetails');
+  const subtitle = lang === 'en' ? t('details.cardDetails') : 'Card Details';
+
+  const status = useMemo(
+    () => validityStatus(cardData.isValid, cardData.dateOfExpiry),
+    [cardData.isValid, cardData.dateOfExpiry],
+  );
+
+  const statusLabel = status === 'valid'
+    ? t('details.statusActive')
+    : status === 'expiring'
+      ? t('details.statusExpiring')
+      : t('details.statusExpired');
+
+  // Country-aware name label: show the secondary language name
+  const localNameLabel = lang === 'en'
+    ? `${t('details.name')} (${config.secondaryLanguage.label})`
+    : `${t('details.name')} (${config.secondaryLanguage.label})`;
+
   return (
     <View style={[styles.screen, { paddingTop: top + 6 }]}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.hTitle}>Card Details</Text>
-        <Text style={styles.hSub}>รายละเอียดบัตร</Text>
+        <Text style={styles.hTitle}>{title}</Text>
+        <Text style={styles.hSub}>{subtitle}</Text>
       </View>
 
       {/* Type chip */}
@@ -73,29 +120,29 @@ export default function DetailsScreen() {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
-        <Section title="Personal" icon="person" color={Colors.blue} colors={Colors}>
-          <Row label="Name (TH)" value={cardData.nameThai} copy colors={Colors} />
-          <Row label="Name (EN)" value={cardData.fullNameEnglish} copy colors={Colors} />
-          <Row label="Date of Birth" value={cardData.dateOfBirth} sub={cardData.dateOfBirthThai} last colors={Colors} />
+        <Section title={t('details.personal')} icon="person" color={Colors.blue} colors={Colors}>
+          <Row label={localNameLabel} value={cardData.nameThai} copy colors={Colors} />
+          <Row label={`${t('details.name')} (EN)`} value={cardData.fullNameEnglish} copy colors={Colors} />
+          <Row label={t('details.dob')} value={cardData.dateOfBirth} sub={cardData.dateOfBirthThai} last colors={Colors} />
         </Section>
 
-        <Section title="Identification" icon="finger-print" color={Colors.gold} colors={Colors}>
-          <Row label="ID Number" value={cardData.idNumber} copy colors={Colors} />
-          <Row label="Laser Code" value={cardData.laserCode} copy colors={Colors} />
-          <Row label="Reference" value={cardData.reference} copy last colors={Colors} />
+        <Section title={t('details.identification')} icon="finger-print" color={Colors.gold} colors={Colors}>
+          <Row label={t('details.idNumber')} value={cardData.idNumber} copy colors={Colors} />
+          <Row label={t('info.laser')} value={cardData.laserCode} copy colors={Colors} />
+          <Row label={t('details.reference')} value={cardData.reference} copy last colors={Colors} />
         </Section>
 
-        <Section title="Address" icon="location" color={Colors.flagRed} colors={Colors}>
-          <Row label="Address" value={cardData.addressThai} copy colors={Colors} />
-          <Row label="Province" value={cardData.province} colors={Colors} />
-          <Row label="District" value={cardData.district} colors={Colors} />
-          <Row label="Sub-district" value={cardData.subDistrict} last colors={Colors} />
+        <Section title={t('info.address')} icon="location" color={Colors.flagRed} colors={Colors}>
+          <Row label={t('info.address')} value={cardData.addressThai} copy colors={Colors} />
+          <Row label={t('info.province')} value={cardData.province} colors={Colors} />
+          <Row label={t('info.district')} value={cardData.district} colors={Colors} />
+          <Row label={t('details.subDistrict')} value={cardData.subDistrict} last colors={Colors} />
         </Section>
 
-        <Section title="Validity" icon="calendar" color={Colors.green} colors={Colors}>
-          <Row label="Issued" value={cardData.dateOfIssue} colors={Colors} />
-          <Row label="Expires" value={cardData.dateOfExpiry} colors={Colors} />
-          <Row label="Status" value="Active" last colors={Colors} />
+        <Section title={t('details.validity')} icon="calendar" color={Colors.green} colors={Colors}>
+          <Row label={t('details.issued')} value={cardData.dateOfIssue} colors={Colors} />
+          <Row label={t('details.expires')} value={cardData.dateOfExpiry} colors={Colors} />
+          <Row label={t('details.status')} value={statusLabel} last colors={Colors} />
         </Section>
 
         <View style={{ height: 30 }} />

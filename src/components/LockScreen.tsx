@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, Image, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -14,7 +14,16 @@ export default function LockScreen() {
   const { colors: Colors } = useTheme();
   const { config } = useCountry();
   const { t } = useLang();
+  const [error, setError] = useState(false);
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
+
+  const handleAuthenticate = async () => {
+    setError(false);
+    const success = await authenticate();
+    if (!success) {
+      setError(true);
+    }
+  };
 
   return (
     <View style={[styles.screen, { paddingTop: top, paddingBottom: bottom }]}>
@@ -33,10 +42,14 @@ export default function LockScreen() {
 
         <Text style={styles.message}>{t('lock.message')}</Text>
 
-        <Pressable style={styles.btn} onPress={authenticate}>
+        <Pressable style={styles.btn} onPress={handleAuthenticate}>
           <Ionicons name="finger-print-outline" size={20} color={Colors.navy} />
           <Text style={styles.btnText}>{t('lock.button')}</Text>
         </Pressable>
+
+        {error && (
+          <Text style={styles.errorText}>Authentication failed. Try again.</Text>
+        )}
       </View>
     </View>
   );
@@ -96,5 +109,11 @@ const makeStyles = (Colors: ColorPalette) => StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     color: Colors.navy,
+  },
+  errorText: {
+    fontSize: 13,
+    color: '#e74c3c',
+    textAlign: 'center',
+    marginTop: 12,
   },
 });

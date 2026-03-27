@@ -1,5 +1,12 @@
-import React, { useEffect, useRef, useState, useMemo } from 'react';
-import { Animated, StyleSheet, View, Text, Dimensions, Easing, Image } from 'react-native';
+import React, { useEffect, useState, useMemo } from 'react';
+import { StyleSheet, View, Text, Dimensions, Image } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withSequence,
+  Easing,
+} from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -20,7 +27,7 @@ import { useCountry } from '../../src/context/CountryContext';
 const { width: SW } = Dimensions.get('window');
 const REGEN_SECS = 15;
 const QR_SIZE = Math.min(SW * 0.48, 220);
-function EmblemWatermark({ emblemAsset, tintColor, width, height }: { emblemAsset: any; tintColor: string; width: number; height: number }) {
+const EmblemWatermark = React.memo(({ emblemAsset, tintColor, width, height }: { emblemAsset: any; tintColor: string; width: number; height: number }) => {
   const tile = 50;
   const cols = Math.ceil(width / tile);
   const rows = Math.ceil(height / tile);
@@ -47,7 +54,7 @@ function EmblemWatermark({ emblemAsset, tintColor, width, height }: { emblemAsse
       {tiles}
     </View>
   );
-}
+});
 
 /* ── Corner brackets — scan target viewfinder ── */
 function ScanBrackets({ color }: { color: string }) {
@@ -75,59 +82,83 @@ export default function DigitalScreen() {
   const { profile: cardData } = useProfile();
   const { config } = useCountry();
 
-  const [remaining, setRemaining] = useState(REGEN_SECS);
-  const [epoch, setEpoch] = useState(0);
+  const [timer, setTimer] = useState({ epoch: 0, remaining: REGEN_SECS });
 
   useEffect(() => {
     const tick = setInterval(() => {
-      setRemaining(prev => {
-        if (prev <= 1) { setEpoch(e => e + 1); return REGEN_SECS; }
-        return prev - 1;
+      setTimer(prev => {
+        const next = prev.remaining - 1;
+        if (next <= 0) return { epoch: prev.epoch + 1, remaining: REGEN_SECS };
+        return { ...prev, remaining: next };
       });
     }, 1000);
     return () => clearInterval(tick);
   }, []);
 
-  const spinAnim = useRef(new Animated.Value(0)).current;
-  const qrFade = useRef(new Animated.Value(1)).current;
+  /* ── Reanimated shared values ── */
+  const spinAnim = useSharedValue(0);
+  const qrFade = useSharedValue(1);
+  const progressAnim = useSharedValue(1);
 
   useEffect(() => {
-    if (epoch > 0) {
-      Animated.timing(spinAnim, {
-        toValue: 1, duration: 600, useNativeDriver: true,
-      }).start(() => spinAnim.setValue(0));
-      Animated.sequence([
-        Animated.timing(qrFade, { toValue: 0, duration: 200, useNativeDriver: true }),
-        Animated.timing(qrFade, { toValue: 1, duration: 400, useNativeDriver: true }),
-      ]).start();
+    if (timer.epoch > 0) {
+      // Spin icon: 0 -> 360deg over 600ms then reset
+      spinAnim.value = 0;
+      spinAnim.value = withTiming(1, { duration: 600, easing: Easing.linear });
+      // QR fade: fade out then back in
+      qrFade.value = withSequence(
+        withTiming(0, { duration: 200, easing: Easing.linear }),
+        withTiming(1, { duration: 400, easing: Easing.linear }),
+      );
     }
-  }, [epoch]);
+    // Progress bar: reset to 1 and animate to 0 over the full cycle
+    progressAnim.value = 1;
+    progressAnim.value = withTiming(0, {
+      duration: REGEN_SECS * 1000,
+      easing: Easing.linear,
+    });
+  }, [timer.epoch]);
+
+  const spinStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${spinAnim.value * 360}deg` }],
+  }));
+
+  const qrAnimStyle = useAnimatedStyle(() => ({
+    opacity: qrFade.value,
+    transform: [{ scale: 0.94 + qrFade.value * 0.06 }],
+  }));
+
+  const progressBarStyle = useAnimatedStyle(() => ({
+    width: `${progressAnim.value * 100}%`,
+  }));
 
   /* ── Entrance animation ── */
-  const cardEntrance = useRef(new Animated.Value(0)).current;
+  const cardEntrance = useSharedValue(0);
   useEffect(() => {
-    Animated.timing(cardEntrance, {
-      toValue: 1, duration: 500, delay: 150,
-      easing: Easing.out(Easing.cubic), useNativeDriver: true,
-    }).start();
+    cardEntrance.value = withTiming(1, {
+      duration: 500,
+      easing: Easing.out(Easing.cubic),
+    });
   }, []);
 
-  const entranceTranslateY = cardEntrance.interpolate({ inputRange: [0, 1], outputRange: [18, 0] });
-  const entranceScale = cardEntrance.interpolate({ inputRange: [0, 1], outputRange: [0.96, 1] });
+  const entranceStyle = useAnimatedStyle(() => ({
+    opacity: cardEntrance.value,
+    transform: [
+      { translateY: 18 * (1 - cardEntrance.value) },
+      { scale: 0.96 + cardEntrance.value * 0.04 },
+    ],
+  }));
 
-  const spin = spinAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
-  const qrScale = qrFade.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1] });
-  const secs = remaining.toString().padStart(2, '0');
-  const isCritical = remaining <= 3;
-  const isWarning = remaining <= 7 && remaining > 3;
+  const secs = timer.remaining.toString().padStart(2, '0');
+  const isCritical = timer.remaining <= 3;
+  const isWarning = timer.remaining <= 7 && timer.remaining > 3;
   const segColor = isCritical ? C.red : isWarning ? C.orange : C.green;
-  const progress = remaining / REGEN_SECS;
 
   const qr = useMemo(() => JSON.stringify({
     type: config.qrType, id: cardData.idNumberCompact,
     name: cardData.fullNameEnglish, expiry: cardData.dateOfExpiry,
-    nonce: epoch,
-  }), [cardData, epoch]);
+    nonce: timer.epoch,
+  }), [cardData, timer.epoch]);
 
   return (
     <View style={[styles.screen, { paddingBottom: bottom }]}>
@@ -136,10 +167,7 @@ export default function DigitalScreen() {
 
       <ScreenHeader title={t('digital.title')} sub={t('digital.sub')} />
 
-      <Animated.View style={[styles.content, {
-        opacity: cardEntrance,
-        transform: [{ translateY: entranceTranslateY }, { scale: entranceScale }],
-      }]}>
+      <Animated.View style={[styles.content, entranceStyle]}>
 
         {/* ── QR Card ── */}
         <View style={styles.qrCardWrap}>
@@ -191,7 +219,7 @@ export default function DigitalScreen() {
                 <EmblemWatermark emblemAsset={config.emblemAsset} tintColor={C.goldLight} width={SW} height={800} />
                 <View style={styles.qrGlow} />
 
-                <Animated.View style={{ opacity: qrFade, transform: [{ scale: qrScale }] }}>
+                <Animated.View style={qrAnimStyle}>
                   <View style={styles.qrFrame}>
                     <ScanBrackets color={`${C.goldLight}66`} />
                     <View style={styles.qrWhite}>
@@ -225,12 +253,11 @@ export default function DigitalScreen() {
 
               {/* ── Timer — prominent ── */}
               <View style={styles.timerRow}>
-                <Animated.View style={{ transform: [{ rotate: spin }] }}>
+                <Animated.View style={spinStyle}>
                   <Ionicons name="sync-outline" size={14} color={segColor} />
                 </Animated.View>
                 <View style={styles.progressTrack}>
-                  <Animated.View style={[styles.progressFill, {
-                    width: `${progress * 100}%`,
+                  <Animated.View style={[styles.progressFill, progressBarStyle, {
                     backgroundColor: segColor,
                   }]} />
                 </View>
