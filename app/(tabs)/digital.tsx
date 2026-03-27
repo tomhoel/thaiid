@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import QRCodeDisplay from '../../src/components/QRCodeDisplay';
 import NationalEmblem from '../../src/components/NationalEmblem';
+import BackgroundAtmosphere from '../../src/components/BackgroundAtmosphere';
 import SingaporeFlag from '../../src/components/SingaporeFlag';
 import ThaiFlag from '../../src/components/ThaiFlag';
 import BrazilFlag from '../../src/components/BrazilFlag';
@@ -163,6 +164,7 @@ export default function DigitalScreen() {
   return (
     <View style={[styles.screen, { paddingBottom: bottom }]}>
 
+      <BackgroundAtmosphere tintCenter={0.45} />
       <LivenessWatermark showEmblem={false} />
 
       <ScreenHeader title={t('digital.title')} sub={t('digital.sub')} />

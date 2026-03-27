@@ -19,11 +19,12 @@ export async function saveCardImage(countryCode: string, dataUri: string): Promi
   return file.uri;
 }
 
-/** Save a portrait data URI to a file and return the file:// URI */
-export async function savePortraitImage(countryCode: string, dataUri: string): Promise<string> {
+/** Save a portrait data URI to a shared file and return the file:// URI.
+ *  All countries reference the same portrait file to avoid sync drift. */
+export async function savePortraitImage(_countryCode: string, dataUri: string): Promise<string> {
   ensureDir();
   const base64 = dataUri.split(',')[1];
-  const file = new File(CARD_DIR, `${countryCode}-portrait.png`);
+  const file = new File(CARD_DIR, `shared-portrait.png`);
   file.write(base64, { encoding: 'base64' });
   return file.uri;
 }

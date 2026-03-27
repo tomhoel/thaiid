@@ -13,9 +13,11 @@ import { useBiometric } from '../../src/context/BiometricContext';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useCountry } from '../../src/context/CountryContext';
 import NationalEmblem from '../../src/components/NationalEmblem';
+import BackgroundAtmosphere from '../../src/components/BackgroundAtmosphere';
 import Constants from 'expo-constants';
 import { setAppIcon } from '../../src/modules/DynamicIcon';
 import { saveCardImage, savePortraitImage, clearCardImages } from '../../src/utils/cardImageStore';
+import { saveVersion, findMatchingVersion, clearAllHistory } from '../../src/utils/versionHistory';
 
 function getCardTemplate(countryCode: string): string {
   switch (countryCode) {
@@ -100,7 +102,7 @@ export default function SettingsScreen() {
     try { await AsyncStorage.setItem('@sync_all', String(v)); } catch {}
   };
   const [picker, setPicker] = useState<{ title: string; options: { key: string; label: string; icon?: string }[]; selected: string; onSelect: (key: string) => void } | null>(null);
-  const { profile: cardData, updateProfile, isGenerating, setGenerating } = useProfile();
+  const { profile: cardData, updateProfile, isGenerating, setGenerating, setGeneratingCountries, clearGeneratingCountry } = useProfile();
   const cardDataRef = useRef(cardData);
   useEffect(() => { cardDataRef.current = cardData; }, [cardData]);
   const [tempData, setTempData] = useState(cardData);
@@ -177,8 +179,9 @@ export default function SettingsScreen() {
   };
 
   const handleRevert = async () => {
-    // Clear saved card image files
+    // Clear saved card image files and version history
     await clearCardImages().catch(console.warn);
+    await clearAllHistory().catch(console.warn);
     // Reset current country
     updateProfile({ ...config.defaultCardData, cardFrontUri: undefined, pictureUri: config.defaultCardData.pictureUri });
 
@@ -214,12 +217,26 @@ export default function SettingsScreen() {
     updateProfile({ ...snap });
     const { pictureUri: _p, cardFrontUri: _c, ...snapWithoutImages } = snap;
     setShowDemoModal(false);
+    // Mark current country + all synced countries as generating
     setGenerating(true);
+    if (syncAll) setGeneratingCountries(['TH', 'SG', 'BR', 'US']);
 
     (async () => {
       try {
-        // Await sync so AsyncStorage has updated dates before generation reads them
-        await syncSharedToOthers(snapWithoutImages);
+        // Check if we already have a cached version for this exact config
+        const cached = await findMatchingVersion(country, snap);
+        if (cached && !photo) {
+          // Instant restore — no API call needed
+          updateProfile({
+            ...snap,
+            cardFrontUri: cached.cardImageUri,
+            ...(cached.portraitUri ? { pictureUri: cached.portraitUri } : {}),
+          });
+          clearGeneratingCountry(country);
+          setGenerating(false);
+          if (syncAll) ['TH', 'SG', 'BR', 'US'].forEach(c => clearGeneratingCountry(c));
+          return;
+        }
 
         const savedData = cardDataRef.current;
         const hasTextChanges =
@@ -287,9 +304,13 @@ export default function SettingsScreen() {
             parts.push({ inlineData: { mimeType: photoMime || 'image/jpeg', data: photo } });
           }
 
+          const aspectNote = `The output image MUST be exactly the same dimensions and aspect ratio as the input image (1013x638 pixels, landscape). Do NOT change the canvas size, crop, pad, or reshape the image in any way.`;
+
           let prompt: string;
           if (hasPhoto) {
             prompt = `Edit this ${cardDesc} image. ${layoutHint}
+
+${aspectNote}
 
 Make these specific changes ONLY:
 1. Replace the portrait photograph with the person from the SECOND image, cropped to fit the photo area naturally.
@@ -301,6 +322,8 @@ Make these specific changes ONLY:
 CRITICAL: All other text, numbers, logos, emblems, background patterns, gradient, chip, and other elements must remain COMPLETELY UNCHANGED. Do not redraw or re-render any element that is not listed above.`;
           } else {
             prompt = `Edit this ${cardDesc} image. ${layoutHint}
+
+${aspectNote}
 
 Replace ONLY these text fields — match the EXACT original font, size, weight, color, and position:
    - English name: ${profileData.fullNameEnglish}
@@ -322,6 +345,17 @@ CRITICAL: Everything else must remain PIXEL-PERFECT identical — portrait photo
           US: require('../../src/countries/usa').USA_CONFIG,
         };
 
+        // ── Save portrait FIRST so all countries share the same file ──
+        let portraitFileUri = portraitUri;
+        if (portraitUri?.startsWith('data:')) {
+          portraitFileUri = await savePortraitImage(country, portraitUri);
+        }
+
+        // Sync portrait + dates to all other countries BEFORE generation starts
+        if (portraitFileUri) {
+          await syncSharedToOthers({ ...snapWithoutImages, pictureUri: portraitFileUri });
+        }
+
         // Current country generation
         const currentGen = (async () => {
           const parts = buildCardParts(
@@ -332,23 +366,22 @@ CRITICAL: Everything else must remain PIXEL-PERFECT identical — portrait photo
           const data = await callGemini(parts);
           const rawCardUri = extractImageUri(data);
 
-          // Save to file system instead of AsyncStorage
           let cardFileUri = snap.cardFrontUri;
           if (rawCardUri) cardFileUri = await saveCardImage(country, rawCardUri);
 
-          let portraitFileUri = portraitUri;
-          if (portraitUri?.startsWith('data:')) portraitFileUri = await savePortraitImage(country, portraitUri);
-
           updateProfile({ cardFrontUri: cardFileUri, pictureUri: portraitFileUri });
-          if (portraitFileUri) syncSharedToOthers({ pictureUri: portraitFileUri });
+          // Save to version history
+          if (cardFileUri) saveVersion(country, snap, cardFileUri, portraitFileUri).catch(console.warn);
+          clearGeneratingCountry(country);
         })();
 
-        // Other countries generation — truly parallel, no waiting for current country
+        // Other countries generation — read profile AFTER sync so data is fresh
         const otherGens = syncAll ? allCodes
           .filter(c => c !== country)
           .map((code) => (async () => {
             const targetConfig = allConfigs[code];
             const targetKey = `profile_data_${code}`;
+            // Re-read from AsyncStorage AFTER syncSharedToOthers has written updated data
             const savedRaw = await AsyncStorage.getItem(targetKey);
             const targetProfile = savedRaw ? JSON.parse(savedRaw) : { ...targetConfig.defaultCardData };
 
@@ -361,14 +394,22 @@ CRITICAL: Everything else must remain PIXEL-PERFECT identical — portrait photo
             const genData = await callGemini(parts);
             const rawUri = extractImageUri(genData);
             if (rawUri) {
-              // Save image to file system, store file path in AsyncStorage
               const fileUri = await saveCardImage(code, rawUri);
               console.log(`[SyncGen:${code}] Success`);
-              await AsyncStorage.setItem(targetKey, JSON.stringify({ ...targetProfile, cardFrontUri: fileUri }));
+              // Re-read profile to avoid clobbering portrait written by sync
+              const freshRaw = await AsyncStorage.getItem(targetKey);
+              const freshProfile = freshRaw ? JSON.parse(freshRaw) : targetProfile;
+              await AsyncStorage.setItem(targetKey, JSON.stringify({ ...freshProfile, cardFrontUri: fileUri }));
+              // Save to version history
+              saveVersion(code, targetProfile, fileUri, portraitFileUri).catch(console.warn);
             } else {
               console.warn(`[SyncGen:${code}] No image returned`);
             }
-          })().catch(e => console.warn(`[SyncGen:${code}] FAILED:`, e?.message || e)))
+            clearGeneratingCountry(code);
+          })().catch(e => {
+            console.warn(`[SyncGen:${code}] FAILED:`, e?.message || e);
+            clearGeneratingCountry(code);
+          }))
           : [];
 
         // Wait for ALL to complete
@@ -377,13 +418,17 @@ CRITICAL: Everything else must remain PIXEL-PERFECT identical — portrait photo
       } catch (err: any) {
         Alert.alert('Generation Failed', err?.message || String(err));
       } finally {
+        // Safety net: clear all generating flags
         setGenerating(false);
+        ['TH', 'SG', 'BR', 'US'].forEach(c => clearGeneratingCountry(c));
       }
     })();
   };
 
   return (
     <View style={styles.screen}>
+
+      <BackgroundAtmosphere tintCenter={0.3} />
 
       <ScreenHeader
         title={t('settings.title')}

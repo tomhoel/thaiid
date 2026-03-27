@@ -11,6 +11,7 @@ import FlippableCard from '../../src/components/FlippableCard';
 import NationalEmblem from '../../src/components/NationalEmblem';
 import LivenessWatermark from '../../src/components/LivenessWatermark';
 import ScreenHeader from '../../src/components/ScreenHeader';
+import BackgroundAtmosphere from '../../src/components/BackgroundAtmosphere';
 import SingaporeFlag from '../../src/components/SingaporeFlag';
 import ThaiFlag from '../../src/components/ThaiFlag';
 import BrazilFlag from '../../src/components/BrazilFlag';
@@ -216,6 +217,7 @@ export default function HomeScreen() {
   return (
     <View style={styles.screen}>
 
+      <BackgroundAtmosphere />
       <LivenessWatermark />
 
       {/* ── Header ── */}
@@ -467,6 +469,7 @@ const makeStyles = (C: ColorPalette) => StyleSheet.create({
     borderTopLeftRadius: 12, borderTopRightRadius: 12,
     overflow: 'hidden',
     borderWidth: StyleSheet.hairlineWidth, borderColor: C.navy,
+    borderTopWidth: 1, borderTopColor: C.goldLight + '25',
     borderBottomWidth: 0,
   },
 

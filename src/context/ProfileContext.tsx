@@ -9,6 +9,10 @@ interface ProfileContextType {
   updateProfile: (updates: Partial<ProfileType>) => void;
   isGenerating: boolean;
   setGenerating: (v: boolean) => void;
+  /** Mark specific countries as generating (for cross-country sync) */
+  setGeneratingCountries: (codes: string[]) => void;
+  /** Mark a single country as done generating */
+  clearGeneratingCountry: (code: string) => void;
   ready: boolean;
 }
 
@@ -20,7 +24,30 @@ const ProfileContext = createContext<ProfileContextType | undefined>(undefined);
 export function ProfileProvider({ children }: { children: ReactNode }) {
   const { country, config } = useCountry();
   const [profile, setProfile] = useState<ProfileType>(config.defaultCardData as ProfileType);
-  const [isGenerating, setGenerating] = useState(false);
+  const [generatingSet, setGeneratingSet] = useState<Set<string>>(new Set());
+  const isGenerating = generatingSet.has(country);
+  const setGenerating = useCallback((v: boolean) => {
+    setGeneratingSet(prev => {
+      const next = new Set(prev);
+      if (v) next.add(countryRef.current);
+      else next.delete(countryRef.current);
+      return next;
+    });
+  }, []);
+  const setGeneratingCountries = useCallback((codes: string[]) => {
+    setGeneratingSet(prev => {
+      const next = new Set(prev);
+      codes.forEach(c => next.add(c));
+      return next;
+    });
+  }, []);
+  const clearGeneratingCountry = useCallback((code: string) => {
+    setGeneratingSet(prev => {
+      const next = new Set(prev);
+      next.delete(code);
+      return next;
+    });
+  }, []);
   const [ready, setReady] = useState(false);
   const countryRef = useRef(country);
 
@@ -83,7 +110,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <ProfileContext.Provider value={{ profile, updateProfile, isGenerating, setGenerating, ready }}>
+    <ProfileContext.Provider value={{ profile, updateProfile, isGenerating, setGenerating, setGeneratingCountries, clearGeneratingCountry, ready }}>
       {children}
     </ProfileContext.Provider>
   );

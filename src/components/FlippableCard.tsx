@@ -25,6 +25,7 @@ import * as Haptics from 'expo-haptics';
 import { useProfile } from '../context/ProfileContext';
 import { useCountry } from '../context/CountryContext';
 import { useLang } from '../i18n/LanguageContext';
+import VersionHistorySheet from './VersionHistorySheet';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const CARD_W = SCREEN_W - 40;
@@ -238,6 +239,14 @@ export default function FlippableCard() {
     return () => { sub?.remove(); };
   }, []);
 
+  /* ── Version history sheet ── */
+  const [showHistory, setShowHistory] = useState(false);
+  const handleLongPress = useCallback(() => {
+    if (isGenerating) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    setShowHistory(true);
+  }, [isGenerating]);
+
   /* ── Success toast ── */
   const [showSuccess, setShowSuccess] = useState(false);
   const prevIsGenerating = useRef(false);
@@ -336,7 +345,7 @@ export default function FlippableCard() {
   });
 
   return (
-    <Pressable onPress={handleFlip} style={styles.container}>
+    <Pressable onPress={handleFlip} onLongPress={handleLongPress} delayLongPress={500} style={styles.container}>
 <Animated.View style={[styles.shadowWrap, bodyStyle]}>
         {/* Single rotating container — one transform for the flip */}
         <Animated.View style={[StyleSheet.absoluteFillObject, { borderRadius: 14, backgroundColor: 'transparent' }, flipStyle]}>
@@ -387,6 +396,8 @@ export default function FlippableCard() {
           </View>
         )}
       </Animated.View>
+
+      <VersionHistorySheet visible={showHistory} onClose={() => setShowHistory(false)} />
     </Pressable>
   );
 }

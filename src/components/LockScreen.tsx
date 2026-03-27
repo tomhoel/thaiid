@@ -7,6 +7,7 @@ import { type ColorPalette } from '../constants/colors';
 import { useBiometric } from '../context/BiometricContext';
 import { useCountry } from '../context/CountryContext';
 import { useLang } from '../i18n/LanguageContext';
+import BackgroundAtmosphere from './BackgroundAtmosphere';
 
 export default function LockScreen() {
   const { authenticate } = useBiometric();
@@ -27,6 +28,7 @@ export default function LockScreen() {
 
   return (
     <View style={[styles.screen, { paddingTop: top, paddingBottom: bottom }]}>
+      <BackgroundAtmosphere tintCenter={0.5} />
       <View style={styles.content}>
         <Image
           source={config.emblemAsset}
