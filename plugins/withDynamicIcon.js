@@ -1,4 +1,4 @@
-const { withAndroidManifest, AndroidConfig } = require('expo/config-plugins');
+const { withAndroidManifest, withDangerousMod } = require('expo/config-plugins');
 const fs = require('fs');
 const path = require('path');
 
@@ -84,22 +84,24 @@ function withDynamicIcon(config) {
     return config;
   });
 
-  // Step 2: Inject app_name_XX strings after prebuild
-  config = AndroidConfig.Strings.withStrings(config, (config) => {
-    const strings = config.modResults;
-    for (const country of COUNTRIES) {
-      const name = `app_name_${country}`;
-      // Remove existing to avoid duplicates
-      strings.resources.string = (strings.resources.string || []).filter(
-        s => s.$.name !== name
-      );
-      strings.resources.string.push({
-        $: { name, translatable: 'false' },
-        _: APP_NAMES[country],
-      });
+  // Step 2: Inject app_name_XX strings into strings.xml
+  config = withDangerousMod(config, ['android', (config) => {
+    const stringsPath = path.join(
+      config.modRequest.platformProjectRoot,
+      'app', 'src', 'main', 'res', 'values', 'strings.xml'
+    );
+    if (fs.existsSync(stringsPath)) {
+      let xml = fs.readFileSync(stringsPath, 'utf8');
+      for (const country of COUNTRIES) {
+        const name = `app_name_${country}`;
+        if (!xml.includes(`name="${name}"`)) {
+          xml = xml.replace('</resources>', `  <string name="${name}">${APP_NAMES[country]}</string>\n</resources>`);
+        }
+      }
+      fs.writeFileSync(stringsPath, xml);
     }
     return config;
-  });
+  }]);
 
   return config;
 }
