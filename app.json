@@ -31,7 +31,8 @@
       "expo-router",
       "expo-asset",
       "expo-font",
-      "expo-local-authentication"
+      "expo-local-authentication",
+      "./plugins/withDynamicIcon"
     ],
     "extra": {
       "router": {},

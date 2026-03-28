@@ -1,13 +1,21 @@
-const { withAndroidManifest } = require('expo/config-plugins');
+const { withAndroidManifest, AndroidConfig } = require('expo/config-plugins');
 const fs = require('fs');
 const path = require('path');
 
-const COUNTRIES = ['th', 'sg', 'br', 'us'];
+const COUNTRIES = ['th', 'sg', 'br', 'us', 'vn'];
 const BG_COLORS = {
   th: '#0C1526',
   sg: '#6B1520',
   br: '#0A3D1F',
   us: '#0D2240',
+  vn: '#DA251D',
+};
+const APP_NAMES = {
+  th: 'Thai ID',
+  sg: 'SG NRIC',
+  br: 'Brasil ID',
+  us: 'NYC ID',
+  vn: 'Vietnam ID',
 };
 
 function withDynamicIcon(config) {
@@ -41,7 +49,7 @@ function withDynamicIcon(config) {
           'android:enabled': isDefault ? 'true' : 'false',
           'android:icon': `@mipmap/ic_launcher_${country}`,
           'android:roundIcon': `@mipmap/ic_launcher_${country}_round`,
-          'android:label': config.modRequest.modResults?.manifest?.application?.[0]?.$?.['android:label'] || 'Thai ID',
+          'android:label': `@string/app_name_${country}`,
           'android:exported': 'true',
         },
         'intent-filter': [
@@ -73,6 +81,23 @@ function withDynamicIcon(config) {
       });
     }
 
+    return config;
+  });
+
+  // Step 2: Inject app_name_XX strings after prebuild
+  config = AndroidConfig.Strings.withStrings(config, (config) => {
+    const strings = config.modResults;
+    for (const country of COUNTRIES) {
+      const name = `app_name_${country}`;
+      // Remove existing to avoid duplicates
+      strings.resources.string = (strings.resources.string || []).filter(
+        s => s.$.name !== name
+      );
+      strings.resources.string.push({
+        $: { name, translatable: 'false' },
+        _: APP_NAMES[country],
+      });
+    }
     return config;
   });
 

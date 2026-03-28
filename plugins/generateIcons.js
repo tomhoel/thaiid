@@ -6,7 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 
-const COUNTRIES = ['th', 'sg', 'br', 'us'];
+const COUNTRIES = ['th', 'sg', 'br', 'us', 'vn'];
 const SIZES = {
   'mipmap-mdpi': 48,
   'mipmap-hdpi': 72,

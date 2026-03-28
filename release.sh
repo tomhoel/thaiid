@@ -44,6 +44,9 @@ git commit -m "Bump version to $SEMVER"
 echo "==> Prebuild"
 ANDROID_HOME="$ANDROID_HOME" npx expo prebuild --platform android --no-install
 
+echo "==> Generate country icons"
+node plugins/generateIcons.js
+
 echo "==> Build APK"
 rm -rf android/app/build/generated/assets/createBundleReleaseJsAndAssets
 cd android
