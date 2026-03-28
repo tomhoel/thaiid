@@ -1,7 +1,7 @@
 import { NativeModules, Platform } from 'react-native';
 
 const PACKAGE = 'com.tomhoel.thaiid';
-const COUNTRIES = ['th', 'sg', 'br', 'us'];
+const COUNTRIES = ['th', 'sg', 'br', 'us', 'vn'];
 
 /**
  * Switches the app's launcher icon by enabling/disabling activity aliases.

@@ -145,6 +145,6 @@ export async function clearHistory(countryCode: string): Promise<void> {
 
 /** Clear all history for all countries */
 export async function clearAllHistory(): Promise<void> {
-  await Promise.all(['TH', 'SG', 'BR', 'US'].map(c => clearHistory(c)));
+  await Promise.all(['TH', 'SG', 'BR', 'US', 'VN'].map(c => clearHistory(c)));
   if (HISTORY_DIR.exists) HISTORY_DIR.delete();
 }

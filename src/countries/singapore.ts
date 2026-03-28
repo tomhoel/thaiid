@@ -22,7 +22,7 @@ export const SINGAPORE_CONFIG: CountryConfig = {
   systemReference: 'SG-ICA-NRIC',
   chipSerial: 'SGC-8E3F-2A17-B5C4',
   cardDescription: 'Singapore NRIC card',
-  cardPromptHint: 'This is a horizontal NRIC card. The portrait photo is on the RIGHT side. Text fields (name, race, dates) are on the LEFT side. The card has a red gradient header bar and light grey body. There is a chip on the lower left.',
+  cardPromptHint: 'This is a horizontal NRIC card. The portrait photo is on the LEFT side. Text fields (name, race, dates) are on the RIGHT side. The card has a red gradient header bar and light grey body with a pink security pattern. The national coat of arms is in the upper right area.',
 
   emblemAsset: require('../../assets/sg-emblem.png'),
   cardImages: {

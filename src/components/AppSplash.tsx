@@ -34,7 +34,7 @@ export default function AppSplash() {
         <Animated.View style={{ opacity: pulse }}>
           <Image
             source={config.emblemAsset}
-            style={[styles.emblem, { tintColor: GOLD }]}
+            style={config.emblemTinted !== false ? [styles.emblem, { tintColor: GOLD }] : styles.emblem}
             resizeMode="contain"
           />
         </Animated.View>

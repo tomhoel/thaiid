@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { type ImageSourcePropType } from 'react-native';
 
-export type CountryCode = 'TH' | 'SG' | 'BR' | 'US';
+export type CountryCode = 'TH' | 'SG' | 'BR' | 'US' | 'VN';
 
 export interface CountryConfig {
   code: CountryCode;
@@ -31,6 +31,7 @@ export interface CountryConfig {
 
   holoStripSide: 'left' | 'right';
   holoStripOffset?: number; // percentage from edge, default 6%
+  emblemTinted?: boolean; // false = emblem is pre-colored, skip tintColor
 
   defaultCardData: Record<string, any>;
 
@@ -54,6 +55,7 @@ const CONFIGS: Record<CountryCode, () => CountryConfig> = {
   SG: () => require('../countries/singapore').SINGAPORE_CONFIG,
   BR: () => require('../countries/brazil').BRAZIL_CONFIG,
   US: () => require('../countries/usa').USA_CONFIG,
+  VN: () => require('../countries/vietnam').VIETNAM_CONFIG,
 };
 
 function getConfig(code: CountryCode): CountryConfig {
@@ -75,7 +77,7 @@ export function CountryProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     AsyncStorage.getItem(KEY).then(v => {
-      if (v === 'TH' || v === 'SG' || v === 'BR' || v === 'US') setCountryState(v);
+      if (v === 'TH' || v === 'SG' || v === 'BR' || v === 'US' || v === 'VN') setCountryState(v);
       setCountryLoaded(true);
     });
   }, []);

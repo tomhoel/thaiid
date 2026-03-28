@@ -17,6 +17,7 @@ import SingaporeFlag from '../../src/components/SingaporeFlag';
 import ThaiFlag from '../../src/components/ThaiFlag';
 import BrazilFlag from '../../src/components/BrazilFlag';
 import USFlag from '../../src/components/USFlag';
+import VietnamFlag from '../../src/components/VietnamFlag';
 import ScreenHeader from '../../src/components/ScreenHeader';
 import LivenessWatermark from '../../src/components/LivenessWatermark';
 import { useTheme } from '../../src/context/ThemeContext';
@@ -43,7 +44,7 @@ const EmblemWatermark = React.memo(({ emblemAsset, tintColor, width, height }: {
             position: 'absolute',
             left: c * tile, top: r * tile,
             width: tile, height: tile,
-            tintColor, opacity: 0.04,
+            ...(tintColor ? { tintColor } : {}), opacity: 0.04,
           }}
           resizeMode="contain"
         />
@@ -210,6 +211,7 @@ export default function DigitalScreen() {
                   {config.code === 'TH' ? <ThaiFlag width={28} height={18} />
                     : config.code === 'SG' ? <SingaporeFlag width={28} height={18} />
                     : config.code === 'BR' ? <BrazilFlag width={28} height={18} />
+                    : config.code === 'VN' ? <VietnamFlag width={28} height={18} />
                     : <USFlag width={28} height={18} />}
                 </View>
               </View>
@@ -218,7 +220,7 @@ export default function DigitalScreen() {
 
               {/* ── QR zone ── */}
               <View style={styles.qrZone}>
-                <EmblemWatermark emblemAsset={config.emblemAsset} tintColor={C.goldLight} width={SW} height={800} />
+                <EmblemWatermark emblemAsset={config.emblemAsset} tintColor={config.emblemTinted !== false ? C.goldLight : ''} width={SW} height={800} />
                 <View style={styles.qrGlow} />
 
                 <Animated.View style={qrAnimStyle}>

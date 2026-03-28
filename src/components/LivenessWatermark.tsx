@@ -41,7 +41,7 @@ const LivenessWatermark = React.memo(function LivenessWatermark({ showEmblem = t
       }, emblemStyle]}>
         <Image
           source={config.emblemAsset}
-          style={{ width: WATERMARK_SIZE, height: WATERMARK_SIZE, tintColor: colors.goldLight, opacity: 0.10 }}
+          style={config.emblemTinted !== false ? { width: WATERMARK_SIZE, height: WATERMARK_SIZE, tintColor: colors.goldLight, opacity: 0.10 } : { width: WATERMARK_SIZE, height: WATERMARK_SIZE, opacity: 0.10 }}
           resizeMode="contain"
         />
       </Animated.View>

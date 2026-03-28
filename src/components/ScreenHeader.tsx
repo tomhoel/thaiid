@@ -21,7 +21,7 @@ export default memo(function ScreenHeader({ title, sub }: Props) {
       <View style={styles.left}>
         <Image
           source={config.emblemAsset}
-          style={{ width: 32, height: 32, tintColor: colors.goldLight }}
+          style={config.emblemTinted !== false ? { width: 32, height: 32, tintColor: colors.goldLight } : { width: 32, height: 32 }}
           resizeMode="contain"
         />
         <View>

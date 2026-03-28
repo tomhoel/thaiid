@@ -11,13 +11,22 @@ interface Props {
 export default memo(function NationalEmblem({ size = 80, opacity = 1 }: Props) {
   const { colors } = useTheme();
   const { config } = useCountry();
+  const useTint = config.emblemTinted !== false;
   return (
     <View style={{ width: size, height: size, opacity }}>
-      <Image
-        source={config.emblemAsset}
-        style={{ width: size, height: size, tintColor: colors.goldLight }}
-        resizeMode="contain"
-      />
+      {useTint ? (
+        <Image
+          source={config.emblemAsset}
+          style={{ width: size, height: size, tintColor: colors.goldLight }}
+          resizeMode="contain"
+        />
+      ) : (
+        <Image
+          source={config.emblemAsset}
+          style={{ width: size, height: size }}
+          resizeMode="contain"
+        />
+      )}
     </View>
   );
 });

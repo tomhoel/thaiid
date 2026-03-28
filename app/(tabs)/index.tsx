@@ -16,6 +16,7 @@ import SingaporeFlag from '../../src/components/SingaporeFlag';
 import ThaiFlag from '../../src/components/ThaiFlag';
 import BrazilFlag from '../../src/components/BrazilFlag';
 import USFlag from '../../src/components/USFlag';
+import VietnamFlag from '../../src/components/VietnamFlag';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useCountry } from '../../src/context/CountryContext';
 import { type ColorPalette } from '../../src/constants/colors';
@@ -63,6 +64,7 @@ const CountryFlagBadge = memo(function CountryFlagBadge({ status }: { status: 'v
         {config.code === 'TH' ? <ThaiFlag width={36} height={24} />
           : config.code === 'SG' ? <SingaporeFlag width={36} height={24} />
           : config.code === 'BR' ? <BrazilFlag width={36} height={24} />
+          : config.code === 'VN' ? <VietnamFlag width={36} height={24} />
           : <USFlag width={36} height={24} />}
       </View>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>

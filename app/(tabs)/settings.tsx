@@ -24,6 +24,7 @@ function getCardTemplate(countryCode: string): string {
     case 'SG': return require('../../src/constants/sgCardTemplate').SG_CARD_TEMPLATE_BASE64;
     case 'BR': return require('../../src/constants/brCardTemplate').BR_CARD_TEMPLATE_BASE64;
     case 'US': return require('../../src/constants/usCardTemplate').US_CARD_TEMPLATE_BASE64;
+    case 'VN': return require('../../src/constants/vnCardTemplate').VN_CARD_TEMPLATE_BASE64;
     default: return require('../../src/constants/cardTemplate').CARD_TEMPLATE_BASE64;
   }
 }
@@ -153,7 +154,7 @@ export default function SettingsScreen() {
       if (k in updates) shared[k] = updates[k];
     }
     if (Object.keys(shared).length === 0) return;
-    const allCodes = ['TH', 'SG', 'BR', 'US'];
+    const allCodes = ['TH', 'SG', 'BR', 'US', 'VN'];
     const configs: Record<string, any> = {
       TH: require('../../src/countries/thailand').THAILAND_CONFIG,
       SG: require('../../src/countries/singapore').SINGAPORE_CONFIG,
@@ -186,7 +187,7 @@ export default function SettingsScreen() {
     updateProfile({ ...config.defaultCardData, cardFrontUri: undefined, pictureUri: config.defaultCardData.pictureUri });
 
     // Reset all other countries too
-    const allCodes = ['TH', 'SG', 'BR', 'US'];
+    const allCodes = ['TH', 'SG', 'BR', 'US', 'VN'];
     const configs: Record<string, any> = {
       TH: require('../../src/countries/thailand').THAILAND_CONFIG,
       SG: require('../../src/countries/singapore').SINGAPORE_CONFIG,
@@ -219,7 +220,7 @@ export default function SettingsScreen() {
     setShowDemoModal(false);
     // Mark current country + all synced countries as generating
     setGenerating(true);
-    if (syncAll) setGeneratingCountries(['TH', 'SG', 'BR', 'US']);
+    if (syncAll) setGeneratingCountries(['TH', 'SG', 'BR', 'US', 'VN']);
 
     (async () => {
       try {
@@ -234,7 +235,7 @@ export default function SettingsScreen() {
           });
           clearGeneratingCountry(country);
           setGenerating(false);
-          if (syncAll) ['TH', 'SG', 'BR', 'US'].forEach(c => clearGeneratingCountry(c));
+          if (syncAll) ['TH', 'SG', 'BR', 'US', 'VN'].forEach(c => clearGeneratingCountry(c));
           return;
         }
 
@@ -263,6 +264,10 @@ export default function SettingsScreen() {
             const errMsg = json.error?.message || `HTTP ${resp.status}`;
             const errCode = json.error?.code || resp.status;
             console.warn(`[Gemini] Error ${errCode} (attempt ${attempt}):`, errMsg);
+            // API key or auth errors — no point retrying
+            if (resp.status === 401 || resp.status === 403 || errMsg.includes('API_KEY')) {
+              throw new Error('Gemini API key is invalid or expired. Please rebuild the app with a valid key.');
+            }
             if (attempt < 3 && (resp.status === 429 || resp.status >= 500)) {
               const delay = resp.status === 429 ? 5000 * attempt : 2000 * attempt;
               console.log(`[Gemini] Retrying in ${delay}ms...`);
@@ -295,8 +300,6 @@ export default function SettingsScreen() {
         ) => {
           const hasPhoto = !!photo;
           const cardDesc = targetConfig.cardDescription;
-          const layoutHint = targetConfig.cardPromptHint || '';
-
           const parts: any[] = [{ inlineData: { mimeType: 'image/png', data: templateBase64 } }];
 
           // Always include the photo if available — ensures consistent portrait across edits
@@ -308,20 +311,20 @@ export default function SettingsScreen() {
 
           let prompt: string;
           if (hasPhoto) {
-            prompt = `Edit this ${cardDesc} image. ${layoutHint}
+            prompt = `Edit this ${cardDesc} image.
 
 ${aspectNote}
 
-Make these specific changes ONLY:
-1. Replace the portrait photograph with the person from the SECOND image, cropped to fit the photo area naturally.
+Make these specific changes ONLY — do NOT move, resize, or reposition any element:
+1. Replace the portrait photograph (keep it in the EXACT same position and size) with the person from the SECOND image, cropped to fit naturally.
 2. Replace ONLY these text fields — match the EXACT original font, size, weight, color, and position:
    - English name: ${profileData.fullNameEnglish}
    - Date of Birth: ${profileData.dateOfBirth}
    - Date of Issue: ${profileData.dateOfIssue}
    - Date of Expiry: ${profileData.dateOfExpiry}
-CRITICAL: All other text, numbers, logos, emblems, background patterns, gradient, chip, and other elements must remain COMPLETELY UNCHANGED. Do not redraw or re-render any element that is not listed above.`;
+CRITICAL: The layout must remain IDENTICAL. All other text, numbers, logos, emblems, background patterns, gradient, chip, photo position, and other elements must remain COMPLETELY UNCHANGED. Do not redraw, move, or re-render any element that is not listed above.`;
           } else {
-            prompt = `Edit this ${cardDesc} image. ${layoutHint}
+            prompt = `Edit this ${cardDesc} image.
 
 ${aspectNote}
 
@@ -330,19 +333,20 @@ Replace ONLY these text fields — match the EXACT original font, size, weight, 
    - Date of Birth: ${profileData.dateOfBirth}
    - Date of Issue: ${profileData.dateOfIssue}
    - Date of Expiry: ${profileData.dateOfExpiry}
-CRITICAL: Everything else must remain PIXEL-PERFECT identical — portrait photo, all other text, ID number, emblems, background, chip, patterns. Only the 4 fields listed above should change.`;
+CRITICAL: The layout must remain IDENTICAL. Everything else must remain PIXEL-PERFECT — portrait photo, all other text, ID number, emblems, background, chip, patterns, positions. Only the 4 text fields listed above should change.`;
           }
           parts.push({ text: prompt });
           return parts;
         };
 
         // ── Generate ALL countries in parallel ──
-        const allCodes = ['TH', 'SG', 'BR', 'US'];
+        const allCodes = ['TH', 'SG', 'BR', 'US', 'VN'];
         const allConfigs: Record<string, any> = {
           TH: require('../../src/countries/thailand').THAILAND_CONFIG,
           SG: require('../../src/countries/singapore').SINGAPORE_CONFIG,
           BR: require('../../src/countries/brazil').BRAZIL_CONFIG,
           US: require('../../src/countries/usa').USA_CONFIG,
+          VN: require('../../src/countries/vietnam').VIETNAM_CONFIG,
         };
 
         // ── Save portrait FIRST so all countries share the same file ──
@@ -420,7 +424,7 @@ CRITICAL: Everything else must remain PIXEL-PERFECT identical — portrait photo
       } finally {
         // Safety net: clear all generating flags
         setGenerating(false);
-        ['TH', 'SG', 'BR', 'US'].forEach(c => clearGeneratingCountry(c));
+        ['TH', 'SG', 'BR', 'US', 'VN'].forEach(c => clearGeneratingCountry(c));
       }
     })();
   };
@@ -490,6 +494,7 @@ CRITICAL: Everything else must remain PIXEL-PERFECT identical — portrait photo
             { key: 'SG', label: 'Singapore' },
             { key: 'BR', label: 'Brazil' },
             { key: 'US', label: 'New York City' },
+            { key: 'VN', label: 'Vietnam' },
           ],
           selected: country,
           onSelect: (k) => { setCountry(k as any); setAppIcon(k); setPicker(null); },

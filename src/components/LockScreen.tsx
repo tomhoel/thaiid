@@ -32,7 +32,7 @@ export default function LockScreen() {
       <View style={styles.content}>
         <Image
           source={config.emblemAsset}
-          style={{ width: 52, height: 52, tintColor: Colors.goldLight, opacity: 0.7 }}
+          style={config.emblemTinted !== false ? { width: 52, height: 52, tintColor: Colors.goldLight, opacity: 0.7 } : { width: 52, height: 52, opacity: 0.7 }}
           resizeMode="contain"
         />
         <Text style={styles.title}>{t('lock.title')}</Text>
