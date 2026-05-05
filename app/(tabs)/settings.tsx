@@ -309,6 +309,15 @@ export default function SettingsScreen() {
 
           const aspectNote = `The output image MUST be exactly the same dimensions and aspect ratio as the input image (1013x638 pixels, landscape). Do NOT change the canvas size, crop, pad, or reshape the image in any way.`;
 
+          const fields = [
+            `Identification Number: ${profileData.idNumber}`,
+            `Native Name (${targetConfig.secondaryLanguage.langName}): ${profileData.nameThai}`,
+            `English Name: ${profileData.fullNameEnglish}`,
+            `Date of Birth: ${profileData.dateOfBirth}`,
+            `Date of Issue: ${profileData.dateOfIssue}`,
+            `Date of Expiry: ${profileData.dateOfExpiry}`,
+          ].join('\n');
+
           let prompt: string;
           if (hasPhoto) {
             prompt = `Edit this ${cardDesc} image.
@@ -316,24 +325,20 @@ export default function SettingsScreen() {
 ${aspectNote}
 
 Make these specific changes ONLY — do NOT move, resize, or reposition any element:
-1. Replace the portrait photograph (keep it in the EXACT same position and size) with the person from the SECOND image, cropped to fit naturally.
-2. Replace ONLY these text fields — match the EXACT original font, size, weight, color, and position:
-   - English name: ${profileData.fullNameEnglish}
-   - Date of Birth: ${profileData.dateOfBirth}
-   - Date of Issue: ${profileData.dateOfIssue}
-   - Date of Expiry: ${profileData.dateOfExpiry}
-CRITICAL: The layout must remain IDENTICAL. All other text, numbers, logos, emblems, background patterns, gradient, chip, photo position, and other elements must remain COMPLETELY UNCHANGED. Do not redraw, move, or re-render any element that is not listed above.`;
+1. Replace the portrait photograph (keep it in the EXACT same position and size) with the person from the SECOND image, cropped and placed exactly in the photo area.
+2. Replace ALL text fields on the card with these values — match the original font, size, weight, color, and position perfectly:
+${fields}
+
+CRITICAL: The layout must remain IDENTICAL. All other elements (logos, emblems, background patterns, gradient, chip, photo position, and other elements) must remain COMPLETELY UNCHANGED. Do not redraw, move, or re-render any element that is not listed above. Output the result as a single image.`;
           } else {
             prompt = `Edit this ${cardDesc} image.
 
 ${aspectNote}
 
-Replace ONLY these text fields — match the EXACT original font, size, weight, color, and position:
-   - English name: ${profileData.fullNameEnglish}
-   - Date of Birth: ${profileData.dateOfBirth}
-   - Date of Issue: ${profileData.dateOfIssue}
-   - Date of Expiry: ${profileData.dateOfExpiry}
-CRITICAL: The layout must remain IDENTICAL. Everything else must remain PIXEL-PERFECT — portrait photo, all other text, ID number, emblems, background, chip, patterns, positions. Only the 4 text fields listed above should change.`;
+Replace ALL text fields on the card with these values — match the original font, size, weight, color, and position perfectly:
+${fields}
+
+CRITICAL: The layout must remain IDENTICAL. Everything else must remain PIXEL-PERFECT — portrait photo, all other text, ID number, emblems, background, chip, patterns, positions. Only the fields listed above should change. Output the result as a single image.`;
           }
           parts.push({ text: prompt });
           return parts;
@@ -645,7 +650,27 @@ CRITICAL: The layout must remain IDENTICAL. Everything else must remain PIXEL-PE
 
               <View style={styles.nameFields}>
                 <View style={styles.nameField}>
-                  <Text style={styles.nameFieldLabel}>FIRST NAME</Text>
+                  <Text style={styles.nameFieldLabel}>ID NUMBER</Text>
+                  <TextInput
+                    style={styles.nameFieldInput}
+                    value={tempData.idNumber}
+                    onChangeText={v => setTempData({ ...tempData, idNumber: v, idNumberCompact: v.replace(/\s/g, '') })}
+                    placeholderTextColor={Colors.t4}
+                  />
+                </View>
+                <View style={styles.nameFieldDivider} />
+                <View style={styles.nameField}>
+                  <Text style={styles.nameFieldLabel}>NATIVE NAME ({config.secondaryLanguage.langName})</Text>
+                  <TextInput
+                    style={styles.nameFieldInput}
+                    value={tempData.nameThai}
+                    onChangeText={v => setTempData({ ...tempData, nameThai: v })}
+                    placeholderTextColor={Colors.t4}
+                  />
+                </View>
+                <View style={styles.nameFieldDivider} />
+                <View style={styles.nameField}>
+                  <Text style={styles.nameFieldLabel}>FIRST NAME (ENGLISH)</Text>
                   <TextInput
                     style={styles.nameFieldInput}
                     value={tempData.firstName}
@@ -655,7 +680,7 @@ CRITICAL: The layout must remain IDENTICAL. Everything else must remain PIXEL-PE
                 </View>
                 <View style={styles.nameFieldDivider} />
                 <View style={styles.nameField}>
-                  <Text style={styles.nameFieldLabel}>LAST NAME</Text>
+                  <Text style={styles.nameFieldLabel}>LAST NAME (ENGLISH)</Text>
                   <TextInput
                     style={styles.nameFieldInput}
                     value={tempData.lastName}

@@ -104,10 +104,12 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   profileRef.current = profile;
 
   const updateProfile = useCallback((updates: Partial<ProfileType>) => {
-    const next = { ...profileRef.current, ...updates };
-    setProfile(next);
-    AsyncStorage.setItem(storageKey(countryRef.current), JSON.stringify(next)).catch(console.warn);
-  }, []);
+    setProfile(prev => {
+      const next = { ...prev, ...updates };
+      AsyncStorage.setItem(storageKey(country), JSON.stringify(next)).catch(console.warn);
+      return next;
+    });
+  }, [country]);
 
   return (
     <ProfileContext.Provider value={{ profile, updateProfile, isGenerating, setGenerating, setGeneratingCountries, clearGeneratingCountry, ready }}>
