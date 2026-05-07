@@ -160,6 +160,7 @@ export default function SettingsScreen() {
       SG: require('../../src/countries/singapore').SINGAPORE_CONFIG,
       BR: require('../../src/countries/brazil').BRAZIL_CONFIG,
       US: require('../../src/countries/usa').USA_CONFIG,
+      VN: require('../../src/countries/vietnam').VIETNAM_CONFIG,
     };
     for (const code of allCodes) {
       if (code === country) continue;
@@ -193,6 +194,7 @@ export default function SettingsScreen() {
       SG: require('../../src/countries/singapore').SINGAPORE_CONFIG,
       BR: require('../../src/countries/brazil').BRAZIL_CONFIG,
       US: require('../../src/countries/usa').USA_CONFIG,
+      VN: require('../../src/countries/vietnam').VIETNAM_CONFIG,
     };
     for (const code of allCodes) {
       if (code === country) continue;
@@ -205,9 +207,10 @@ export default function SettingsScreen() {
   };
 
   const handleSaveGenerate = () => {
-    const apiKey = process.env.EXPO_PUBLIC_GEMINI_API_KEY;
-    if (!apiKey) {
-      Alert.alert('Missing API Key', 'EXPO_PUBLIC_GEMINI_API_KEY is not set.');
+    const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+    if (!supabaseUrl || !supabaseAnonKey) {
+      Alert.alert('Missing Supabase config', 'EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY must be set.');
       return;
     }
 
@@ -246,13 +249,17 @@ export default function SettingsScreen() {
           snap.dateOfIssue !== savedData.dateOfIssue ||
           snap.dateOfExpiry !== savedData.dateOfExpiry;
 
-        // Helper: call Gemini with retry on rate limit
+        // Helper: call Gemini through Supabase Edge Function with retry on rate limit
         const callGemini = async (parts: any[], attempt = 1): Promise<any> => {
           const resp = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent`,
+            `${supabaseUrl}/functions/v1/gemini-proxy`,
             {
               method: 'POST',
-              headers: { 'x-goog-api-key': apiKey, 'Content-Type': 'application/json' },
+              headers: {
+                'Authorization': `Bearer ${supabaseAnonKey}`,
+                'apikey': supabaseAnonKey,
+                'Content-Type': 'application/json',
+              },
               body: JSON.stringify({
                 contents: [{ role: 'user', parts }],
                 generationConfig: { responseModalities: ['TEXT', 'IMAGE'] },
@@ -264,9 +271,8 @@ export default function SettingsScreen() {
             const errMsg = json.error?.message || `HTTP ${resp.status}`;
             const errCode = json.error?.code || resp.status;
             console.warn(`[Gemini] Error ${errCode} (attempt ${attempt}):`, errMsg);
-            // API key or auth errors — no point retrying
             if (resp.status === 401 || resp.status === 403 || errMsg.includes('API_KEY')) {
-              throw new Error('Gemini API key is invalid or expired. Please rebuild the app with a valid key.');
+              throw new Error('Gemini API key is invalid on the server. Update GEMINI_API_KEY in Supabase secrets.');
             }
             if (attempt < 3 && (resp.status === 429 || resp.status >= 500)) {
               const delay = resp.status === 429 ? 5000 * attempt : 2000 * attempt;

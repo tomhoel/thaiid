@@ -10,22 +10,23 @@ function ensureDir() {
   if (!CARD_DIR.exists) CARD_DIR.create();
 }
 
-/** Save a data URI to a file and return the file:// URI (WEBP for efficiency) */
+/** Save a data URI to a file and return the file:// URI */
 export async function saveCardImage(countryCode: string, dataUri: string): Promise<string> {
   ensureDir();
   const base64 = dataUri.split(',')[1];
-  const file = new File(CARD_DIR, `${countryCode}-front.webp`);
+  const file = new File(CARD_DIR, `${countryCode}-front.png`);
   file.write(base64, { encoding: 'base64' });
-  return `${file.uri}?t=${Date.now()}`;
+  return file.uri;
 }
 
-/** Save a portrait data URI to a file and return the file:// URI (WEBP for efficiency) */
-export async function savePortraitImage(countryCode: string, dataUri: string): Promise<string> {
+/** Save a portrait data URI to a shared file and return the file:// URI.
+ *  All countries reference the same portrait file to avoid sync drift. */
+export async function savePortraitImage(_countryCode: string, dataUri: string): Promise<string> {
   ensureDir();
   const base64 = dataUri.split(',')[1];
-  const file = new File(CARD_DIR, `${countryCode}-portrait.webp`);
+  const file = new File(CARD_DIR, `shared-portrait.png`);
   file.write(base64, { encoding: 'base64' });
-  return `${file.uri}?t=${Date.now()}`;
+  return file.uri;
 }
 
 /** Delete all saved card images (used by reset) */

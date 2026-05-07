@@ -30,18 +30,30 @@ const { width: SW } = Dimensions.get('window');
 const REGEN_SECS = 15;
 const QR_SIZE = Math.min(SW * 0.48, 220);
 const EmblemWatermark = React.memo(({ emblemAsset, tintColor, width, height }: { emblemAsset: any; tintColor: string; width: number; height: number }) => {
+  const tile = 50;
+  const cols = Math.ceil(width / tile);
+  const rows = Math.ceil(height / tile);
+  const tiles = [];
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      tiles.push(
+        <Image
+          key={`${r}-${c}`}
+          source={emblemAsset}
+          style={{
+            position: 'absolute',
+            left: c * tile, top: r * tile,
+            width: tile, height: tile,
+            ...(tintColor ? { tintColor } : {}), opacity: 0.04,
+          }}
+          resizeMode="contain"
+        />
+      );
+    }
+  }
   return (
     <View style={[StyleSheet.absoluteFill, { overflow: 'hidden' }]} pointerEvents="none">
-      <Image
-        source={emblemAsset}
-        style={{
-          width: '100%',
-          height: '100%',
-          tintColor,
-          opacity: 0.04,
-        }}
-        resizeMode="repeat"
-      />
+      {tiles}
     </View>
   );
 });

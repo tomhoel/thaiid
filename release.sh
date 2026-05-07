@@ -7,10 +7,18 @@ if [ -z "$VERSION" ]; then
   exit 1
 fi
 
-ANDROID_HOME="/c/Users/tomho/AppData/Local/Android/Sdk"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 KEYSTORE="$SCRIPT_DIR/thaiid-release.keystore"
 APK="android/app/build/outputs/apk/release/app-release.apk"
+
+# Default ANDROID_HOME per OS if not already set
+if [ -z "$ANDROID_HOME" ]; then
+  case "$(uname -s)" in
+    Darwin) ANDROID_HOME="$HOME/Library/Android/sdk" ;;
+    Linux)  ANDROID_HOME="$HOME/Android/Sdk" ;;
+    MINGW*|MSYS*|CYGWIN*) ANDROID_HOME="/c/Users/tomho/AppData/Local/Android/Sdk" ;;
+  esac
+fi
 
 # Source all env vars from .env.local
 set -a
@@ -21,8 +29,8 @@ if [ -z "$KEYSTORE_PASSWORD" ]; then
   echo "Error: KEYSTORE_PASSWORD not found in .env.local"
   exit 1
 fi
-if [ -z "$EXPO_PUBLIC_GEMINI_API_KEY" ]; then
-  echo "Error: EXPO_PUBLIC_GEMINI_API_KEY not found in .env.local"
+if [ -z "$EXPO_PUBLIC_SUPABASE_URL" ] || [ -z "$EXPO_PUBLIC_SUPABASE_ANON_KEY" ]; then
+  echo "Error: EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY must be set in .env.local"
   exit 1
 fi
 

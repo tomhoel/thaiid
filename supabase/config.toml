@@ -1,0 +1,11 @@
+# Supabase project config
+# Run `supabase link --project-ref <ref>` to link this folder to your remote project.
+
+project_id = "thaiid"
+
+[functions.gemini-proxy]
+# Public function — anyone with the anon key can invoke it.
+# Verify_jwt=false skips Supabase Auth JWT validation; we don't have user accounts.
+# If you add abuse protection later (rate limiting, captcha, RLS-backed quotas),
+# flip this to true and require a real user session.
+verify_jwt = false
