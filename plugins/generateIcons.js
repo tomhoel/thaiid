@@ -6,6 +6,18 @@ const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 
+// Pick whichever Python is on PATH. macOS/Linux ships `python3`; Windows ships `python`.
+function detectPython() {
+  for (const cmd of ['python3', 'python']) {
+    try {
+      execSync(`${cmd} -c "import PIL"`, { stdio: 'pipe' });
+      return cmd;
+    } catch {}
+  }
+  throw new Error('Neither python3 nor python with Pillow installed was found on PATH. Run: pip install Pillow');
+}
+const PYTHON = detectPython();
+
 const COUNTRIES = ['th', 'sg', 'br', 'us', 'vn'];
 const SIZES = {
   'mipmap-mdpi': 48,
@@ -36,7 +48,7 @@ for (const country of COUNTRIES) {
     const outRound = path.join(outDir, `ic_launcher_${country}_round.png`);
 
     try {
-      execSync(`python -c "
+      execSync(`${PYTHON} -c "
 from PIL import Image
 img = Image.open('${srcIcon.replace(/\\/g, '/')}').resize((${size}, ${size}), Image.LANCZOS)
 img.save('${outFile.replace(/\\/g, '/')}')
