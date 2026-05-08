@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCountry } from '../context/CountryContext';
+import { reportError } from '../utils/reportError';
 
 type Lang = string;
 
@@ -36,7 +37,8 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     (async () => {
       // Save current language for the previous country (skip on initial mount)
       if (prevCountry !== country) {
-        await AsyncStorage.setItem(langKeyFor(prevCountry), lang).catch(console.warn);
+        await AsyncStorage.setItem(langKeyFor(prevCountry), lang)
+          .catch((e) => reportError('LanguageContext.saveOnCountryChange', e));
       }
 
       // Load saved language for the new country
@@ -51,13 +53,15 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 
   const setLang = useCallback((l: string) => {
     setLangState(l);
-    AsyncStorage.setItem(langKeyFor(country), l).catch(console.warn);
+    AsyncStorage.setItem(langKeyFor(country), l)
+      .catch((e) => reportError('LanguageContext.setLang', e));
   }, [country]);
 
   const toggle = useCallback(() => {
     setLangState(prev => {
       const next = prev === 'en' ? secondaryLanguage.code : 'en';
-      AsyncStorage.setItem(langKeyFor(country), next).catch(console.warn);
+      AsyncStorage.setItem(langKeyFor(country), next)
+        .catch((e) => reportError('LanguageContext.toggle', e));
       return next;
     });
   }, [secondaryLanguage.code, country]);

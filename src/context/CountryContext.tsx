@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { type ImageSourcePropType } from 'react-native';
+import { reportError } from '../utils/reportError';
 
 export type CountryCode = 'TH' | 'SG' | 'BR' | 'US' | 'VN';
 
@@ -84,7 +85,7 @@ export function CountryProvider({ children }: { children: React.ReactNode }) {
 
   const setCountry = useCallback((c: CountryCode) => {
     setCountryState(c);
-    AsyncStorage.setItem(KEY, c).catch(console.warn);
+    AsyncStorage.setItem(KEY, c).catch((e) => reportError('CountryContext.setCountry', e));
   }, []);
 
   const config = useMemo(() => getConfig(country), [country]);

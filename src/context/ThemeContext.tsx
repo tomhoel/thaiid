@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DarkColors, LightColors, type ColorPalette } from '../constants/colors';
+import { reportError } from '../utils/reportError';
 
 type Theme = 'dark' | 'light';
 
@@ -36,7 +37,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   const setTheme = useCallback((t: Theme) => {
     setThemeState(t);
-    AsyncStorage.setItem(KEY, t).catch(console.warn);
+    AsyncStorage.setItem(KEY, t).catch((e) => reportError('ThemeContext.setTheme', e));
   }, []);
 
   const baseColors = theme === 'dark' ? DarkColors : LightColors;

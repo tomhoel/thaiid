@@ -98,12 +98,14 @@ export default function SettingsScreen() {
 
   const handleToggleNotif = async (v: boolean) => {
     setNotif(v);
-    try { await AsyncStorage.setItem('@notifications', String(v)); } catch {}
+    try { await AsyncStorage.setItem('@notifications', String(v)); }
+    catch (e) { reportError('settings.toggleNotif', e); }
   };
 
   const handleToggleSyncAll = async (v: boolean) => {
     setSyncAll(v);
-    try { await AsyncStorage.setItem('@sync_all', String(v)); } catch {}
+    try { await AsyncStorage.setItem('@sync_all', String(v)); }
+    catch (e) { reportError('settings.toggleSyncAll', e); }
   };
   const [picker, setPicker] = useState<{ title: string; options: { key: string; label: string; icon?: string }[]; selected: string; onSelect: (key: string) => void } | null>(null);
   const { profile: cardData, updateProfile, isGenerating, setGenerating, setGeneratingCountries, clearGeneratingCountry } = useProfile();
@@ -190,8 +192,8 @@ export default function SettingsScreen() {
 
   const handleRevert = async () => {
     // Clear saved card image files and version history
-    await clearCardImages().catch(console.warn);
-    await clearAllHistory().catch(console.warn);
+    await clearCardImages().catch((e) => reportError('settings.handleRevert.clearCardImages', e));
+    await clearAllHistory().catch((e) => reportError('settings.handleRevert.clearAllHistory', e));
     // Reset current country
     updateProfile({ ...config.defaultCardData, cardFrontUri: undefined, pictureUri: config.defaultCardData.pictureUri });
 
@@ -208,7 +210,8 @@ export default function SettingsScreen() {
       if (code === country) continue;
       const key = `profile_data_${code}`;
       const defaults = configs[code].defaultCardData;
-      await AsyncStorage.setItem(key, JSON.stringify({ ...defaults })).catch(console.warn);
+      await AsyncStorage.setItem(key, JSON.stringify({ ...defaults }))
+        .catch((e) => reportError(`settings.handleRevert.resetCountry.${code}`, e));
     }
 
     setShowDemoModal(false);
@@ -394,7 +397,8 @@ CRITICAL: The layout must remain IDENTICAL. Everything else must remain PIXEL-PE
 
           updateProfile({ cardFrontUri: cardFileUri, pictureUri: portraitFileUri });
           // Save to version history
-          if (cardFileUri) saveVersion(country, snap, cardFileUri, portraitFileUri).catch(console.warn);
+          if (cardFileUri) saveVersion(country, snap, cardFileUri, portraitFileUri)
+            .catch((e) => reportError(`settings.saveVersion.${country}`, e));
           clearGeneratingCountry(country);
         })();
 
@@ -424,7 +428,8 @@ CRITICAL: The layout must remain IDENTICAL. Everything else must remain PIXEL-PE
               const freshProfile = freshRaw ? JSON.parse(freshRaw) : targetProfile;
               await AsyncStorage.setItem(targetKey, JSON.stringify({ ...freshProfile, cardFrontUri: fileUri }));
               // Save to version history
-              saveVersion(code, targetProfile, fileUri, portraitFileUri).catch(console.warn);
+              saveVersion(code, targetProfile, fileUri, portraitFileUri)
+                .catch((e) => reportError(`settings.saveVersion.${code}`, e));
             } else {
               console.warn(`[SyncGen:${code}] No image returned`);
             }
