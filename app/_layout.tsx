@@ -12,6 +12,7 @@ import { BiometricProvider, useBiometric } from '../src/context/BiometricContext
 import { ProfileProvider, useProfile } from '../src/context/ProfileContext';
 import { ThemeProvider, ThemeAccentBridge, useTheme } from '../src/context/ThemeContext';
 import { CountryProvider, useCountry } from '../src/context/CountryContext';
+import { SnackbarProvider } from '../src/context/SnackbarContext';
 import LockScreen from '../src/components/LockScreen';
 import AppSplash from '../src/components/AppSplash';
 
@@ -137,6 +138,7 @@ export default function RootLayout() {
         <ThemeProvider>
           <CountryProvider>
             <ThemeAccentBridge>
+            <SnackbarProvider>
             <LanguageProvider>
               <ProfileProvider>
                 <BiometricProvider>
@@ -144,6 +146,7 @@ export default function RootLayout() {
                 </BiometricProvider>
               </ProfileProvider>
             </LanguageProvider>
+            </SnackbarProvider>
             </ThemeAccentBridge>
           </CountryProvider>
         </ThemeProvider>
