@@ -4,6 +4,8 @@ import path from 'path';
 import os from 'os';
 import { createRequire } from 'module';
 
+// Test file uses ESM-style imports; createRequire is the interop bridge
+// to load the CJS plugin module (which uses module.exports).
 const require = createRequire(import.meta.url);
 const withDynamicIcon = require('../../plugins/withDynamicIcon.js');
 
@@ -70,6 +72,8 @@ describe('withDynamicIcon plugin — Java bridge generation', () => {
     expect(java).toContain('package com.example.app;');
     expect(java).toContain('public class DynamicIconModule');
     expect(java).toContain('return "DynamicIconModule"');
+    expect(java).toContain('"th"');
+    expect(java).toContain('"vn"');
   });
 
   it('writes DynamicIconPackage.java with the configured package', async () => {
