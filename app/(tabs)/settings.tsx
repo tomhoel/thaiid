@@ -16,6 +16,7 @@ import NationalEmblem from '../../src/components/NationalEmblem';
 import BackgroundAtmosphere from '../../src/components/BackgroundAtmosphere';
 import Constants from 'expo-constants';
 import { setAppIcon } from '../../src/modules/DynamicIcon';
+import { useSnackbar } from '../../src/context/SnackbarContext';
 import { saveCardImage, savePortraitImage, clearCardImages } from '../../src/utils/cardImageStore';
 import { saveVersion, findMatchingVersion, clearAllHistory } from '../../src/utils/versionHistory';
 
@@ -74,6 +75,7 @@ export default function SettingsScreen() {
   const { country, config, setCountry } = useCountry();
   const { enabled: bio, setEnabled: setBio } = useBiometric();
   const { theme, setTheme, colors: Colors } = useTheme();
+  const snackbar = useSnackbar();
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const [showDemoModal, setShowDemoModal] = useState(false);
   const [syncAll, setSyncAll] = useState(false);
@@ -508,7 +510,17 @@ CRITICAL: The layout must remain IDENTICAL. Everything else must remain PIXEL-PE
             { key: 'VN', label: 'Vietnam' },
           ],
           selected: country,
-          onSelect: (k) => { setCountry(k as any); setAppIcon(k); setPicker(null); },
+          onSelect: async (k) => {
+            setCountry(k as any);
+            setPicker(null);
+            try {
+              await setAppIcon(k);
+              snackbar.show('Icon will update on next app open.');
+            } catch {
+              // reportError already logged in DynamicIcon.ts
+              snackbar.show('Icon switching unavailable in this build.');
+            }
+          },
         })} colors={Colors} styles={styles} />
         <Item icon={theme === 'dark' ? 'moon-outline' : 'sunny-outline'} label={t('settings.theme')} value={theme === 'dark' ? 'Dark' : 'Light'} onPress={() => setPicker({
           title: 'Theme',
