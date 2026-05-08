@@ -87,4 +87,37 @@ describe('withDynamicIcon plugin — Java bridge generation', () => {
     expect(java).toContain('public class DynamicIconPackage implements ReactPackage');
     expect(java).toContain('new DynamicIconModule(reactContext)');
   });
+
+  it('patches MainApplication.kt to register DynamicIconPackage', async () => {
+    const config = mockConfig(tmp, 'com.example.app');
+    await withDynamicIcon.__runDangerousModsForTest(config);
+
+    const ktPath = path.join(tmp, 'app', 'src', 'main', 'java', 'com', 'example', 'app', 'MainApplication.kt');
+    const kt = fs.readFileSync(ktPath, 'utf8');
+    expect(kt).toContain('add(DynamicIconPackage())');
+    // Must be inside the apply block, not at the top of the file
+    expect(kt.indexOf('add(DynamicIconPackage())'))
+      .toBeGreaterThan(kt.indexOf('PackageList(this).packages.apply'));
+  });
+
+  it('is idempotent — running twice does not duplicate the add line', async () => {
+    const config = mockConfig(tmp, 'com.example.app');
+    await withDynamicIcon.__runDangerousModsForTest(config);
+    await withDynamicIcon.__runDangerousModsForTest(config);
+
+    const ktPath = path.join(tmp, 'app', 'src', 'main', 'java', 'com', 'example', 'app', 'MainApplication.kt');
+    const kt = fs.readFileSync(ktPath, 'utf8');
+    const occurrences = (kt.match(/add\(DynamicIconPackage\(\)\)/g) || []).length;
+    expect(occurrences).toBe(1);
+  });
+
+  it('throws a clear error when MainApplication.kt template does not match', async () => {
+    const config = mockConfig(tmp, 'com.example.app');
+    // Overwrite the seeded template with one that has no apply block
+    const ktPath = path.join(tmp, 'app', 'src', 'main', 'java', 'com', 'example', 'app', 'MainApplication.kt');
+    fs.writeFileSync(ktPath, 'package com.example.app\n\nclass MainApplication { }\n');
+
+    await expect(withDynamicIcon.__runDangerousModsForTest(config))
+      .rejects.toThrow(/MainApplication.kt/);
+  });
 });

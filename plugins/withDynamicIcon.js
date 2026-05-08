@@ -107,6 +107,36 @@ function injectBridgeFiles(config) {
   fs.writeFileSync(path.join(javaDir, 'DynamicIconPackage.java'), dynamicIconPackageJava(pkg));
 }
 
+function patchMainApplicationKt(config) {
+  const pkg = config.android?.package;
+  const ktPath = path.join(
+    config.modRequest.platformProjectRoot,
+    'app', 'src', 'main', 'java',
+    ...pkg.split('.'),
+    'MainApplication.kt',
+  );
+  if (!fs.existsSync(ktPath)) {
+    throw new Error(`[withDynamicIcon] MainApplication.kt not found at ${ktPath}. Did Expo prebuild fail?`);
+  }
+  let kt = fs.readFileSync(ktPath, 'utf8');
+
+  // Idempotent: skip if already patched
+  if (kt.includes('add(DynamicIconPackage())')) return;
+
+  // Find the apply block and inject the add call as its first child statement.
+  // Matches: PackageList(this).packages.apply {
+  // followed by optional whitespace and a newline.
+  const applyRegex = /(PackageList\(this\)\.packages\.apply\s*\{\s*\n)/;
+  if (!applyRegex.test(kt)) {
+    throw new Error(
+      `[withDynamicIcon] Could not find 'PackageList(this).packages.apply {' in MainApplication.kt at ${ktPath}. ` +
+      `The Expo template likely changed; update the regex in plugins/withDynamicIcon.js.`
+    );
+  }
+  kt = kt.replace(applyRegex, '$1              add(DynamicIconPackage())\n');
+  fs.writeFileSync(ktPath, kt);
+}
+
 function injectStringsXml(config) {
   const stringsPath = path.join(
     config.modRequest.platformProjectRoot,
@@ -180,9 +210,10 @@ function withDynamicIcon(config) {
     return config;
   });
 
-  // Step 2: Inject the native bridge Java files
+  // Step 2: Inject the native bridge Java files + register in MainApplication.kt
   config = withDangerousMod(config, ['android', (config) => {
     injectBridgeFiles(config);
+    patchMainApplicationKt(config);
     return config;
   }]);
 
@@ -199,6 +230,7 @@ function withDynamicIcon(config) {
 // bypassing Expo's mod scheduler. Production code path uses withDangerousMod above.
 withDynamicIcon.__runDangerousModsForTest = async function(config) {
   injectBridgeFiles(config);
+  patchMainApplicationKt(config);
   injectStringsXml(config);
 };
 
