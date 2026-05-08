@@ -65,6 +65,9 @@ ANDROID_HOME="$ANDROID_HOME" ./gradlew assembleRelease \
   -Pandroid.injected.signing.key.password="$KEYSTORE_PASSWORD"
 cd ..
 
+echo "==> Verify APK contains native bridge"
+"$SCRIPT_DIR/scripts/check-apk.sh" "$APK"
+
 echo "==> Tag & release $VERSION"
 git tag "$VERSION"
 git push origin master
