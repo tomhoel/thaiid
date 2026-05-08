@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCountry } from './CountryContext';
+import { reportError } from '../utils/reportError';
 
 export type ProfileType = Record<string, any> & { pictureUri?: string; cardFrontUri?: string };
 
@@ -106,7 +107,11 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   const updateProfile = useCallback((updates: Partial<ProfileType>) => {
     setProfile(prev => {
       const next = { ...prev, ...updates };
-      AsyncStorage.setItem(storageKey(country), JSON.stringify(next)).catch(console.warn);
+      AsyncStorage.setItem(storageKey(country), JSON.stringify(next))
+        .catch((e) => reportError('ProfileContext.updateProfile', e, {
+          userVisible: true,
+          toast: 'Could not save profile changes.',
+        }));
       return next;
     });
   }, [country]);

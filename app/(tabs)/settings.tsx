@@ -17,6 +17,7 @@ import BackgroundAtmosphere from '../../src/components/BackgroundAtmosphere';
 import Constants from 'expo-constants';
 import { setAppIcon } from '../../src/modules/DynamicIcon';
 import { useSnackbar } from '../../src/context/SnackbarContext';
+import { reportError } from '../../src/utils/reportError';
 import { saveCardImage, savePortraitImage, clearCardImages } from '../../src/utils/cardImageStore';
 import { saveVersion, findMatchingVersion, clearAllHistory } from '../../src/utils/versionHistory';
 
@@ -178,7 +179,12 @@ export default function SettingsScreen() {
         if (converted.dateOfIssue) converted.dateOfIssueThai = targetConfig.dateFormat.toLocal(converted.dateOfIssue);
         if (converted.dateOfExpiry) converted.dateOfExpiryThai = targetConfig.dateFormat.toLocal(converted.dateOfExpiry);
         await AsyncStorage.setItem(key, JSON.stringify({ ...other, ...converted }));
-      } catch (e) { console.warn('[Sync]', e); }
+      } catch (e) {
+        reportError('settings.syncSharedToOthers', e, {
+          userVisible: true,
+          toast: 'Could not sync changes to all countries.',
+        });
+      }
     }
   };
 
