@@ -95,9 +95,12 @@ describe('withDynamicIcon plugin — Java bridge generation', () => {
     const ktPath = path.join(tmp, 'app', 'src', 'main', 'java', 'com', 'example', 'app', 'MainApplication.kt');
     const kt = fs.readFileSync(ktPath, 'utf8');
     expect(kt).toContain('add(DynamicIconPackage())');
-    // Must be inside the apply block, not at the top of the file
-    expect(kt.indexOf('add(DynamicIconPackage())'))
-      .toBeGreaterThan(kt.indexOf('PackageList(this).packages.apply'));
+    // Must be inside the apply block, not before or after it
+    const applyIdx = kt.indexOf('PackageList(this).packages.apply');
+    const addIdx = kt.indexOf('add(DynamicIconPackage())');
+    const closeIdx = kt.indexOf('}', applyIdx);
+    expect(addIdx).toBeGreaterThan(applyIdx);
+    expect(addIdx).toBeLessThan(closeIdx);
   });
 
   it('is idempotent — running twice does not duplicate the add line', async () => {

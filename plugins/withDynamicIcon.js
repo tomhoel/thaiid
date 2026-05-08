@@ -133,7 +133,14 @@ function patchMainApplicationKt(config) {
       `The Expo template likely changed; update the regex in plugins/withDynamicIcon.js.`
     );
   }
-  kt = kt.replace(applyRegex, '$1              add(DynamicIconPackage())\n');
+  kt = kt.replace(applyRegex, (_match, prefix) => {
+    // Derive body indent from the `apply {` line so the inserted call aligns
+    // with however the Expo template (current or future) indents the block.
+    const applyLineMatch = prefix.match(/(^|\n)([ \t]*)PackageList/);
+    const applyIndent = applyLineMatch ? applyLineMatch[2] : '';
+    const bodyIndent = applyIndent + '  '; // one extra level (2 spaces)
+    return prefix + bodyIndent + 'add(DynamicIconPackage())\n';
+  });
   fs.writeFileSync(ktPath, kt);
 }
 
