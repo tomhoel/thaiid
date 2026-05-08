@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { StyleSheet, View, Text, Pressable, Switch, Platform, TextInput, ScrollView, Modal, Image, Alert } from 'react-native';
 import { BlurView } from 'expo-blur';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -109,8 +109,6 @@ export default function SettingsScreen() {
   };
   const [picker, setPicker] = useState<{ title: string; options: { key: string; label: string; icon?: string }[]; selected: string; onSelect: (key: string) => void } | null>(null);
   const { profile: cardData, updateProfile, isGenerating, setGenerating, setGeneratingCountries, clearGeneratingCountry } = useProfile();
-  const cardDataRef = useRef(cardData);
-  useEffect(() => { cardDataRef.current = cardData; }, [cardData]);
   const [tempData, setTempData] = useState(cardData);
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
   const [selectedPhotoMime, setSelectedPhotoMime] = useState<string | null>(null);
@@ -252,13 +250,6 @@ export default function SettingsScreen() {
           if (syncAll) ['TH', 'SG', 'BR', 'US', 'VN'].forEach(c => clearGeneratingCountry(c));
           return;
         }
-
-        const savedData = cardDataRef.current;
-        const hasTextChanges =
-          snap.fullNameEnglish !== savedData.fullNameEnglish ||
-          snap.dateOfBirth !== savedData.dateOfBirth ||
-          snap.dateOfIssue !== savedData.dateOfIssue ||
-          snap.dateOfExpiry !== savedData.dateOfExpiry;
 
         // Helper: call Gemini through Supabase Edge Function with retry on rate limit
         const callGemini = async (parts: any[], attempt = 1): Promise<any> => {
@@ -493,9 +484,7 @@ CRITICAL: The layout must remain IDENTICAL. Everything else must remain PIXEL-PE
 
         {/* ── Security ── */}
         <Text style={styles.sectionLabel}>{t('settings.security')}</Text>
-        <Item icon="finger-print-outline" label={t('settings.biometric')} toggle={bio} onToggle={setBio} colors={Colors} styles={styles} />
-        <Item icon="lock-closed-outline" label={t('settings.pin')} onPress={() => Alert.alert('Coming Soon', 'This feature is not yet available.')} colors={Colors} styles={styles} />
-        <Item icon="eye-off-outline" label={t('settings.privacy')} last onPress={() => Alert.alert('Coming Soon', 'This feature is not yet available.')} colors={Colors} styles={styles} />
+        <Item icon="finger-print-outline" label={t('settings.biometric')} toggle={bio} onToggle={setBio} last colors={Colors} styles={styles} />
 
         <View style={styles.gap} />
 
