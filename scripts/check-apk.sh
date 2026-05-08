@@ -19,6 +19,7 @@ missing=()
 for class in "${REQUIRED[@]}"; do
   found=0
   for dex in "$TMP"/classes*.dex; do
+    [ -f "$dex" ] || continue
     if grep -aq "$class" "$dex"; then
       found=1
       break
