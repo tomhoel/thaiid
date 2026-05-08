@@ -47,4 +47,12 @@ describe('reportError', () => {
     reportError('test-scope', new Error('boom'), { userVisible: true });
     expect(handler).toHaveBeenCalledWith('Something went wrong. Please try again.');
   });
+
+  it('does not throw when userVisible is true but no handler is registered', () => {
+    // snackbarHandler is null (reset by beforeEach)
+    expect(() =>
+      reportError('test-scope', new Error('boom'), { userVisible: true }),
+    ).not.toThrow();
+    expect(consoleSpy).toHaveBeenCalledTimes(1);
+  });
 });

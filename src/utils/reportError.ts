@@ -9,7 +9,11 @@ type SnackbarHandler = (text: string) => void;
 
 let snackbarHandler: SnackbarHandler | null = null;
 
-/** Called by SnackbarProvider on mount. */
+/**
+ * Called by SnackbarProvider on mount. Singleton: the last caller wins.
+ * This app has exactly one SnackbarProvider; if a second is ever introduced,
+ * userVisible toasts will route to whichever provider mounted most recently.
+ */
 export function setSnackbarHandler(handler: SnackbarHandler) {
   snackbarHandler = handler;
 }
