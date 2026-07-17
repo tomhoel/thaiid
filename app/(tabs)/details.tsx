@@ -128,7 +128,6 @@ export default function DetailsScreen() {
 
         <Section title={t('details.identification')} icon="finger-print" color={Colors.gold} colors={Colors}>
           <Row label={t('details.idNumber')} value={cardData.idNumber} copy colors={Colors} />
-          <Row label={t('info.laser')} value={cardData.laserCode} copy colors={Colors} />
           <Row label={t('details.reference')} value={cardData.reference} copy last colors={Colors} />
         </Section>
 
