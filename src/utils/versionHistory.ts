@@ -2,17 +2,35 @@
  * Card Version History — saves generated card snapshots so users can
  * restore previous configurations without re-generating.
  *
- * Images live on the file system (avoids AsyncStorage size limits).
+ * Images live on the file system (avoids AsyncStorage size limits on native).
  * Metadata (profile data + file paths) stored in AsyncStorage.
  */
-import { Paths, File, Directory } from 'expo-file-system/next';
+import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const HISTORY_DIR = new Directory(Paths.document, 'card-history');
+let cachedHistoryDir: any = null;
 const MAX_VERSIONS = 8;
 
+function getHistoryDir() {
+  if (Platform.OS === 'web') return null;
+  if (!cachedHistoryDir) {
+    try {
+      const { Paths, Directory } = require('expo-file-system/next');
+      cachedHistoryDir = new Directory(Paths.document, 'card-history');
+    } catch {
+      cachedHistoryDir = null;
+    }
+  }
+  return cachedHistoryDir;
+}
+
 function ensureDir() {
-  if (!HISTORY_DIR.exists) HISTORY_DIR.create();
+  const dir = getHistoryDir();
+  if (dir && !dir.exists) {
+    try {
+      dir.create();
+    } catch {}
+  }
 }
 
 const metaKey = (countryCode: string) => `card_history_${countryCode}`;
@@ -45,6 +63,10 @@ export async function getVersions(countryCode: string): Promise<CardVersion[]> {
     const raw = await AsyncStorage.getItem(metaKey(countryCode));
     if (!raw) return [];
     const versions: CardVersion[] = JSON.parse(raw);
+    if (Platform.OS === 'web') {
+      return versions;
+    }
+    const { File } = require('expo-file-system/next');
     // Filter out versions whose image files no longer exist
     return versions.filter(v => {
       try {
@@ -64,16 +86,22 @@ export async function saveVersion(
   cardImageUri: string,
   portraitUri?: string,
 ): Promise<CardVersion> {
-  ensureDir();
-
-  // Copy the card image into history directory so it survives re-generation
   const id = uid();
-  const ext = cardImageUri.includes('.webp') ? 'webp' : 'png';
-  const historyFile = new File(HISTORY_DIR, `${countryCode}-${id}.${ext}`);
-  // expo-file-system/next File accepts a URI string directly
-  const sourceFile = new File(cardImageUri);
-  if (sourceFile.exists) {
-    sourceFile.copy(historyFile);
+  let savedCardUri = cardImageUri;
+
+  if (Platform.OS !== 'web') {
+    ensureDir();
+    const dir = getHistoryDir();
+    if (dir) {
+      const { File } = require('expo-file-system/next');
+      const ext = cardImageUri.includes('.webp') ? 'webp' : 'png';
+      const historyFile = new File(dir, `${countryCode}-${id}.${ext}`);
+      const sourceFile = new File(cardImageUri);
+      if (sourceFile.exists) {
+        sourceFile.copy(historyFile);
+        savedCardUri = historyFile.uri;
+      }
+    }
   }
 
   const version: CardVersion = {
@@ -85,7 +113,7 @@ export async function saveVersion(
       dateOfIssue: profileData.dateOfIssue,
       dateOfExpiry: profileData.dateOfExpiry,
     },
-    cardImageUri: historyFile.uri,
+    cardImageUri: savedCardUri,
     portraitUri,
   };
 
@@ -99,9 +127,12 @@ export async function saveVersion(
   const updated = [version, ...deduped].slice(0, MAX_VERSIONS);
 
   // Clean up evicted versions
-  const evicted = deduped.slice(MAX_VERSIONS - 1);
-  for (const old of evicted) {
-    try { new File(old.cardImageUri).delete(); } catch {}
+  if (Platform.OS !== 'web') {
+    const { File } = require('expo-file-system/next');
+    const evicted = deduped.slice(MAX_VERSIONS - 1);
+    for (const old of evicted) {
+      try { new File(old.cardImageUri).delete(); } catch {}
+    }
   }
 
   await AsyncStorage.setItem(metaKey(countryCode), JSON.stringify(updated));
@@ -124,9 +155,12 @@ export async function deleteVersions(countryCode: string, ids: string[]): Promis
   const idSet = new Set(ids);
 
   // Delete image files
-  for (const v of versions) {
-    if (idSet.has(v.id)) {
-      try { new File(v.cardImageUri).delete(); } catch {}
+  if (Platform.OS !== 'web') {
+    const { File } = require('expo-file-system/next');
+    for (const v of versions) {
+      if (idSet.has(v.id)) {
+        try { new File(v.cardImageUri).delete(); } catch {}
+      }
     }
   }
 
@@ -136,9 +170,12 @@ export async function deleteVersions(countryCode: string, ids: string[]): Promis
 
 /** Clear all history for a country */
 export async function clearHistory(countryCode: string): Promise<void> {
-  const versions = await getVersions(countryCode);
-  for (const v of versions) {
-    try { new File(v.cardImageUri).delete(); } catch {}
+  if (Platform.OS !== 'web') {
+    const { File } = require('expo-file-system/next');
+    const versions = await getVersions(countryCode);
+    for (const v of versions) {
+      try { new File(v.cardImageUri).delete(); } catch {}
+    }
   }
   await AsyncStorage.removeItem(metaKey(countryCode));
 }
@@ -146,5 +183,10 @@ export async function clearHistory(countryCode: string): Promise<void> {
 /** Clear all history for all countries */
 export async function clearAllHistory(): Promise<void> {
   await Promise.all(['TH', 'SG', 'BR', 'US', 'VN'].map(c => clearHistory(c)));
-  if (HISTORY_DIR.exists) HISTORY_DIR.delete();
+  const dir = getHistoryDir();
+  if (dir && dir.exists) {
+    try {
+      dir.delete();
+    } catch {}
+  }
 }

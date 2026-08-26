@@ -28,7 +28,7 @@ import { useLang } from '../i18n/LanguageContext';
 import VersionHistorySheet from './VersionHistorySheet';
 
 const { width: SCREEN_W } = Dimensions.get('window');
-const CARD_W = SCREEN_W - 40;
+const CARD_W = Math.min(SCREEN_W - 40, 390);
 const CARD_H = CARD_W * 0.63;
 
 /* ── 3 colors instead of 5 — halves the Image count ── */
@@ -133,22 +133,25 @@ function HoloOverlay({ tiltX, tiltY, emblemSource }: { tiltX: SharedValue<number
 function HoloSurface({ tiltX, tiltY }: { tiltX: SharedValue<number>; tiltY: SharedValue<number> }) {
   const bandStyle = useAnimatedStyle(() => {
     'worklet';
+    const tiltMagnitude = Math.abs(tiltX.value) + Math.abs(tiltY.value);
     return {
       transform: [
-        { translateX: tiltX.value * CARD_W * 0.55 },
-        { translateY: tiltY.value * CARD_H * 0.30 },
+        { translateX: tiltX.value * CARD_W * 0.7 },
+        { translateY: tiltY.value * CARD_H * 0.45 },
+        { rotate: '25deg' },
       ],
+      opacity: interpolate(tiltMagnitude, [0, 0.1, 0.8], [0, 0.3, 0.85], Extrapolation.CLAMP),
     };
   });
   return (
     <View pointerEvents="none" style={[StyleSheet.absoluteFillObject, { borderRadius: 14, overflow: 'hidden' }]}>
       <Animated.View style={[{
         position: 'absolute',
-        top: -CARD_H * 0.6, bottom: -CARD_H * 0.6,
-        left: -CARD_W * 0.3, right: -CARD_W * 0.3,
+        top: -CARD_H * 0.8, bottom: -CARD_H * 0.8,
+        left: -CARD_W * 0.4, right: -CARD_W * 0.4,
       }, bandStyle]}>
         <LinearGradient
-          colors={['transparent', 'rgba(140,220,255,0.09)', 'rgba(255,255,255,0.11)', 'rgba(255,210,90,0.07)', 'rgba(255,130,190,0.05)', 'transparent']}
+          colors={['transparent', 'rgba(140,220,255,0.08)', 'rgba(255,255,255,0.14)', 'rgba(255,210,90,0.08)', 'rgba(255,130,190,0.06)', 'transparent']}
           start={{ x: 0.15, y: 0 }}
           end={{ x: 0.85, y: 1 }}
           style={{ flex: 1 }}
@@ -236,7 +239,41 @@ export default function FlippableCard() {
         tiltY.value = withSpring(Math.max(-1, Math.min(1, y - 0.5)), { damping: 18, stiffness: 100 });
       });
     });
+
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const handleOrientation = (e: DeviceOrientationEvent) => {
+        if (e.gamma === null || e.beta === null) return;
+        const x = Math.max(-1, Math.min(1, e.gamma / 25));
+        const y = Math.max(-1, Math.min(1, (e.beta - 45) / 30));
+        tiltX.value = withSpring(x, { damping: 20, stiffness: 150 });
+        tiltY.value = withSpring(y, { damping: 20, stiffness: 150 });
+      };
+      window.addEventListener('deviceorientation', handleOrientation);
+      return () => {
+        sub?.remove();
+        window.removeEventListener('deviceorientation', handleOrientation);
+      };
+    }
+
     return () => { sub?.remove(); };
+  }, []);
+
+  const handlePointerMove = useCallback((e: any) => {
+    if (Platform.OS !== 'web') return;
+    const target = e.currentTarget;
+    if (!target) return;
+    const rect = target.getBoundingClientRect ? target.getBoundingClientRect() : null;
+    if (!rect) return;
+    const x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+    const y = ((e.clientY - rect.top) / rect.height) * 2 - 1;
+    tiltX.value = withSpring(Math.max(-1, Math.min(1, x)), { damping: 24, stiffness: 220 });
+    tiltY.value = withSpring(Math.max(-1, Math.min(1, y)), { damping: 24, stiffness: 220 });
+  }, []);
+
+  const handlePointerLeave = useCallback(() => {
+    if (Platform.OS !== 'web') return;
+    tiltX.value = withSpring(0, { damping: 20, stiffness: 180 });
+    tiltY.value = withSpring(0, { damping: 20, stiffness: 180 });
   }, []);
 
   /* ── Version history sheet ── */
@@ -301,7 +338,12 @@ export default function FlippableCard() {
 
   /* ── Flip — clean timing, zero overshoot ── */
   const handleFlip = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } catch {}
+    if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.vibrate) {
+      try { navigator.vibrate(10); } catch {}
+    }
     flipTarget.current = flipTarget.current === 0 ? 1 : 0;
     flipProgress.value = withTiming(flipTarget.current, {
       duration: 350,
@@ -314,9 +356,9 @@ export default function FlippableCard() {
     'worklet';
     return {
       transform: [
-        { perspective: 800 },
-        { rotateY: `${interpolate(tiltX.value, [-1, 1], [-8, 8])}deg` },
-        { rotateX: `${interpolate(tiltY.value, [-1, 1], [8, -8])}deg` },
+        { perspective: 900 },
+        { rotateY: `${interpolate(tiltX.value, [-1, 1], [-16, 16])}deg` },
+        { rotateX: `${interpolate(tiltY.value, [-1, 1], [14, -14])}deg` },
       ],
     };
   });
@@ -345,7 +387,13 @@ export default function FlippableCard() {
   });
 
   return (
-    <Pressable onPress={handleFlip} onLongPress={handleLongPress} delayLongPress={500} style={styles.container}>
+    <Pressable
+      onPress={handleFlip}
+      onLongPress={handleLongPress}
+      delayLongPress={500}
+      style={styles.container}
+      {...(Platform.OS === 'web' ? ({ onPointerMove: handlePointerMove, onPointerLeave: handlePointerLeave } as any) : {})}
+    >
 <Animated.View style={[styles.shadowWrap, bodyStyle]}>
         {/* Single rotating container — one transform for the flip */}
         <Animated.View style={[StyleSheet.absoluteFillObject, { borderRadius: 14, backgroundColor: 'transparent' }, flipStyle]}>
@@ -356,22 +404,12 @@ export default function FlippableCard() {
               style={styles.cardImage}
               resizeMode="cover"
             />
-            {/* Holographic surface sheen — front face only */}
-            <HoloSurface tiltX={tiltX} tiltY={tiltY} />
-            {/* Edge highlights — physical card thickness illusion */}
-            <EdgeHighlights tiltX={tiltX} tiltY={tiltY} />
           </Animated.View>
 
           {/* Back face — pre-rotated 180° so it reads correctly when flipped */}
           <Animated.View style={[styles.face, { transform: [{ rotateY: '180deg' }] }, backOpacityStyle]}>
             <Image source={config.cardImages.back} style={styles.cardImage} resizeMode="cover" />
           </Animated.View>
-
-          {/* Holo border */}
-          <HoloBorder />
-
-          {/* Entrance shimmer */}
-          <EntranceShimmer />
         </Animated.View>
 
         {/* Generating overlay — percentage progress */}

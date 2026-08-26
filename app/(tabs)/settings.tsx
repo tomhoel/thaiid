@@ -142,9 +142,34 @@ export default function SettingsScreen() {
       quality: 0.8,
       base64: true,
     });
-    if (!result.canceled && result.assets[0].base64) {
-      setSelectedPhoto(result.assets[0].base64);
-      setSelectedPhotoMime(result.assets[0].mimeType || 'image/jpeg');
+    if (!result.canceled && result.assets[0]) {
+      const asset = result.assets[0];
+      if (asset.base64) {
+        setSelectedPhoto(asset.base64);
+        setSelectedPhotoMime(asset.mimeType || 'image/jpeg');
+      } else if (asset.uri) {
+        if (asset.uri.startsWith('data:')) {
+          const parts = asset.uri.split(',');
+          const mime = parts[0].match(/:(.*?);/)?.[1] || 'image/jpeg';
+          setSelectedPhoto(parts[1]);
+          setSelectedPhotoMime(mime);
+        } else {
+          try {
+            const resp = await fetch(asset.uri);
+            const blob = await resp.blob();
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              const dataUrl = reader.result as string;
+              const parts = dataUrl.split(',');
+              setSelectedPhoto(parts[1]);
+              setSelectedPhotoMime(blob.type || 'image/jpeg');
+            };
+            reader.readAsDataURL(blob);
+          } catch {
+            setSelectedPhoto(asset.uri);
+          }
+        }
+      }
     }
   };
 

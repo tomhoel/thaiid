@@ -17,7 +17,7 @@ export default memo(function ScreenHeader({ title, sub }: Props) {
   const { config } = useCountry();
 
   return (
-    <View style={[styles.bar, { paddingTop: top + 8, backgroundColor: colors.navy, borderBottomColor: colors.goldLight + '30' }]}>
+    <View style={[styles.bar, { paddingTop: Math.max(top + 8, 14), backgroundColor: colors.navy, borderBottomColor: colors.goldLight + '30' }]}>
       <View style={styles.left}>
         <Image
           source={config.emblemAsset}

@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { Platform } from 'react-native';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../src/context/ThemeContext';
@@ -18,9 +19,9 @@ export default function TabLayout() {
       backgroundColor: theme === 'dark' ? colors.navy : colors.bgCard,
       borderTopWidth: 1,
       borderTopColor: colors.b1,
-      height: 78,
+      height: Platform.OS === 'web' ? 62 : 78,
       paddingTop: 6,
-      paddingBottom: 28,
+      paddingBottom: Platform.OS === 'web' ? 10 : 28,
       elevation: 0,
     },
     tabBarLabelStyle: { fontSize: 10, fontWeight: '600' as const, marginTop: 1 },

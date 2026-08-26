@@ -27,7 +27,8 @@ export function Snackbar({ text }: { text: string | null }) {
     opacity: opacity.value,
   }));
 
-  // Always render — animated translateY/opacity drive visibility. Avoids unmount races.
+  if (!text) return null;
+
   return (
     <Animated.View
       pointerEvents={visible ? 'auto' : 'none'}

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { View, Text, Pressable, Animated, StyleSheet } from 'react-native';
+import { View, Text, Pressable, Animated, StyleSheet, Platform, useWindowDimensions } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as SystemUI from 'expo-system-ui';
 import { useFonts, IBMPlexMono_500Medium } from '@expo-google-fonts/ibm-plex-mono';
@@ -67,6 +67,9 @@ function AppShell() {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const splashOpacity = useRef(new Animated.Value(1)).current;
   const [splashRemoved, setSplashRemoved] = useState(false);
+  const { width: winW, height: winH } = useWindowDimensions();
+
+  const isDesktop = Platform.OS === 'web' && winW > 500;
 
   const preloadAssets = useMemo(() => [
     config.cardImages.front,
@@ -76,6 +79,13 @@ function AppShell() {
 
   useEffect(() => {
     SystemUI.setBackgroundColorAsync('#0C1526').catch(() => {});
+    if (Platform.OS === 'web' && typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(registrations => {
+        for (const registration of registrations) {
+          registration.unregister();
+        }
+      });
+    }
   }, []);
 
   useEffect(() => {

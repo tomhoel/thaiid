@@ -1,0 +1,17 @@
+{
+  "short_name": "Digital ID",
+  "name": "Digital Identification Application",
+  "icons": [
+    {
+      "src": "/assets/icon.png",
+      "sizes": "192x192 512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#0C1526",
+  "background_color": "#0C1526"
+}

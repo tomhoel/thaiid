@@ -219,9 +219,6 @@ export default function HomeScreen() {
   return (
     <View style={styles.screen}>
 
-      <BackgroundAtmosphere />
-      <LivenessWatermark />
-
       {/* ── Header ── */}
       <Animated.View style={headerEnterStyle} onLayout={e => { measured.current.header = e.nativeEvent.layout.height; recalc(); }}>
         <ScreenHeader title={t('header.title')} sub={t('header.sub')} />
@@ -368,15 +365,59 @@ export default function HomeScreen() {
             {/* ── Expanded details ── */}
             <Animated.View style={detailsStyle}>
 
-              {/* Card Details link */}
-              <Pressable
-                style={styles.cardDetailsBtn}
-                onPress={() => router.push('/details')}
-              >
-                <Ionicons name="document-text-outline" size={14} color={colors.goldLight} />
-                <Text style={styles.cardDetailsBtnTxt}>{t('details.cardDetails')}</Text>
-                <Ionicons name="chevron-forward" size={14} color={colors.t4} style={{ marginLeft: 'auto' }} />
-              </Pressable>
+              {/* ── Smart Card / Identification Specs ── */}
+              <View style={styles.sectionHeader}>
+                <Ionicons name="hardware-chip-outline" size={12} color={colors.goldLight} />
+                <Text style={styles.sectionTitle}>{lang === 'en' ? 'SMART CARD SPECIFICATIONS' : 'ข้อมูลสมาร์ทการ์ด'}</Text>
+              </View>
+              <View style={styles.specGrid}>
+                <View style={styles.specItem}>
+                  <Text style={styles.specLabel}>{lang === 'en' ? 'OFFICIAL REFERENCE' : 'เลขอ้างอิง'}</Text>
+                  <Text style={styles.specMono}>{cardData.reference || config.systemReference}</Text>
+                </View>
+                <View style={styles.specItem}>
+                  <Text style={styles.specLabel}>{lang === 'en' ? 'STANDARD' : 'มาตรฐาน'}</Text>
+                  <Text style={styles.specMono}>ISO/IEC 7816-4</Text>
+                </View>
+                <View style={styles.specItem}>
+                  <Text style={styles.specLabel}>{lang === 'en' ? 'NATIONALITY' : 'สัญชาติ'}</Text>
+                  <Text style={styles.specValue}>{lang === 'en' ? cardData.nationality : cardData.nationalityThai}</Text>
+                </View>
+                <View style={styles.specItem}>
+                  <Text style={styles.specLabel}>{lang === 'en' ? 'SEX' : 'เพศ'}</Text>
+                  <Text style={styles.specValue}>{lang === 'en' ? cardData.sex : cardData.sexThai}</Text>
+                </View>
+              </View>
+
+              <View style={styles.rule} />
+
+              {/* ── Biometric Data ── */}
+              <View style={styles.sectionHeader}>
+                <Ionicons name="finger-print" size={12} color={colors.goldLight} />
+                <Text style={styles.sectionTitle}>{lang === 'en' ? 'BIOMETRIC CREDENTIALS' : 'ข้อมูลไบโอเมตริกซ์'}</Text>
+              </View>
+              <View style={{ gap: 2, paddingBottom: 14 }}>
+                <View style={styles.bioRow}>
+                  <Ionicons name="finger-print" size={14} color={colors.green} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.specLabel}>{lang === 'en' ? 'FINGERPRINT TEMPLATE' : 'ลายนิ้วมือ'}</Text>
+                    <Text style={styles.specMono}>a7f2c934...6d3f8e2a</Text>
+                  </View>
+                  <View style={styles.bioTag}>
+                    <Text style={styles.bioTagTxt}>{lang === 'en' ? 'ENROLLED' : 'ลงทะเบียนแล้ว'}</Text>
+                  </View>
+                </View>
+                <View style={styles.bioRow}>
+                  <Ionicons name="scan-outline" size={14} color={colors.green} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.specLabel}>{lang === 'en' ? 'FACIAL BIOMETRICS' : 'ใบหน้าดิจิทัล'}</Text>
+                    <Text style={styles.specMono}>fc91b2e8...04a7d1c3</Text>
+                  </View>
+                  <View style={styles.bioTag}>
+                    <Text style={styles.bioTagTxt}>{lang === 'en' ? 'ENROLLED' : 'ลงทะเบียนแล้ว'}</Text>
+                  </View>
+                </View>
+              </View>
 
             </Animated.View>
 
@@ -398,15 +439,13 @@ const makeStyles = (C: ColorPalette) => StyleSheet.create({
   flipHint: { fontSize: 11, color: C.t4, marginTop: 8, textAlign: 'center' },
 
   /* Panel — top animated, bottom anchored to tab bar */
-  panel: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 20, backgroundColor: 'transparent' },
+  panel: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 16, backgroundColor: 'transparent' },
 
   docPanel: {
     flex: 1, backgroundColor: C.bgCard,
-    borderTopLeftRadius: 12, borderTopRightRadius: 12,
+    borderTopLeftRadius: 16, borderTopRightRadius: 16,
     overflow: 'hidden',
-    borderWidth: StyleSheet.hairlineWidth, borderColor: C.navy,
-    borderTopWidth: 1, borderTopColor: C.goldLight + '25',
-    borderBottomWidth: 0,
+    borderTopWidth: 1, borderTopColor: C.goldLight + '35',
   },
 
   docHeader: {

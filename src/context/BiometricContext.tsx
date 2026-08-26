@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
-import { AppState, Alert } from 'react-native';
+import { AppState, Alert, Platform } from 'react-native';
 import * as LocalAuthentication from 'expo-local-authentication';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -37,6 +37,10 @@ export function BiometricProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const authenticate = useCallback(async (): Promise<boolean> => {
+    if (Platform.OS === 'web') {
+      setAuthenticated(true);
+      return true;
+    }
     try {
       const result = await LocalAuthentication.authenticateAsync({
         promptMessage: 'Authenticate to access your ID',
@@ -93,6 +97,13 @@ export function BiometricProvider({ children }: { children: React.ReactNode }) {
       setEnabledState(false);
       setAuthenticated(true);
       await AsyncStorage.setItem(STORAGE_KEY, 'false');
+      return;
+    }
+
+    if (Platform.OS === 'web') {
+      setEnabledState(true);
+      await AsyncStorage.setItem(STORAGE_KEY, 'true');
+      setAuthenticated(true);
       return;
     }
 
