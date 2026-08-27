@@ -7,6 +7,8 @@ import * as SystemUI from 'expo-system-ui';
 import { useFonts, IBMPlexMono_500Medium } from '@expo-google-fonts/ibm-plex-mono';
 import { Asset } from 'expo-asset';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
+import { queryClient, asyncStoragePersister } from '../src/query/queryClient';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
 import { BiometricProvider, useBiometric } from '../src/context/BiometricContext';
 import { ProfileProvider, useProfile } from '../src/context/ProfileContext';
@@ -144,23 +146,28 @@ function AppShell() {
 export default function RootLayout() {
   return (
     <ErrorBoundary>
-      <GestureHandlerRootView style={{ flex: 1 }}>
-        <ThemeProvider>
-          <CountryProvider>
-            <ThemeAccentBridge>
-            <SnackbarProvider>
-            <LanguageProvider>
-              <ProfileProvider>
-                <BiometricProvider>
-                  <AppShell />
-                </BiometricProvider>
-              </ProfileProvider>
-            </LanguageProvider>
-            </SnackbarProvider>
-            </ThemeAccentBridge>
-          </CountryProvider>
-        </ThemeProvider>
-      </GestureHandlerRootView>
+      <PersistQueryClientProvider
+        client={queryClient}
+        persistOptions={{ persister: asyncStoragePersister }}
+      >
+        <GestureHandlerRootView style={{ flex: 1 }}>
+          <ThemeProvider>
+            <CountryProvider>
+              <ThemeAccentBridge>
+              <SnackbarProvider>
+              <LanguageProvider>
+                <ProfileProvider>
+                  <BiometricProvider>
+                    <AppShell />
+                  </BiometricProvider>
+                </ProfileProvider>
+              </LanguageProvider>
+              </SnackbarProvider>
+              </ThemeAccentBridge>
+            </CountryProvider>
+          </ThemeProvider>
+        </GestureHandlerRootView>
+      </PersistQueryClientProvider>
     </ErrorBoundary>
   );
 }
