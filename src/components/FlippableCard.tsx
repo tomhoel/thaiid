@@ -1,16 +1,17 @@
 /**
- * FlippableCard — High-Performance Pure 3D Smart Card Engine.
+ * FlippableCard — High-Performance Pure 3D Smart Card Engine with Little Specular Beam.
  * Features:
- *   1. 100% True-Color Artwork (Zero darkening, zero discoloration on drag/flip)
- *   2. Solid Pure White 3D Perimeter Walls & Smooth 14px Corner Arcs
- *   3. High-FPS 60-120 FPS Performance with Hardware-Accelerated 3D Transforms
- *   4. Intuitive Fast Swipe Fling Snap (Flicking left advances +180°, flicking right flips -180°)
- *   5. Continuous, Unclamped Rotational Drag (Spin left or right infinitely in real-time)
- *   6. Dual-Axis 3D Spatial Physics (Horizontal drag spins Y, vertical drag pitches X)
- *   7. Tap / Click to flip 180° with crisp subtle settling bounce
- *   8. Front face (Z = +3.0px) and Back face (Z = -3.0px) with clean, unobstructed artwork
- *   9. Long Press to open Version History
- *   10. Smooth 3D mouse hover & gyroscope tilt
+ *   1. Little Specular Beam (Delicate, soft glass reflection sweeping naturally on both faces)
+ *   2. 100% True-Color Artwork (Zero darkening, zero black gradients)
+ *   3. Solid Pure White 3D Perimeter Walls & Smooth 14px Corner Arcs
+ *   4. High-FPS 60-120 FPS Performance with Hardware-Accelerated 3D Transforms
+ *   5. Intuitive Fast Swipe Fling Snap (Flicking left advances +180°, flicking right flips -180°)
+ *   6. Continuous, Unclamped Rotational Drag (Spin left or right infinitely in real-time)
+ *   7. Dual-Axis 3D Spatial Physics (Horizontal drag spins Y, vertical drag pitches X)
+ *   8. Tap / Click to flip 180° with crisp subtle settling bounce
+ *   9. Front face (Z = +3.0px) and Back face (Z = -3.0px) with clean, unobstructed artwork
+ *   10. Long Press to open Version History
+ *   11. Smooth 3D mouse hover & gyroscope tilt
  */
 import React, { useRef, useCallback, useEffect, useState } from 'react';
 import { StyleSheet, View, Image, Dimensions, Text, Platform } from 'react-native';
@@ -27,6 +28,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { GestureDetector, Gesture } from 'react-native-gesture-handler';
 import { Accelerometer } from 'expo-sensors';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { useProfile } from '../context/ProfileContext';
 import { useCountry } from '../context/CountryContext';
@@ -278,6 +280,46 @@ export default function FlippableCard() {
     };
   });
 
+  // Little Specular Beam for Front Face
+  const frontBeamStyle = useAnimatedStyle(() => {
+    'worklet';
+    const norm = ((rotY.value % 360) + 360) % 360;
+    const relAngle = norm > 180 ? norm - 360 : norm;
+
+    const sweepX = interpolate(relAngle, [-60, 0, 60], [-CARD_W * 0.75, 0, CARD_W * 0.75], Extrapolation.CLAMP);
+    const sweepY = interpolate(rotX.value, [-25, 0, 25], [CARD_H * 0.35, 0, -CARD_H * 0.35], Extrapolation.CLAMP);
+    const opacity = interpolate(Math.abs(relAngle), [0, 45, 80], [0.38, 0.22, 0], Extrapolation.CLAMP);
+
+    return {
+      transform: [
+        { translateX: sweepX },
+        { translateY: sweepY },
+        { rotate: '25deg' },
+      ],
+      opacity,
+    };
+  });
+
+  // Little Specular Beam for Back Face
+  const backBeamStyle = useAnimatedStyle(() => {
+    'worklet';
+    const norm = ((rotY.value % 360) + 360) % 360;
+    const relAngle = norm - 180;
+
+    const sweepX = interpolate(relAngle, [-60, 0, 60], [CARD_W * 0.75, 0, -CARD_W * 0.75], Extrapolation.CLAMP);
+    const sweepY = interpolate(rotX.value, [-25, 0, 25], [CARD_H * 0.35, 0, -CARD_H * 0.35], Extrapolation.CLAMP);
+    const opacity = interpolate(Math.abs(relAngle), [0, 45, 80], [0.38, 0.22, 0], Extrapolation.CLAMP);
+
+    return {
+      transform: [
+        { translateX: sweepX },
+        { translateY: sweepY },
+        { rotate: '25deg' },
+      ],
+      opacity,
+    };
+  });
+
   return (
     <GestureDetector gesture={composedGesture}>
       <Animated.View
@@ -372,6 +414,24 @@ export default function FlippableCard() {
               style={styles.cardImage}
               resizeMode="cover"
             />
+
+            {/* Little Specular Beam (Front Face) */}
+            <View pointerEvents="none" style={styles.beamWrapper}>
+              <Animated.View style={[styles.lilBeam, frontBeamStyle]}>
+                <LinearGradient
+                  colors={[
+                    'transparent',
+                    'rgba(255, 255, 255, 0.04)',
+                    'rgba(255, 255, 255, 0.32)',
+                    'rgba(255, 255, 255, 0.04)',
+                    'transparent',
+                  ]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={StyleSheet.absoluteFillObject}
+                />
+              </Animated.View>
+            </View>
           </Animated.View>
 
           {/* ═══ Back Face (Z = -3.0px, pre-rotated 180°, exact R = 14px) ═══ */}
@@ -383,6 +443,24 @@ export default function FlippableCard() {
             ]}
           >
             <Image source={config.cardImages.back} style={styles.cardImage} resizeMode="cover" />
+
+            {/* Little Specular Beam (Back Face) */}
+            <View pointerEvents="none" style={styles.beamWrapper}>
+              <Animated.View style={[styles.lilBeam, backBeamStyle]}>
+                <LinearGradient
+                  colors={[
+                    'transparent',
+                    'rgba(255, 255, 255, 0.04)',
+                    'rgba(255, 255, 255, 0.32)',
+                    'rgba(255, 255, 255, 0.04)',
+                    'transparent',
+                  ]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={StyleSheet.absoluteFillObject}
+                />
+              </Animated.View>
+            </View>
           </Animated.View>
         </Animated.View>
 
@@ -436,6 +514,20 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   cardImage: { width: '100%', height: '100%', borderRadius: CORNER_R },
+
+  /* Little Specular Beam */
+  beamWrapper: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: CORNER_R,
+    overflow: 'hidden',
+  },
+  lilBeam: {
+    position: 'absolute',
+    top: -CARD_H * 0.8,
+    left: CARD_W * 0.25,
+    width: CARD_W * 0.45,
+    height: CARD_H * 2.6,
+  },
 
   /* Solid Pure White Chassis Core */
   chassisSlice: {
