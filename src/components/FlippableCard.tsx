@@ -1,10 +1,10 @@
 /**
- * FlippableCard — High-Performance Pure White Solid 3D Card Engine.
+ * FlippableCard — High-Performance Pure White Solid 3D Box Engine.
  * Features:
  *   1. Tap / Click to flip 180°
  *   2. Drag / Swipe horizontally in real time with continuous pure white 3D volume
- *   3. Solid 3D White Polycarbonate/PVC Extruded Body (24 gapless micro-slices + 4 seamless white side walls)
- *   4. Zero gaps, ultra-smooth rotations, and pristine aesthetic at all angles
+ *   3. True 6-Sided Solid 3D Box (Front plate + Back plate + 4 Seamless White Perimeter Walls reaching 100% of all edges)
+ *   4. Zero interior plates / slices — 100% clean hollow-core solid geometry
  *   5. Long Press to open Version History
  *   6. Smooth 3D mouse hover & gyroscope tilt
  */
@@ -32,13 +32,7 @@ import VersionHistorySheet from './VersionHistorySheet';
 const { width: SCREEN_W } = Dimensions.get('window');
 const CARD_W = Math.min(SCREEN_W - 40, 390);
 const CARD_H = CARD_W * 0.63;
-const CARD_DEPTH = 6.4; // 0.76mm equivalent physical card thickness
-
-// 25 ultra-dense micro-slices (0.25px increment) for seamless pure white physical volume
-const CORE_SLICES = [
-  -3.0, -2.75, -2.5, -2.25, -2.0, -1.75, -1.5, -1.25, -1.0, -0.75, -0.5, -0.25,
-   0.0,  0.25,  0.5,  0.75,  1.0,  1.25,  1.5,  1.75,  2.0,  2.25,  2.5,  2.75,  3.0,
-];
+const CARD_DEPTH = 6; // 6px clean physical card thickness (±3px Z-depth)
 
 export default function FlippableCard() {
   const { profile, isGenerating } = useProfile();
@@ -258,73 +252,60 @@ export default function FlippableCard() {
         {...(Platform.OS === 'web' ? ({ onPointerMove: handlePointerMove, onPointerLeave: handlePointerLeave } as any) : {})}
       >
         <Animated.View style={[styles.card3DContainer, card3DStyle]}>
-          {/* ═══ Seamless Pure White Volumetric Core (25 Micro-Slices) ═══ */}
-          {CORE_SLICES.map((z, idx) => (
-            <View
-              key={idx}
-              pointerEvents="none"
-              style={[
-                styles.face,
-                {
-                  backgroundColor: '#FFFFFF',
-                  borderColor: 'rgba(255, 255, 255, 0.95)',
-                  borderWidth: 0.5,
-                  transform: [{ translateZ: z }] as any,
-                },
-              ]}
-            />
-          ))}
-
-          {/* ═══ 4 Orthogonal Pure White 3D Wall Enclosures ═══ */}
-          {/* Left Wall (X = 0) */}
+          {/* ═══ 4 Seamless Pure White 3D Outer Perimeter Walls (Zero interior plates) ═══ */}
+          {/* Left Wall (Reaches full height from top to bottom at X = 0) */}
           <View
             pointerEvents="none"
             style={[
-              styles.sideWallV,
+              styles.sideWallLeft,
               {
+                width: CARD_DEPTH,
                 left: -CARD_DEPTH / 2,
                 transform: [{ rotateY: '-90deg' }] as any,
               },
             ]}
           />
 
-          {/* Right Wall (X = CARD_W) */}
+          {/* Right Wall (Reaches full height from top to bottom at X = CARD_W) */}
           <View
             pointerEvents="none"
             style={[
-              styles.sideWallV,
+              styles.sideWallRight,
               {
+                width: CARD_DEPTH,
                 right: -CARD_DEPTH / 2,
                 transform: [{ rotateY: '90deg' }] as any,
               },
             ]}
           />
 
-          {/* Top Wall (Y = 0) */}
+          {/* Top Wall (Reaches full width from left to right at Y = 0) */}
           <View
             pointerEvents="none"
             style={[
-              styles.sideWallH,
+              styles.sideWallTop,
               {
+                height: CARD_DEPTH,
                 top: -CARD_DEPTH / 2,
                 transform: [{ rotateX: '90deg' }] as any,
               },
             ]}
           />
 
-          {/* Bottom Wall (Y = CARD_H) */}
+          {/* Bottom Wall (Reaches full width from left to right at Y = CARD_H) */}
           <View
             pointerEvents="none"
             style={[
-              styles.sideWallH,
+              styles.sideWallBottom,
               {
+                height: CARD_DEPTH,
                 bottom: -CARD_DEPTH / 2,
                 transform: [{ rotateX: '-90deg' }] as any,
               },
             ]}
           />
 
-          {/* ═══ Front Face (Z = +3.2px) ═══ */}
+          {/* ═══ Front Face (Z = +3px) ═══ */}
           <Animated.View
             style={[
               styles.face,
@@ -339,7 +320,7 @@ export default function FlippableCard() {
             />
           </Animated.View>
 
-          {/* ═══ Back Face (Z = -3.2px, pre-rotated 180°) ═══ */}
+          {/* ═══ Back Face (Z = -3px, pre-rotated 180°) ═══ */}
           <Animated.View
             style={[
               styles.face,
@@ -403,29 +384,45 @@ const styles = StyleSheet.create({
   },
   cardImage: { width: '100%', height: '100%', borderRadius: 14 },
 
-  /* 3D Orthogonal Pure White Side Walls */
-  sideWallV: {
+  /* 3D Pure White Perimeter Walls spanning 100% of all edges */
+  sideWallLeft: {
     position: 'absolute',
-    top: 14,
-    bottom: 14,
-    width: CARD_DEPTH,
+    top: 0,
+    bottom: 0,
     backgroundColor: '#FFFFFF',
     borderTopWidth: 0.5,
     borderBottomWidth: 0.5,
     borderColor: 'rgba(255, 255, 255, 0.95)',
-    overflow: 'hidden',
     zIndex: 5,
   },
-  sideWallH: {
+  sideWallRight: {
     position: 'absolute',
-    left: 14,
-    right: 14,
-    height: CARD_DEPTH,
+    top: 0,
+    bottom: 0,
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 0.5,
+    borderBottomWidth: 0.5,
+    borderColor: 'rgba(255, 255, 255, 0.95)',
+    zIndex: 5,
+  },
+  sideWallTop: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
     backgroundColor: '#FFFFFF',
     borderLeftWidth: 0.5,
     borderRightWidth: 0.5,
     borderColor: 'rgba(255, 255, 255, 0.95)',
-    overflow: 'hidden',
+    zIndex: 5,
+  },
+  sideWallBottom: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    backgroundColor: '#FFFFFF',
+    borderLeftWidth: 0.5,
+    borderRightWidth: 0.5,
+    borderColor: 'rgba(255, 255, 255, 0.95)',
     zIndex: 5,
   },
 
