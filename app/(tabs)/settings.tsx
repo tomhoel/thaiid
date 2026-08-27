@@ -18,7 +18,8 @@ import Constants from 'expo-constants';
 import { setAppIcon } from '../../src/modules/DynamicIcon';
 import { useSnackbar } from '../../src/context/SnackbarContext';
 import { reportError } from '../../src/utils/reportError';
-import { saveCardImage, savePortraitImage, clearCardImages } from '../../src/utils/cardImageStore';
+import { StorageService } from '../../src/services/storageService';
+import { GeminiService } from '../../src/services/geminiService';
 import { saveVersion, findMatchingVersion, clearAllHistory } from '../../src/utils/versionHistory';
 import { usePWA } from '../../src/hooks/usePWA';
 
@@ -278,106 +279,10 @@ export default function SettingsScreen() {
           return;
         }
 
-        // Helper: call Gemini through Supabase Edge Function with retry on rate limit
-        const callGemini = async (parts: any[], attempt = 1): Promise<any> => {
-          const resp = await fetch(
-            `${supabaseUrl}/functions/v1/gemini-proxy`,
-            {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${supabaseAnonKey}`,
-                'apikey': supabaseAnonKey,
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                contents: [{ role: 'user', parts }],
-                generationConfig: { responseModalities: ['TEXT', 'IMAGE'] },
-              }),
-            }
-          );
-          const json = await resp.json();
-          if (!resp.ok) {
-            const errMsg = json.error?.message || `HTTP ${resp.status}`;
-            const errCode = json.error?.code || resp.status;
-            console.warn(`[Gemini] Error ${errCode} (attempt ${attempt}):`, errMsg);
-            if (resp.status === 401 || resp.status === 403 || errMsg.includes('API_KEY')) {
-              throw new Error('Gemini API key is invalid on the server. Update GEMINI_API_KEY in Supabase secrets.');
-            }
-            if (attempt < 3 && (resp.status === 429 || resp.status >= 500)) {
-              const delay = resp.status === 429 ? 5000 * attempt : 2000 * attempt;
-              console.log(`[Gemini] Retrying in ${delay}ms...`);
-              await new Promise(r => setTimeout(r, delay));
-              return callGemini(parts, attempt + 1);
-            }
-            throw new Error(errMsg);
-          }
-          return json;
-        };
-
-        const extractImageUri = (data: any): string | null => {
-          const part = data.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData);
-          if (part?.inlineData?.data) return `data:${part.inlineData.mimeType || 'image/png'};base64,${part.inlineData.data}`;
-          return null;
-        };
-
-        // If user picked a photo, use it directly as the portrait (no face extraction needed)
-        // If no photo, keep the existing portrait
+        // If user picked a photo, use it directly as the portrait
         const portraitUri = photo
           ? `data:${photoMime || 'image/jpeg'};base64,${photo}`
           : snap.pictureUri;
-
-        // Build card generation parts for a given country
-        // Always uses the clean template + photo (if available) for consistent quality
-        const buildCardParts = (
-          templateBase64: string,
-          targetConfig: Record<string, any>,
-          profileData: Record<string, any>,
-        ) => {
-          const hasPhoto = !!photo;
-          const cardDesc = targetConfig.cardDescription;
-          const parts: any[] = [{ inlineData: { mimeType: 'image/png', data: templateBase64 } }];
-
-          // Always include the photo if available — ensures consistent portrait across edits
-          if (hasPhoto) {
-            parts.push({ inlineData: { mimeType: photoMime || 'image/jpeg', data: photo } });
-          }
-
-          const aspectNote = `The output image MUST be exactly the same dimensions and aspect ratio as the input image (1013x638 pixels, landscape). Do NOT change the canvas size, crop, pad, or reshape the image in any way.`;
-
-          const fields = [
-            `Identification Number: ${profileData.idNumber}`,
-            `Native Name (${targetConfig.secondaryLanguage.langName}): ${profileData.nameThai}`,
-            `English Name: ${profileData.fullNameEnglish}`,
-            `Date of Birth: ${profileData.dateOfBirth}`,
-            `Date of Issue: ${profileData.dateOfIssue}`,
-            `Date of Expiry: ${profileData.dateOfExpiry}`,
-          ].join('\n');
-
-          let prompt: string;
-          if (hasPhoto) {
-            prompt = `Edit this ${cardDesc} image.
-
-${aspectNote}
-
-Make these specific changes ONLY — do NOT move, resize, or reposition any element:
-1. Replace the portrait photograph (keep it in the EXACT same position and size) with the person from the SECOND image, cropped and placed exactly in the photo area.
-2. Replace ALL text fields on the card with these values — match the original font, size, weight, color, and position perfectly:
-${fields}
-
-CRITICAL: The layout must remain IDENTICAL. All other elements (logos, emblems, background patterns, gradient, chip, photo position, and other elements) must remain COMPLETELY UNCHANGED. Do not redraw, move, or re-render any element that is not listed above. Output the result as a single image.`;
-          } else {
-            prompt = `Edit this ${cardDesc} image.
-
-${aspectNote}
-
-Replace ALL text fields on the card with these values — match the original font, size, weight, color, and position perfectly:
-${fields}
-
-CRITICAL: The layout must remain IDENTICAL. Everything else must remain PIXEL-PERFECT — portrait photo, all other text, ID number, emblems, background, chip, patterns, positions. Only the fields listed above should change. Output the result as a single image.`;
-          }
-          parts.push({ text: prompt });
-          return parts;
-        };
 
         // ── Generate ALL countries in parallel ──
         const allCodes = ['TH', 'SG', 'BR', 'US', 'VN'];
@@ -392,7 +297,7 @@ CRITICAL: The layout must remain IDENTICAL. Everything else must remain PIXEL-PE
         // ── Save portrait FIRST so all countries share the same file ──
         let portraitFileUri = portraitUri;
         if (portraitUri?.startsWith('data:')) {
-          portraitFileUri = await savePortraitImage(country, portraitUri);
+          portraitFileUri = await StorageService.savePortraitImage(portraitUri);
         }
 
         // Sync portrait + dates to all other countries BEFORE generation starts
@@ -402,16 +307,19 @@ CRITICAL: The layout must remain IDENTICAL. Everything else must remain PIXEL-PE
 
         // Current country generation
         const currentGen = (async () => {
-          const parts = buildCardParts(
-            getCardTemplate(country),
-            config,
-            snap,
-          );
-          const data = await callGemini(parts);
-          const rawCardUri = extractImageUri(data);
+          const parts = GeminiService.buildCardParts({
+            templateBase64: getCardTemplate(country),
+            cardDescription: config.cardDescription,
+            secondaryLangName: config.secondaryLanguage.langName,
+            profileData: snap,
+            selectedPhotoBase64: photo,
+            selectedPhotoMime: photoMime,
+          });
+          const data = await GeminiService.callProxy(parts);
+          const rawCardUri = GeminiService.extractImageUri(data);
 
           let cardFileUri = snap.cardFrontUri;
-          if (rawCardUri) cardFileUri = await saveCardImage(country, rawCardUri);
+          if (rawCardUri) cardFileUri = await StorageService.saveCardImage(country, rawCardUri);
 
           updateProfile({ cardFrontUri: cardFileUri, pictureUri: portraitFileUri });
           // Save to version history
@@ -426,26 +334,26 @@ CRITICAL: The layout must remain IDENTICAL. Everything else must remain PIXEL-PE
           .map((code) => (async () => {
             const targetConfig = allConfigs[code];
             const targetKey = `profile_data_${code}`;
-            // Re-read from AsyncStorage AFTER syncSharedToOthers has written updated data
             const savedRaw = await AsyncStorage.getItem(targetKey);
             const targetProfile = savedRaw ? JSON.parse(savedRaw) : { ...targetConfig.defaultCardData };
 
-            const parts = buildCardParts(
-              getCardTemplate(code),
-              targetConfig,
-              targetProfile,
-            );
+            const parts = GeminiService.buildCardParts({
+              templateBase64: getCardTemplate(code),
+              cardDescription: targetConfig.cardDescription,
+              secondaryLangName: targetConfig.secondaryLanguage.langName,
+              profileData: targetProfile,
+              selectedPhotoBase64: photo,
+              selectedPhotoMime: photoMime,
+            });
             console.log(`[SyncGen:${code}] Generating with DOB=${targetProfile.dateOfBirth}`);
-            const genData = await callGemini(parts);
-            const rawUri = extractImageUri(genData);
+            const genData = await GeminiService.callProxy(parts);
+            const rawUri = GeminiService.extractImageUri(genData);
             if (rawUri) {
-              const fileUri = await saveCardImage(code, rawUri);
+              const fileUri = await StorageService.saveCardImage(code, rawUri);
               console.log(`[SyncGen:${code}] Success`);
-              // Re-read profile to avoid clobbering portrait written by sync
               const freshRaw = await AsyncStorage.getItem(targetKey);
               const freshProfile = freshRaw ? JSON.parse(freshRaw) : targetProfile;
               await AsyncStorage.setItem(targetKey, JSON.stringify({ ...freshProfile, cardFrontUri: fileUri }));
-              // Save to version history
               saveVersion(code, targetProfile, fileUri, portraitFileUri)
                 .catch((e) => reportError(`settings.saveVersion.${code}`, e));
             } else {

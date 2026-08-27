@@ -190,3 +190,6 @@ export async function clearAllHistory(): Promise<void> {
     } catch {}
   }
 }
+
+export const saveCardVersion = saveVersion;
+
