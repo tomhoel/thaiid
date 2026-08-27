@@ -1,12 +1,9 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { Platform } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Linking from 'expo-linking';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '../services/supabaseClient';
 import { reportError } from '../utils/reportError';
-
-const ONBOARDING_KEY = 'onboarding_completed_v1';
 
 interface AuthContextType {
   user: User | null;
@@ -14,11 +11,8 @@ interface AuthContextType {
   loading: boolean;
   ready: boolean;
   isAuthenticated: boolean;
-  isOnboarded: boolean;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
-  completeOnboarding: () => Promise<void>;
-  resetOnboarding: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -27,11 +21,8 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   ready: false,
   isAuthenticated: false,
-  isOnboarded: false,
   signInWithGoogle: async () => {},
   signOut: async () => {},
-  completeOnboarding: async () => {},
-  resetOnboarding: async () => {},
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -39,20 +30,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(false);
   const [ready, setReady] = useState(false);
-  const [isOnboarded, setIsOnboarded] = useState(false);
 
   useEffect(() => {
     let mounted = true;
 
     async function initAuth() {
       try {
-        // 1. Check onboarding state from local storage first (instant)
-        const storedOnboarded = await AsyncStorage.getItem(ONBOARDING_KEY);
-        if (mounted && storedOnboarded === 'true') {
-          setIsOnboarded(true);
-        }
-
-        // 2. Timeout-protected session retrieval (never block app startup if offline)
+        // Fast timeout-protected session check
         const sessionPromise = supabase.auth.getSession();
         const timeoutPromise = new Promise<any>((resolve) =>
           setTimeout(() => resolve({ data: { session: null }, error: null }), 400)
@@ -67,9 +51,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const currentSession = data?.session ?? null;
           setSession(currentSession);
           setUser(currentSession?.user ?? null);
-          if (currentSession?.user || storedOnboarded === 'true') {
-            setIsOnboarded(true);
-          }
         }
       } catch (e) {
         reportError('AuthContext.initAuth', e);
@@ -82,15 +63,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     initAuth();
 
-    // 3. Listen for auth state changes (OAuth redirect, sign-in, token refresh, sign-out)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    // Listen for auth state changes (OAuth redirect, sign-in, token refresh, sign-out)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!mounted) return;
       setSession(session);
       setUser(session?.user ?? null);
-      if (session?.user) {
-        setIsOnboarded(true);
-        await AsyncStorage.setItem(ONBOARDING_KEY, 'true').catch(() => {});
-      }
       setLoading(false);
       setReady(true);
     });
@@ -136,24 +113,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const completeOnboarding = async () => {
-    try {
-      setIsOnboarded(true);
-      await AsyncStorage.setItem(ONBOARDING_KEY, 'true');
-    } catch (e) {
-      reportError('AuthContext.completeOnboarding', e);
-    }
-  };
-
-  const resetOnboarding = async () => {
-    try {
-      setIsOnboarded(false);
-      await AsyncStorage.removeItem(ONBOARDING_KEY);
-    } catch (e) {
-      reportError('AuthContext.resetOnboarding', e);
-    }
-  };
-
   const signOut = async () => {
     try {
       setLoading(true);
@@ -163,7 +122,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       setUser(null);
       setSession(null);
-      await resetOnboarding();
     } catch (e: any) {
       reportError('AuthContext.signOut', e);
       throw e;
@@ -180,11 +138,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loading,
         ready,
         isAuthenticated: !!user,
-        isOnboarded,
         signInWithGoogle,
         signOut,
-        completeOnboarding,
-        resetOnboarding,
       }}
     >
       {children}

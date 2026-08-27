@@ -66,16 +66,14 @@ function AppShell() {
   const { colors, themeLoaded } = useTheme();
   const { ready: profileReady } = useProfile();
   const { countryLoaded, config } = useCountry();
-  const { isOnboarded, isAuthenticated, ready: authReady } = useAuth();
+  const { isAuthenticated, ready: authReady } = useAuth();
   const [fontsLoaded] = useFonts({ IBMPlexMono_500Medium });
   const [splashDone, setSplashDone] = useState(false);
   const [assetsReady, setAssetsReady] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const splashOpacity = useRef(new Animated.Value(1)).current;
   const [splashRemoved, setSplashRemoved] = useState(false);
-  const { width: winW, height: winH } = useWindowDimensions();
-
-  const isDesktop = Platform.OS === 'web' && winW > 500;
+  const { width: winW } = useWindowDimensions();
 
   const preloadAssets = useMemo(() => [
     config.cardImages.front,
@@ -86,26 +84,17 @@ function AppShell() {
   useEffect(() => {
     SystemUI.setBackgroundColorAsync('#0C1526').catch(() => {});
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      // 1. Register Service Worker for PWA Offline Caching
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js').then((reg) => {
-            console.log('[PWA] Service Worker registered with scope:', reg.scope);
-          }).catch((err) => {
-            console.log('[PWA] Service Worker registration failed:', err);
-          });
+          navigator.serviceWorker.register('/sw.js').catch(() => {});
         });
       }
-
-      // 2. Ensure PWA Manifest link tag is present
       if (!document.querySelector('link[rel="manifest"]')) {
         const link = document.createElement('link');
         link.rel = 'manifest';
         link.href = '/manifest.json';
         document.head.appendChild(link);
       }
-
-      // 3. Apple Touch Icon and Mobile Web App Meta Tags
       const metaTags = [
         { name: 'mobile-web-app-capable', content: 'yes' },
         { name: 'apple-mobile-web-app-capable', content: 'yes' },
@@ -128,45 +117,61 @@ function AppShell() {
     SystemUI.setBackgroundColorAsync(colors.bg).catch(() => {});
   }, [colors.bg]);
 
-  // Minimum splash duration with safety fallback
+  // If user is authenticated, run splash animation while loading assets
   useEffect(() => {
-    timerRef.current = setTimeout(() => setSplashDone(true), SPLASH_MIN_MS);
-    const safetyTimer = setTimeout(() => {
-      setSplashDone(true);
-      setAssetsReady(true);
-    }, 1000);
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-      clearTimeout(safetyTimer);
-    };
-  }, []);
+    if (isAuthenticated) {
+      timerRef.current = setTimeout(() => setSplashDone(true), SPLASH_MIN_MS);
+      const safetyTimer = setTimeout(() => {
+        setSplashDone(true);
+        setAssetsReady(true);
+      }, 1200);
+      return () => {
+        if (timerRef.current) clearTimeout(timerRef.current);
+        clearTimeout(safetyTimer);
+      };
+    }
+  }, [isAuthenticated]);
 
-  // Pre-load card images so they render instantly when content mounts
   useEffect(() => {
-    Asset.loadAsync(preloadAssets)
-      .then(() => setAssetsReady(true))
-      .catch(() => setAssetsReady(true));
-  }, [preloadAssets]);
+    if (isAuthenticated) {
+      Asset.loadAsync(preloadAssets)
+        .then(() => setAssetsReady(true))
+        .catch(() => setAssetsReady(true));
+    }
+  }, [isAuthenticated, preloadAssets]);
 
-  const ready = (themeLoaded && countryLoaded) || splashDone;
+  const appReady = (themeLoaded && countryLoaded && bioReady && fontsLoaded && assetsReady && profileReady) || splashDone;
 
-  // Cross-fade: splash fades out to reveal content underneath
   useEffect(() => {
-    if (ready && !splashRemoved) {
+    if (isAuthenticated && appReady && !splashRemoved) {
       Animated.timing(splashOpacity, {
         toValue: 0,
         duration: 350,
         useNativeDriver: Platform.OS !== 'web',
       }).start(() => setSplashRemoved(true));
     }
-  }, [ready, splashRemoved]);
+  }, [isAuthenticated, appReady, splashRemoved]);
 
+  // 1. Initial auth check loading
+  if (!authReady) {
+    return <View style={{ flex: 1, backgroundColor: colors.navy }} />;
+  }
+
+  // 2. Unauthenticated: Strict Google Sign-In gatekeeper
+  if (!isAuthenticated) {
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.navy }}>
+        <StatusBar style="light" backgroundColor={colors.navy} />
+        <OnboardingAuthScreen />
+      </View>
+    );
+  }
+
+  // 3. Authenticated: App content with splash transition & biometric lock
   return (
     <View style={{ flex: 1, backgroundColor: themeLoaded ? colors.bg : '#0C1526' }}>
-      {ready && (
-        !isOnboarded && !isAuthenticated ? (
-          <OnboardingAuthScreen />
-        ) : !authenticated ? (
+      {appReady && (
+        !authenticated ? (
           <LockScreen />
         ) : (
           <>

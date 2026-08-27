@@ -18,7 +18,7 @@ import { useSnackbar } from '../context/SnackbarContext';
 import BackgroundAtmosphere from './BackgroundAtmosphere';
 
 export default function OnboardingAuthScreen() {
-  const { loading, signInWithGoogle, completeOnboarding } = useAuth();
+  const { loading, signInWithGoogle } = useAuth();
   const { colors } = useTheme();
   const { config } = useCountry();
   const { top, bottom } = useSafeAreaInsets();
@@ -33,14 +33,6 @@ export default function OnboardingAuthScreen() {
       await signInWithGoogle();
     } catch (err: any) {
       snackbar.show(err?.message || 'Google sign-in failed', 'error');
-    }
-  };
-
-  const handleGuestContinue = async () => {
-    try {
-      await completeOnboarding();
-    } catch (err: any) {
-      snackbar.show(err?.message || 'Failed to enter demo mode', 'error');
     }
   };
 
@@ -71,7 +63,7 @@ export default function OnboardingAuthScreen() {
         {/* ── Subtle Divider ── */}
         <View style={styles.divider} />
 
-        {/* ── Auth Actions ── */}
+        {/* ── Auth Actions (Strict Google Sign-In Only) ── */}
         <View style={styles.actionsBox}>
           <Pressable
             style={({ pressed }) => [
@@ -89,18 +81,6 @@ export default function OnboardingAuthScreen() {
                 <Text style={styles.googleBtnText}>Sign in with Google</Text>
               </>
             )}
-          </Pressable>
-
-          <Pressable
-            style={({ pressed }) => [
-              styles.guestBtn,
-              pressed && { opacity: 0.6 },
-            ]}
-            onPress={handleGuestContinue}
-            disabled={loading}
-          >
-            <Text style={styles.guestBtnText}>Continue as Guest</Text>
-            <Ionicons name="chevron-forward" size={14} color="rgba(255, 255, 255, 0.45)" />
           </Pressable>
         </View>
       </View>
@@ -169,7 +149,6 @@ const styles = StyleSheet.create({
   actionsBox: {
     width: '100%',
     maxWidth: 320,
-    gap: 12,
     alignItems: 'center',
   },
   googleBtn: {
@@ -191,19 +170,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     letterSpacing: 0.2,
-  },
-  guestBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-  },
-  guestBtnText: {
-    color: 'rgba(255, 255, 255, 0.55)',
-    fontSize: 13,
-    fontWeight: '500',
-    letterSpacing: 0.3,
   },
   footer: {
     fontSize: 8,
