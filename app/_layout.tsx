@@ -8,7 +8,7 @@ import { useFonts, IBMPlexMono_500Medium } from '@expo-google-fonts/ibm-plex-mon
 import { Asset } from 'expo-asset';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools/production';
 import { queryClient, asyncStoragePersister } from '../src/query/queryClient';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
 import { BiometricProvider, useBiometric } from '../src/context/BiometricContext';
