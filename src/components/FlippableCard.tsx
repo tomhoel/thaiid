@@ -1,17 +1,16 @@
 /**
  * FlippableCard — High-Performance Pure 3D Smart Card Engine.
  * Features:
- *   1. Zero Ghost Boxes (No separate shadow DOM elements behind the card)
- *   2. Ultra-Refined Subtle Specular Sheen (Delicate, natural, non-intrusive)
- *   3. Solid Pure White 3D Perimeter Walls & Smooth 14px Corner Arcs
- *   4. High-FPS 60-120 FPS Performance with Hardware-Accelerated 3D Transforms
- *   5. Intuitive Fast Swipe Fling Snap (Flicking left advances +180°, flicking right flips -180°)
- *   6. Continuous, Unclamped Rotational Drag (Spin left or right infinitely in real-time)
- *   7. Dual-Axis 3D Spatial Physics (Horizontal drag spins Y, vertical drag pitches X)
- *   8. Tap / Click to flip 180° with crisp subtle settling bounce
- *   9. Front face (Z = +3.0px) and Back face (Z = -3.0px) with clean, unobstructed artwork
- *   10. Long Press to open Version History
- *   11. Smooth 3D mouse hover & gyroscope tilt
+ *   1. 100% True-Color Artwork (Zero darkening, zero discoloration on drag/flip)
+ *   2. Solid Pure White 3D Perimeter Walls & Smooth 14px Corner Arcs
+ *   3. High-FPS 60-120 FPS Performance with Hardware-Accelerated 3D Transforms
+ *   4. Intuitive Fast Swipe Fling Snap (Flicking left advances +180°, flicking right flips -180°)
+ *   5. Continuous, Unclamped Rotational Drag (Spin left or right infinitely in real-time)
+ *   6. Dual-Axis 3D Spatial Physics (Horizontal drag spins Y, vertical drag pitches X)
+ *   7. Tap / Click to flip 180° with crisp subtle settling bounce
+ *   8. Front face (Z = +3.0px) and Back face (Z = -3.0px) with clean, unobstructed artwork
+ *   9. Long Press to open Version History
+ *   10. Smooth 3D mouse hover & gyroscope tilt
  */
 import React, { useRef, useCallback, useEffect, useState } from 'react';
 import { StyleSheet, View, Image, Dimensions, Text, Platform } from 'react-native';
@@ -28,7 +27,6 @@ import Animated, {
 } from 'react-native-reanimated';
 import { GestureDetector, Gesture } from 'react-native-gesture-handler';
 import { Accelerometer } from 'expo-sensors';
-import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { useProfile } from '../context/ProfileContext';
 import { useCountry } from '../context/CountryContext';
@@ -280,22 +278,6 @@ export default function FlippableCard() {
     };
   });
 
-  // Delicate, ultra-subtle light sheen reacting gently to tilt
-  const subtleSheenStyle = useAnimatedStyle(() => {
-    'worklet';
-    const norm = ((rotY.value % 360) + 360) % 360;
-    const relAngle = norm > 180 ? norm - 360 : norm;
-    const sweepX = interpolate(relAngle, [-60, 0, 60], [-CARD_W * 0.5, 0, CARD_W * 0.5], Extrapolation.CLAMP);
-    const sweepY = interpolate(rotX.value, [-25, 0, 25], [CARD_H * 0.25, 0, -CARD_H * 0.25], Extrapolation.CLAMP);
-
-    return {
-      transform: [
-        { translateX: sweepX },
-        { translateY: sweepY },
-      ],
-    };
-  });
-
   return (
     <GestureDetector gesture={composedGesture}>
       <Animated.View
@@ -315,7 +297,7 @@ export default function FlippableCard() {
             />
           ))}
 
-          {/* ═══ 4 Straight Pure White 3D Perimeter Walls with Clean Lighting ═══ */}
+          {/* ═══ 4 Straight Pure White 3D Perimeter Walls ═══ */}
           {/* Top Wall */}
           <View
             pointerEvents="none"
@@ -390,18 +372,6 @@ export default function FlippableCard() {
               style={styles.cardImage}
               resizeMode="cover"
             />
-
-            {/* Subtle, delicate surface sheen */}
-            <View pointerEvents="none" style={styles.opticalOverlay}>
-              <Animated.View style={[StyleSheet.absoluteFillObject, subtleSheenStyle]}>
-                <LinearGradient
-                  colors={['rgba(255, 255, 255, 0.10)', 'transparent', 'rgba(0, 0, 0, 0.05)']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 0.6, y: 1 }}
-                  style={StyleSheet.absoluteFillObject}
-                />
-              </Animated.View>
-            </View>
           </Animated.View>
 
           {/* ═══ Back Face (Z = -3.0px, pre-rotated 180°, exact R = 14px) ═══ */}
@@ -413,18 +383,6 @@ export default function FlippableCard() {
             ]}
           >
             <Image source={config.cardImages.back} style={styles.cardImage} resizeMode="cover" />
-
-            {/* Subtle, delicate surface sheen (Back Face) */}
-            <View pointerEvents="none" style={styles.opticalOverlay}>
-              <Animated.View style={[StyleSheet.absoluteFillObject, subtleSheenStyle]}>
-                <LinearGradient
-                  colors={['rgba(255, 255, 255, 0.10)', 'transparent', 'rgba(0, 0, 0, 0.05)']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 0.6, y: 1 }}
-                  style={StyleSheet.absoluteFillObject}
-                />
-              </Animated.View>
-            </View>
           </Animated.View>
         </Animated.View>
 
@@ -478,13 +436,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   cardImage: { width: '100%', height: '100%', borderRadius: CORNER_R },
-
-  /* Subtle surface overlay */
-  opticalOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    borderRadius: CORNER_R,
-    overflow: 'hidden',
-  },
 
   /* Solid Pure White Chassis Core */
   chassisSlice: {
