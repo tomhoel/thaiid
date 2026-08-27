@@ -15,9 +15,9 @@ import { BiometricProvider, useBiometric } from '../src/context/BiometricContext
 import { ProfileProvider, useProfile } from '../src/context/ProfileContext';
 import { ThemeProvider, ThemeAccentBridge, useTheme } from '../src/context/ThemeContext';
 import { CountryProvider, useCountry } from '../src/context/CountryContext';
-import { SnackbarProvider } from '../src/context/SnackbarContext';
-import { AuthProvider } from '../src/context/AuthContext';
+import { AuthProvider, useAuth } from '../src/context/AuthContext';
 import LockScreen from '../src/components/LockScreen';
+import OnboardingAuthScreen from '../src/components/OnboardingAuthScreen';
 import AppSplash from '../src/components/AppSplash';
 
 class ErrorBoundary extends React.Component<
@@ -65,6 +65,7 @@ function AppShell() {
   const { colors, themeLoaded } = useTheme();
   const { ready: profileReady } = useProfile();
   const { countryLoaded, config } = useCountry();
+  const { isOnboarded, isAuthenticated, ready: authReady } = useAuth();
   const [fontsLoaded] = useFonts({ IBMPlexMono_500Medium });
   const [splashDone, setSplashDone] = useState(false);
   const [assetsReady, setAssetsReady] = useState(false);
@@ -141,7 +142,7 @@ function AppShell() {
 
   // Wait for auth to complete before revealing — biometric prompt fires during splash,
   // so the user authenticates behind the splash and goes straight to the main app
-  const ready = themeLoaded && countryLoaded && bioReady && splashDone && fontsLoaded && assetsReady && profileReady;
+  const ready = themeLoaded && countryLoaded && bioReady && authReady && splashDone && fontsLoaded && assetsReady && profileReady;
 
   // Cross-fade: splash fades out to reveal content underneath
   useEffect(() => {
@@ -157,7 +158,11 @@ function AppShell() {
   return (
     <View style={{ flex: 1, backgroundColor: themeLoaded ? colors.bg : '#0C1526' }}>
       {ready && (
-        !authenticated ? <LockScreen /> : (
+        !isOnboarded && !isAuthenticated ? (
+          <OnboardingAuthScreen />
+        ) : !authenticated ? (
+          <LockScreen />
+        ) : (
           <>
             <StatusBar style="light" backgroundColor={colors.navy} />
             <Stack screenOptions={{ headerShown: false }}>
