@@ -1,20 +1,28 @@
 import React, { useEffect } from 'react';
 import { View, Image, StyleSheet, Dimensions } from 'react-native';
 import Animated, {
-  useSharedValue, useAnimatedStyle,
-  withRepeat, withTiming, Easing,
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withTiming,
+  Easing,
 } from 'react-native-reanimated';
 import { useCountry } from '../context/CountryContext';
 import { useTheme } from '../context/ThemeContext';
+import GuillocheLivenessWatermark from './GuillocheLivenessWatermark';
 
 const { width: SW, height: SH } = Dimensions.get('window');
 const WATERMARK_SIZE = SW * 0.60;
 
 /**
- * Slowly rotating Garuda watermark — identity tab only.
- * Rendered behind all content via StyleSheet.absoluteFill + pointerEvents="none".
+ * LivenessWatermark — Government-Grade Kinetic Security Atmosphere.
+ * Combines rotating National Security Emblem + Harmonic Micro-Guilloche Waves.
  */
-const LivenessWatermark = React.memo(function LivenessWatermark({ showEmblem = true }: { showEmblem?: boolean }) {
+const LivenessWatermark = React.memo(function LivenessWatermark({
+  showEmblem = true,
+}: {
+  showEmblem?: boolean;
+}) {
   const { config } = useCountry();
   const { colors } = useTheme();
   const rotation = useSharedValue(0);
@@ -22,9 +30,10 @@ const LivenessWatermark = React.memo(function LivenessWatermark({ showEmblem = t
   useEffect(() => {
     rotation.value = withRepeat(
       withTiming(360, { duration: 50000, easing: Easing.linear }),
-      -1, false,
+      -1,
+      false
     );
-  }, []);
+  }, [rotation]);
 
   const emblemStyle = useAnimatedStyle(() => ({
     transform: [{ rotate: `${rotation.value}deg` }],
@@ -34,14 +43,38 @@ const LivenessWatermark = React.memo(function LivenessWatermark({ showEmblem = t
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
-      <Animated.View style={[{
-        position: 'absolute',
-        top:  (SH - WATERMARK_SIZE) * 0.4,
-        left: (SW - WATERMARK_SIZE) / 2,
-      }, emblemStyle]}>
+      {/* Background Micro-Guilloche Waves */}
+      <GuillocheLivenessWatermark
+        width={SW}
+        height={SH}
+        opacity={0.08}
+        tintColor={colors.goldLight}
+        showRosette={false}
+      />
+
+      {/* Rotating Security Emblem */}
+      <Animated.View
+        style={[
+          {
+            position: 'absolute',
+            top: (SH - WATERMARK_SIZE) * 0.4,
+            left: (SW - WATERMARK_SIZE) / 2,
+          },
+          emblemStyle,
+        ]}
+      >
         <Image
           source={config.emblemAsset}
-          style={config.emblemTinted !== false ? { width: WATERMARK_SIZE, height: WATERMARK_SIZE, tintColor: colors.goldLight, opacity: 0.10 } : { width: WATERMARK_SIZE, height: WATERMARK_SIZE, opacity: 0.10 }}
+          style={
+            config.emblemTinted !== false
+              ? {
+                  width: WATERMARK_SIZE,
+                  height: WATERMARK_SIZE,
+                  tintColor: colors.goldLight,
+                  opacity: 0.09,
+                }
+              : { width: WATERMARK_SIZE, height: WATERMARK_SIZE, opacity: 0.09 }
+          }
           resizeMode="contain"
         />
       </Animated.View>

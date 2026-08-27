@@ -34,6 +34,7 @@ import { useProfile } from '../context/ProfileContext';
 import { useCountry } from '../context/CountryContext';
 import { useLang } from '../i18n/LanguageContext';
 import VersionHistorySheet from './VersionHistorySheet';
+import GuillocheLivenessWatermark from './GuillocheLivenessWatermark';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const CARD_W = Math.min(SCREEN_W - 40, 390);
@@ -415,6 +416,11 @@ export default function FlippableCard() {
               resizeMode="cover"
             />
 
+            {/* Dynamic Anti-Counterfeiting Micro-Guilloche Liveness Watermark */}
+            <View pointerEvents="none" style={styles.guillocheOverlay}>
+              <GuillocheLivenessWatermark width={CARD_W} height={CARD_H} opacity={0.16} tintColor="#D4AF37" />
+            </View>
+
             {/* Little Specular Beam (Front Face) */}
             <View pointerEvents="none" style={styles.beamWrapper}>
               <Animated.View style={[styles.lilBeam, frontBeamStyle]}>
@@ -514,6 +520,13 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   cardImage: { width: '100%', height: '100%', borderRadius: CORNER_R },
+
+  /* Dynamic Guilloche Liveness Overlay */
+  guillocheOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: CORNER_R,
+    overflow: 'hidden',
+  },
 
   /* Little Specular Beam */
   beamWrapper: {
