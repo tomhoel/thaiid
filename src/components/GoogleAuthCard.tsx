@@ -32,7 +32,7 @@ export default function GoogleAuthCard() {
   const userEmail = user?.email || '';
 
   return (
-    <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
+    <View style={[styles.card, { backgroundColor: colors.bgCard, borderColor: colors.b2 }]}>
       {isAuthenticated && user ? (
         <View style={styles.loggedInContainer}>
           <View style={styles.userRow}>
@@ -47,7 +47,7 @@ export default function GoogleAuthCard() {
             )}
             <View style={styles.userInfo}>
               <View style={styles.nameRow}>
-                <Text style={[styles.userName, { color: colors.textPrimary }]} numberOfLines={1}>
+                <Text style={[styles.userName, { color: colors.t1 }]} numberOfLines={1}>
                   {userName}
                 </Text>
                 <View style={styles.verifiedBadge}>
@@ -55,7 +55,7 @@ export default function GoogleAuthCard() {
                   <Text style={styles.verifiedText}>Google</Text>
                 </View>
               </View>
-              <Text style={[styles.userEmail, { color: colors.textSecondary }]} numberOfLines={1}>
+              <Text style={[styles.userEmail, { color: colors.t2 }]} numberOfLines={1}>
                 {userEmail}
               </Text>
             </View>
@@ -89,10 +89,10 @@ export default function GoogleAuthCard() {
               <Ionicons name="logo-google" size={20} color="#4285F4" />
             </View>
             <View style={styles.headerTextCol}>
-              <Text style={[styles.title, { color: colors.textPrimary }]}>
+              <Text style={[styles.title, { color: colors.t1 }]}>
                 Google Account & Cloud
               </Text>
-              <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+              <Text style={[styles.subtitle, { color: colors.t2 }]}>
                 Sign in to sync your cards, photos, and ID profiles across devices.
               </Text>
             </View>

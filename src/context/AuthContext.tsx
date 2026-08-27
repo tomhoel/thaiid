@@ -37,7 +37,7 @@ const AuthContext = createContext<AuthContextType>({
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [ready, setReady] = useState(false);
   const [isOnboarded, setIsOnboarded] = useState(false);
 
@@ -46,25 +46,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     async function initAuth() {
       try {
-        // 1. Check onboarding state from local storage
+        // 1. Check onboarding state from local storage first (instant)
         const storedOnboarded = await AsyncStorage.getItem(ONBOARDING_KEY);
+        if (mounted && storedOnboarded === 'true') {
+          setIsOnboarded(true);
+        }
 
-        // 2. Get initial session from Supabase
-        const { data: { session }, error } = await supabase.auth.getSession();
+        // 2. Timeout-protected session retrieval (never block app startup if offline)
+        const sessionPromise = supabase.auth.getSession();
+        const timeoutPromise = new Promise<any>((resolve) =>
+          setTimeout(() => resolve({ data: { session: null }, error: null }), 400)
+        );
+
+        const { data, error } = await Promise.race([sessionPromise, timeoutPromise]);
         if (error) {
           reportError('AuthContext.getSession', error);
         }
 
         if (mounted) {
-          setSession(session);
-          setUser(session?.user ?? null);
-          setIsOnboarded(!!session?.user || storedOnboarded === 'true');
+          const currentSession = data?.session ?? null;
+          setSession(currentSession);
+          setUser(currentSession?.user ?? null);
+          if (currentSession?.user || storedOnboarded === 'true') {
+            setIsOnboarded(true);
+          }
         }
       } catch (e) {
         reportError('AuthContext.initAuth', e);
       } finally {
         if (mounted) {
-          setLoading(false);
           setReady(true);
         }
       }

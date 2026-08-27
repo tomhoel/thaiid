@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, Image, StyleSheet, Animated } from 'react-native';
+import { View, Text, Image, StyleSheet, Animated, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCountry } from '../context/CountryContext';
 import { useTheme } from '../context/ThemeContext';
@@ -16,8 +16,8 @@ export default function AppSplash() {
   useEffect(() => {
     Animated.loop(
       Animated.sequence([
-        Animated.timing(pulse, { toValue: 1, duration: 900, useNativeDriver: true }),
-        Animated.timing(pulse, { toValue: 0.6, duration: 900, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 1, duration: 900, useNativeDriver: Platform.OS !== 'web' }),
+        Animated.timing(pulse, { toValue: 0.6, duration: 900, useNativeDriver: Platform.OS !== 'web' }),
       ])
     ).start();
 

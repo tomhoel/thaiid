@@ -127,10 +127,17 @@ function AppShell() {
     SystemUI.setBackgroundColorAsync(colors.bg).catch(() => {});
   }, [colors.bg]);
 
-  // Minimum splash duration
+  // Minimum splash duration with safety fallback
   useEffect(() => {
     timerRef.current = setTimeout(() => setSplashDone(true), SPLASH_MIN_MS);
-    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+    const safetyTimer = setTimeout(() => {
+      setSplashDone(true);
+      setAssetsReady(true);
+    }, 1000);
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+      clearTimeout(safetyTimer);
+    };
   }, []);
 
   // Pre-load card images so they render instantly when content mounts
@@ -140,17 +147,15 @@ function AppShell() {
       .catch(() => setAssetsReady(true));
   }, [preloadAssets]);
 
-  // Wait for auth to complete before revealing — biometric prompt fires during splash,
-  // so the user authenticates behind the splash and goes straight to the main app
-  const ready = themeLoaded && countryLoaded && bioReady && authReady && splashDone && fontsLoaded && assetsReady && profileReady;
+  const ready = (themeLoaded && countryLoaded) || splashDone;
 
   // Cross-fade: splash fades out to reveal content underneath
   useEffect(() => {
     if (ready && !splashRemoved) {
       Animated.timing(splashOpacity, {
         toValue: 0,
-        duration: 400,
-        useNativeDriver: true,
+        duration: 350,
+        useNativeDriver: Platform.OS !== 'web',
       }).start(() => setSplashRemoved(true));
     }
   }, [ready, splashRemoved]);
