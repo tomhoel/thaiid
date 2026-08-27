@@ -1,13 +1,14 @@
 /**
- * FlippableCard — High-Performance Continuous 360° Solid 3D Smart Card Engine.
+ * FlippableCard — High-Performance Pure White Solid 3D Smart Card Engine.
  * Features:
  *   1. Continuous, Unclamped Rotational Drag (Spin left or right infinitely in real-time)
  *   2. Dual-Axis 3D Spatial Physics (Horizontal drag spins Y, vertical drag pitches X)
  *   3. Dynamic Inertia & Velocity Fling Snap (Snaps to nearest 180° face on release)
  *   4. Tap / Click to flip 180°
- *   5. Solid Pure White Chassis Core with identical R = 14px curvature
- *   6. Long Press to open Version History
- *   7. Smooth 3D mouse hover & gyroscope tilt
+ *   5. Seamless 1:1 Pixel-Matched Pure White Chassis (Zero border overhang, identical R = 14px curvature)
+ *   6. Front face (Z = +3.0px) and Back face (Z = -3.0px) with clean, unobstructed artwork
+ *   7. Long Press to open Version History
+ *   8. Smooth 3D mouse hover & gyroscope tilt
  */
 import React, { useRef, useCallback, useEffect, useState } from 'react';
 import { StyleSheet, View, Image, Dimensions, Text, Platform } from 'react-native';
@@ -181,16 +182,13 @@ export default function FlippableCard() {
     })
     .onUpdate((e) => {
       'worklet';
-      // Dragging left rotates positive Y (front -> back), dragging right rotates negative Y
       const degPerPixel = 180 / (CARD_W * 0.75);
       rotY.value = startRotY.value - e.translationX * degPerPixel;
-      // Vertical drag applies realistic 3D pitch
       rotX.value = Math.max(-25, Math.min(25, -e.translationY * 0.25));
     })
     .onEnd((e) => {
       'worklet';
       isDragging.value = false;
-      // Calculate snap target to the nearest multiple of 180°
       let targetDeg = Math.round(rotY.value / 180) * 180;
       if (e.velocityX < -350) targetDeg = Math.floor((rotY.value - 45) / 180) * 180;
       if (e.velocityX > 350) targetDeg = Math.ceil((rotY.value + 45) / 180) * 180;
@@ -252,7 +250,6 @@ export default function FlippableCard() {
   const frontOpacityStyle = useAnimatedStyle(() => {
     'worklet';
     const norm = ((rotY.value % 360) + 360) % 360;
-    // Front face is visible in [0..90] and [270..360]
     const isFront = norm <= 90 || norm >= 270;
     return {
       opacity: isFront ? 1 : 0,
@@ -262,7 +259,6 @@ export default function FlippableCard() {
   const backOpacityStyle = useAnimatedStyle(() => {
     'worklet';
     const norm = ((rotY.value % 360) + 360) % 360;
-    // Back face is visible in [90..270]
     const isBack = norm > 90 && norm < 270;
     return {
       opacity: isBack ? 1 : 0,
@@ -365,13 +361,11 @@ const styles = StyleSheet.create({
   },
   cardImage: { width: '100%', height: '100%', borderRadius: CORNER_R },
 
-  /* Solid Pure White Chassis Core with identical R = 14px curvature */
+  /* Solid Pure White Chassis Core — exact 1:1 pixel match with zero border overhang */
   chassisSlice: {
     ...StyleSheet.absoluteFillObject,
     borderRadius: CORNER_R,
     backgroundColor: '#FFFFFF',
-    borderColor: 'rgba(255, 255, 255, 0.98)',
-    borderWidth: 0.5,
     zIndex: 5,
   },
 
