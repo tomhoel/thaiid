@@ -8,6 +8,7 @@ import { useFonts, IBMPlexMono_500Medium } from '@expo-google-fonts/ibm-plex-mon
 import { Asset } from 'expo-asset';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { queryClient, asyncStoragePersister } from '../src/query/queryClient';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
 import { BiometricProvider, useBiometric } from '../src/context/BiometricContext';
@@ -167,6 +168,9 @@ export default function RootLayout() {
             </CountryProvider>
           </ThemeProvider>
         </GestureHandlerRootView>
+        {Platform.OS === 'web' && (
+          <ReactQueryDevtools initialIsOpen={false} buttonPosition="bottom-right" />
+        )}
       </PersistQueryClientProvider>
     </ErrorBoundary>
   );
