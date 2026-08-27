@@ -1,14 +1,14 @@
 /**
- * FlippableCard — High-Performance Solid Volumetric 3D Card Engine.
+ * FlippableCard — High-Performance Pure White Solid 3D Card Engine.
  * Features:
  *   1. Tap / Click to flip 180°
- *   2. Drag / Swipe horizontally in real time with continuous 3D physical volume
- *   3. Solid 3D Polycarbonate/PVC Extruded Body (16 gapless micro-slices + 4 planar side walls)
- *   4. Zero gaps, zero see-through artifacts at any rotation angle (0° to 180°)
+ *   2. Drag / Swipe horizontally in real time with continuous pure white 3D volume
+ *   3. Solid 3D White Polycarbonate/PVC Extruded Body (24 gapless micro-slices + 4 seamless white side walls)
+ *   4. Zero gaps, ultra-smooth rotations, and pristine aesthetic at all angles
  *   5. Long Press to open Version History
  *   6. Smooth 3D mouse hover & gyroscope tilt
  */
-import React, { useRef, useCallback, useEffect, useState, useMemo } from 'react';
+import React, { useRef, useCallback, useEffect, useState } from 'react';
 import { StyleSheet, View, Image, Dimensions, Text, Platform } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -34,10 +34,10 @@ const CARD_W = Math.min(SCREEN_W - 40, 390);
 const CARD_H = CARD_W * 0.63;
 const CARD_DEPTH = 6.4; // 0.76mm equivalent physical card thickness
 
-// 16 gapless micro-slices spanning the full card depth from -3.0px to +3.0px
+// 25 ultra-dense micro-slices (0.25px increment) for seamless pure white physical volume
 const CORE_SLICES = [
-  -3.0, -2.6, -2.2, -1.8, -1.4, -1.0, -0.6, -0.2,
-   0.2,  0.6,  1.0,  1.4,  1.8,  2.2,  2.6,  3.0,
+  -3.0, -2.75, -2.5, -2.25, -2.0, -1.75, -1.5, -1.25, -1.0, -0.75, -0.5, -0.25,
+   0.0,  0.25,  0.5,  0.75,  1.0,  1.25,  1.5,  1.75,  2.0,  2.25,  2.5,  2.75,  3.0,
 ];
 
 export default function FlippableCard() {
@@ -70,8 +70,8 @@ export default function FlippableCard() {
       Accelerometer.setUpdateInterval(32);
       sub = Accelerometer.addListener(({ x, y }) => {
         if (isDragging.value) return;
-        tiltX.value = withSpring(Math.max(-1, Math.min(1, x)), { damping: 18, stiffness: 100 });
-        tiltY.value = withSpring(Math.max(-1, Math.min(1, y - 0.5)), { damping: 18, stiffness: 100 });
+        tiltX.value = withSpring(Math.max(-1, Math.min(1, x)), { damping: 20, stiffness: 120 });
+        tiltY.value = withSpring(Math.max(-1, Math.min(1, y - 0.5)), { damping: 20, stiffness: 120 });
       });
     });
 
@@ -80,8 +80,8 @@ export default function FlippableCard() {
         if (isDragging.value || e.gamma === null || e.beta === null) return;
         const x = Math.max(-1, Math.min(1, e.gamma / 25));
         const y = Math.max(-1, Math.min(1, (e.beta - 45) / 30));
-        tiltX.value = withSpring(x, { damping: 20, stiffness: 150 });
-        tiltY.value = withSpring(y, { damping: 20, stiffness: 150 });
+        tiltX.value = withSpring(x, { damping: 22, stiffness: 160 });
+        tiltY.value = withSpring(y, { damping: 22, stiffness: 160 });
       };
       window.addEventListener('deviceorientation', handleOrientation);
       return () => {
@@ -187,8 +187,8 @@ export default function FlippableCard() {
       if (e.velocityX > 350) target = 0;
 
       flipProgress.value = withSpring(target, {
-        damping: 22,
-        stiffness: 260,
+        damping: 24,
+        stiffness: 240,
         overshootClamping: true,
       });
       runOnJS(triggerHaptic)();
@@ -200,8 +200,8 @@ export default function FlippableCard() {
       'worklet';
       const target = flipProgress.value > 0.5 ? 0 : 1;
       flipProgress.value = withSpring(target, {
-        damping: 22,
-        stiffness: 260,
+        damping: 24,
+        stiffness: 240,
         overshootClamping: true,
       });
       runOnJS(triggerHaptic)();
@@ -258,27 +258,24 @@ export default function FlippableCard() {
         {...(Platform.OS === 'web' ? ({ onPointerMove: handlePointerMove, onPointerLeave: handlePointerLeave } as any) : {})}
       >
         <Animated.View style={[styles.card3DContainer, card3DStyle]}>
-          {/* ═══ Continuous Solid Volumetric 3D Core (16 Gapless Micro-Slices) ═══ */}
-          {CORE_SLICES.map((z, idx) => {
-            const isCore = Math.abs(z) < 2.0;
-            return (
-              <View
-                key={idx}
-                pointerEvents="none"
-                style={[
-                  styles.face,
-                  {
-                    backgroundColor: isCore ? '#94A3B8' : '#E2E8F0',
-                    borderColor: isCore ? '#CBD5E1' : '#FFFFFF',
-                    borderWidth: 0.5,
-                    transform: [{ translateZ: z }] as any,
-                  },
-                ]}
-              />
-            );
-          })}
+          {/* ═══ Seamless Pure White Volumetric Core (25 Micro-Slices) ═══ */}
+          {CORE_SLICES.map((z, idx) => (
+            <View
+              key={idx}
+              pointerEvents="none"
+              style={[
+                styles.face,
+                {
+                  backgroundColor: '#FFFFFF',
+                  borderColor: 'rgba(255, 255, 255, 0.95)',
+                  borderWidth: 0.5,
+                  transform: [{ translateZ: z }] as any,
+                },
+              ]}
+            />
+          ))}
 
-          {/* ═══ 4 Orthogonal 3D Wall Enclosures ═══ */}
+          {/* ═══ 4 Orthogonal Pure White 3D Wall Enclosures ═══ */}
           {/* Left Wall (X = 0) */}
           <View
             pointerEvents="none"
@@ -289,9 +286,7 @@ export default function FlippableCard() {
                 transform: [{ rotateY: '-90deg' }] as any,
               },
             ]}
-          >
-            <View style={styles.wallCoreStripe} />
-          </View>
+          />
 
           {/* Right Wall (X = CARD_W) */}
           <View
@@ -303,9 +298,7 @@ export default function FlippableCard() {
                 transform: [{ rotateY: '90deg' }] as any,
               },
             ]}
-          >
-            <View style={styles.wallCoreStripe} />
-          </View>
+          />
 
           {/* Top Wall (Y = 0) */}
           <View
@@ -317,9 +310,7 @@ export default function FlippableCard() {
                 transform: [{ rotateX: '90deg' }] as any,
               },
             ]}
-          >
-            <View style={styles.wallCoreStripeH} />
-          </View>
+          />
 
           {/* Bottom Wall (Y = CARD_H) */}
           <View
@@ -331,9 +322,7 @@ export default function FlippableCard() {
                 transform: [{ rotateX: '-90deg' }] as any,
               },
             ]}
-          >
-            <View style={styles.wallCoreStripeH} />
-          </View>
+          />
 
           {/* ═══ Front Face (Z = +3.2px) ═══ */}
           <Animated.View
@@ -410,20 +399,20 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     overflow: 'hidden',
     borderWidth: 0.5,
-    borderColor: 'rgba(255, 255, 255, 0.25)',
+    borderColor: 'rgba(255, 255, 255, 0.35)',
   },
   cardImage: { width: '100%', height: '100%', borderRadius: 14 },
 
-  /* 3D Orthogonal Side Walls */
+  /* 3D Orthogonal Pure White Side Walls */
   sideWallV: {
     position: 'absolute',
     top: 14,
     bottom: 14,
     width: CARD_DEPTH,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
     borderTopWidth: 0.5,
     borderBottomWidth: 0.5,
-    borderColor: '#FFFFFF',
+    borderColor: 'rgba(255, 255, 255, 0.95)',
     overflow: 'hidden',
     zIndex: 5,
   },
@@ -432,28 +421,12 @@ const styles = StyleSheet.create({
     left: 14,
     right: 14,
     height: CARD_DEPTH,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
     borderLeftWidth: 0.5,
     borderRightWidth: 0.5,
-    borderColor: '#FFFFFF',
+    borderColor: 'rgba(255, 255, 255, 0.95)',
     overflow: 'hidden',
     zIndex: 5,
-  },
-  wallCoreStripe: {
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    left: '25%',
-    width: '50%',
-    backgroundColor: '#94A3B8',
-  },
-  wallCoreStripeH: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: '25%',
-    height: '50%',
-    backgroundColor: '#94A3B8',
   },
 
   genOverlay: {
