@@ -7,12 +7,12 @@
 // Deploy with: supabase functions deploy gemini-proxy
 
 const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
-const DEFAULT_MODEL = 'gemini-3-pro-image-preview';
+const DEFAULT_MODEL = 'gemini-2.5-flash';
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'authorization, content-type',
+  'Access-Control-Allow-Headers': 'authorization, apikey, content-type',
 };
 
 Deno.serve(async (req) => {

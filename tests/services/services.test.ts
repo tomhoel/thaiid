@@ -147,7 +147,7 @@ describe('GeminiService AI Prompt & Image Processing', () => {
 
     expect(parts.length).toBe(2);
     expect(parts[0].inlineData.data).toBe('BASE64TEMPLATE==');
-    expect(parts[1].text).toContain('1013x638 pixels');
+    expect(parts[1].text).toContain('1013 x 638 pixels');
     expect(parts[1].text).toContain('Mr. Somchai Prasert');
   });
 

@@ -1,10 +1,11 @@
 /**
  * GeminiService — High-Performance AI Image Generation & Vision Pipeline.
  * Features:
- *   1. Direct / Supabase Proxy Dual-Route Execution with Automatic Fallback
- *   2. Strict Pixel-Perfect Template & Field Preservation Prompts
- *   3. Intelligent Exponential Backoff with Rate-Limit (429/503) Handling
- *   4. Zero-Leak Secret Handling
+ *   1. Latest Google Multimodal Architecture (gemini-2.5-flash / gemini-2.5-pro)
+ *   2. Perfectionized Official Document Engraving & Typography Prompts
+ *   3. Direct / Supabase Proxy Dual-Route Execution with Automatic Failover
+ *   4. Strict Aspect-Ratio Guarantee (1013x638 ISO/IEC 7810 ID-1 Standard)
+ *   5. Intelligent Exponential Backoff with Rate-Limit (429/503) Handling
  */
 
 import Constants from 'expo-constants';
@@ -13,7 +14,9 @@ import { reportError } from '../utils/reportError';
 
 const MAX_RETRIES = 3;
 const INITIAL_RETRY_DELAY = 1500;
-const GEMINI_DIRECT_BASE = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent';
+const DEFAULT_MODEL = 'gemini-2.5-flash';
+const GEMINI_DIRECT_ENDPOINT = (model: string) =>
+  `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 
 export class GeminiService {
   private static getCredentials() {
@@ -27,12 +30,12 @@ export class GeminiService {
   }
 
   /** Call the AI service (Supabase Proxy first, Direct API fallback) */
-  static async callProxy(parts: any[], attempt = 1): Promise<any> {
+  static async callProxy(parts: any[], model = DEFAULT_MODEL, attempt = 1): Promise<any> {
     const { supabaseUrl, supabaseAnonKey, directApiKey } = this.getCredentials();
 
     try {
       // 1. Try Supabase Edge Function Proxy
-      const resp = await fetch(`${supabaseUrl}/functions/v1/gemini-proxy`, {
+      const resp = await fetch(`${supabaseUrl}/functions/v1/gemini-proxy?model=${encodeURIComponent(model)}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -43,6 +46,7 @@ export class GeminiService {
           contents: [{ role: 'user', parts }],
           generationConfig: {
             responseModalities: ['TEXT', 'IMAGE'],
+            temperature: 0.2, // Low temperature for high factual & typography precision
           },
         }),
       });
@@ -53,15 +57,15 @@ export class GeminiService {
         const errCode = data?.error?.code || resp.status;
         const errMsg = data?.error?.message || `HTTP ${resp.status}`;
 
-        // If server proxy is unconfigured or rate limited, attempt direct API fallback if key exists
+        // If server proxy is unconfigured or unauthorized, attempt direct API fallback if key exists
         if ((errMsg.includes('not configured') || resp.status === 401 || resp.status === 403) && directApiKey) {
-          return this.callDirect(parts, directApiKey);
+          return this.callDirect(parts, model, directApiKey);
         }
 
         if ((errCode === 429 || errCode === 503 || resp.status === 429) && attempt <= MAX_RETRIES) {
           const delay = INITIAL_RETRY_DELAY * Math.pow(2, attempt - 1);
           await new Promise((r) => setTimeout(r, delay));
-          return this.callProxy(parts, attempt + 1);
+          return this.callProxy(parts, model, attempt + 1);
         }
 
         throw new Error(errMsg);
@@ -77,12 +81,12 @@ export class GeminiService {
       ) {
         const delay = INITIAL_RETRY_DELAY * Math.pow(2, attempt - 1);
         await new Promise((r) => setTimeout(r, delay));
-        return this.callProxy(parts, attempt + 1);
+        return this.callProxy(parts, model, attempt + 1);
       }
 
       // If direct API key is available, fallback to direct API
       if (directApiKey && !e.message?.includes('Direct API Error')) {
-        return this.callDirect(parts, directApiKey);
+        return this.callDirect(parts, model, directApiKey);
       }
 
       reportError('GeminiService.callProxy', e);
@@ -91,8 +95,8 @@ export class GeminiService {
   }
 
   /** Direct Google Gemini API fallback */
-  private static async callDirect(parts: any[], apiKey: string): Promise<any> {
-    const resp = await fetch(`${GEMINI_DIRECT_BASE}`, {
+  private static async callDirect(parts: any[], model = DEFAULT_MODEL, apiKey: string): Promise<any> {
+    const resp = await fetch(GEMINI_DIRECT_ENDPOINT(model), {
       method: 'POST',
       headers: {
         'x-goog-api-key': apiKey,
@@ -102,6 +106,7 @@ export class GeminiService {
         contents: [{ role: 'user', parts }],
         generationConfig: {
           responseModalities: ['TEXT', 'IMAGE'],
+          temperature: 0.2,
         },
       }),
     });
@@ -113,7 +118,9 @@ export class GeminiService {
     return json;
   }
 
-  /** Build structured prompt parts for card generation */
+  /**
+   * Build perfectionized structured prompt parts for high-precision government identity card rendering.
+   */
   static buildCardParts(params: {
     templateBase64: string;
     cardDescription: string;
@@ -143,38 +150,56 @@ export class GeminiService {
       });
     }
 
-    const aspectNote = `The output image MUST be exactly the same dimensions and aspect ratio as the input image (1013x638 pixels, landscape). Do NOT change the canvas size, crop, pad, or reshape the image in any way.`;
+    const aspectNote = `CRITICAL FORMAT REQUIREMENT:
+- Exact Dimensions: 1013 x 638 pixels (Landscape aspect ratio ~1.588:1, standard ISO/IEC 7810 ID-1 card format).
+- Flat Orthographic View: Perfectly straight, 2D front-facing orientation with no 3D tilt, no angle distortion, and no perspective slant.
+- Zero Padding: Do not add borders, margins, dropshadows, watermarks, or extra canvas padding.`;
 
     const fields = [
-      `Identification Number: ${profileData.idNumber}`,
-      `Native Name (${secondaryLangName}): ${profileData.nameThai || ''}`,
-      `English Name: ${profileData.fullNameEnglish}`,
-      `Date of Birth: ${profileData.dateOfBirth}`,
-      `Date of Issue: ${profileData.dateOfIssue}`,
-      `Date of Expiry: ${profileData.dateOfExpiry}`,
+      `• Identification Number: ${profileData.idNumber}`,
+      `• Native Name (${secondaryLangName}): ${profileData.nameThai || ''}`,
+      `• Legal Name (English): ${profileData.fullNameEnglish}`,
+      `• Date of Birth: ${profileData.dateOfBirth}`,
+      `• Date of Issue: ${profileData.dateOfIssue}`,
+      `• Date of Expiry: ${profileData.dateOfExpiry}`,
     ].join('\n');
 
     let prompt: string;
     if (hasPhoto) {
-      prompt = `Edit this ${cardDescription} image.
+      prompt = `Role: You are an expert official sovereign identity document compositor and engraver.
+Task: Edit the provided official ${cardDescription} template (Image 1) using the portrait photograph (Image 2).
 
 ${aspectNote}
 
-Make these specific changes ONLY — do NOT move, resize, or reposition any element:
-1. Replace the portrait photograph (keep it in the EXACT same position and size) with the person from the SECOND image, cropped and placed exactly in the photo area.
-2. Replace ALL text fields on the card with these values — match the original font, size, weight, color, and position perfectly:
+PRECISE EDITING INSTRUCTIONS:
+1. PORTRAIT PHOTOGRAPH:
+   - Extract and crop the person from Image 2 (head and shoulders passport crop).
+   - Place and fit the photo seamlessly into the exact photo frame area of Image 1, matching standard government ID scale, contrast, and alignment.
+2. TEXT & TYPOGRAPHY REPLACEMENT:
+   - Replace ALL personal identification text fields with these exact official values:
 ${fields}
+   - Match the font family, font weight, color palette, optical sizing, and position of the original template perfectly.
+3. SECURITY & GRAPHICS PRESERVATION:
+   - 100% PRESERVE all national crests, emblems, microprint, Guilloche anti-counterfeiting wave patterns, holographic foils, smart card chip contacts, barcodes, and background gradients.
+   - Do NOT blur, distort, redraw, or alter any non-text security feature.
 
-CRITICAL: The layout must remain IDENTICAL. All other elements (logos, emblems, background patterns, gradient, chip, photo position, and other elements) must remain COMPLETELY UNCHANGED. Do not redraw, move, or re-render any element that is not listed above. Output the result as a single image.`;
+Output: Return ONLY the final composited high-resolution card image.`;
     } else {
-      prompt = `Edit this ${cardDescription} image.
+      prompt = `Role: You are an expert official sovereign identity document compositor and engraver.
+Task: Edit the provided official ${cardDescription} template (Image 1).
 
 ${aspectNote}
 
-Replace ALL text fields on the card with these values — match the original font, size, weight, color, and position perfectly:
+PRECISE EDITING INSTRUCTIONS:
+1. TEXT & TYPOGRAPHY REPLACEMENT:
+   - Replace ALL personal identification text fields on the card with these exact official values:
 ${fields}
+   - Match the font family, font weight, color palette, optical sizing, and position of the original template perfectly.
+2. SECURITY & GRAPHICS PRESERVATION:
+   - 100% PRESERVE all existing portrait artwork, national crests, emblems, microprint, Guilloche wave patterns, holographic foils, smart card chip contacts, barcodes, and background gradients.
+   - Do NOT blur, distort, redraw, or alter any non-text security feature.
 
-CRITICAL: The layout must remain IDENTICAL. Everything else must remain PIXEL-PERFECT — portrait photo, all other text, ID number, emblems, background, chip, patterns, positions. Only the fields listed above should change. Output the result as a single image.`;
+Output: Return ONLY the final composited high-resolution card image.`;
     }
 
     parts.push({ text: prompt });
@@ -201,6 +226,7 @@ CRITICAL: The layout must remain IDENTICAL. Everything else must remain PIXEL-PE
     templateBase64?: string;
     cardDescription?: string;
     secondaryLangName?: string;
+    model?: string;
   }): Promise<string> {
     const {
       profileData,
@@ -209,6 +235,7 @@ CRITICAL: The layout must remain IDENTICAL. Everything else must remain PIXEL-PE
       templateBase64,
       cardDescription = 'National Identity Card',
       secondaryLangName = 'Native Language',
+      model = DEFAULT_MODEL,
     } = params;
 
     let parts: any[];
@@ -243,7 +270,7 @@ Dimensions: exactly 1013x638 pixels. Clean, official layout.`;
       parts.push({ text: promptText });
     }
 
-    const response = await this.callProxy(parts);
+    const response = await this.callProxy(parts, model);
     const uri = this.extractImageUri(response);
 
     if (!uri) {
