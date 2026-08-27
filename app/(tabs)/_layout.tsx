@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Platform } from 'react-native';
+import { Platform, Text } from 'react-native';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../src/context/ThemeContext';
@@ -14,30 +14,20 @@ export default function TabLayout() {
     headerShown: false,
     animation: 'none' as const,
     tabBarActiveTintColor: colors.goldLight,
-    tabBarInactiveTintColor: theme === 'dark' ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.35)',
+    tabBarInactiveTintColor: theme === 'dark' ? 'rgba(255,255,255,0.40)' : 'rgba(0,0,0,0.40)',
     tabBarStyle: {
       backgroundColor: theme === 'dark' ? colors.navy : colors.bgCard,
       borderTopWidth: 1,
       borderTopColor: colors.b1,
-      height: Platform.OS === 'web' ? 68 : 82,
+      height: Platform.OS === 'web' ? 66 : 82,
       paddingTop: 6,
-      paddingBottom: Platform.OS === 'web' ? 10 : 26,
+      paddingBottom: Platform.OS === 'web' ? 8 : 26,
       elevation: 0,
     },
     tabBarItemStyle: {
       justifyContent: 'center',
       alignItems: 'center',
-    },
-    tabBarLabelStyle: {
-      fontSize: 10.5,
-      fontWeight: '600' as const,
-      lineHeight: 14,
-      marginTop: 2,
-      paddingBottom: 2,
-    },
-    tabBarIconStyle: {
-      marginTop: 2,
-      marginBottom: 0,
+      paddingVertical: 2,
     },
   }), [theme, colors]);
 
@@ -45,23 +35,35 @@ export default function TabLayout() {
     <Tabs screenOptions={screenOptions}>
       <Tabs.Screen name="index" options={{
         title: 'Identity',
-        tabBarLabel: t('tab.identity'),
+        tabBarLabel: ({ color }) => (
+          <Text style={{ color, fontSize: 11, fontWeight: '600', marginTop: 3, textAlign: 'center' }}>
+            {t('tab.identity')}
+          </Text>
+        ),
         tabBarIcon: ({ color, focused }) => (
-          <Ionicons name={focused ? 'card' : 'card-outline'} size={20} color={color} />
+          <Ionicons name={focused ? 'card' : 'card-outline'} size={21} color={color} />
         ),
       }} />
       <Tabs.Screen name="digital" options={{
         title: 'QR Code',
-        tabBarLabel: t('tab.qr'),
+        tabBarLabel: ({ color }) => (
+          <Text style={{ color, fontSize: 11, fontWeight: '600', marginTop: 3, textAlign: 'center' }}>
+            {t('tab.qr')}
+          </Text>
+        ),
         tabBarIcon: ({ color, focused }) => (
-          <Ionicons name={focused ? 'qr-code' : 'qr-code-outline'} size={20} color={color} />
+          <Ionicons name={focused ? 'qr-code' : 'qr-code-outline'} size={21} color={color} />
         ),
       }} />
       <Tabs.Screen name="settings" options={{
         title: 'Settings',
-        tabBarLabel: t('tab.settings'),
+        tabBarLabel: ({ color }) => (
+          <Text style={{ color, fontSize: 11, fontWeight: '600', marginTop: 3, textAlign: 'center' }}>
+            {t('tab.settings')}
+          </Text>
+        ),
         tabBarIcon: ({ color, focused }) => (
-          <Ionicons name={focused ? 'cog' : 'cog-outline'} size={20} color={color} />
+          <Ionicons name={focused ? 'cog' : 'cog-outline'} size={21} color={color} />
         ),
       }} />
       <Tabs.Screen name="details" options={{ href: null }} />
