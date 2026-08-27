@@ -218,6 +218,8 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.screen}>
+      <BackgroundAtmosphere tintCenter={0.5} />
+      <LivenessWatermark />
 
       {/* ── Header ── */}
       <Animated.View style={headerEnterStyle} onLayout={e => { measured.current.header = e.nativeEvent.layout.height; recalc(); }}>

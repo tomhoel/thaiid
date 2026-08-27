@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, Image, StyleSheet, Dimensions } from 'react-native';
+import { View, Image, StyleSheet, Dimensions, Platform } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -10,11 +10,11 @@ import Animated, {
 import { useCountry } from '../context/CountryContext';
 import { useTheme } from '../context/ThemeContext';
 
-const { width: SW, height: SH } = Dimensions.get('window');
-const WATERMARK_SIZE = SW * 0.60;
+const { width: SW } = Dimensions.get('window');
+const WATERMARK_SIZE = Math.min(SW * 0.72, 270);
 
 /**
- * LivenessWatermark — Clean, subtle background rotating national emblem.
+ * LivenessWatermark — Slowly rotating National Emblem background watermark.
  * Rendered behind all content via StyleSheet.absoluteFill + pointerEvents="none".
  */
 const LivenessWatermark = React.memo(function LivenessWatermark({
@@ -28,7 +28,7 @@ const LivenessWatermark = React.memo(function LivenessWatermark({
 
   useEffect(() => {
     rotation.value = withRepeat(
-      withTiming(360, { duration: 50000, easing: Easing.linear }),
+      withTiming(360, { duration: 42000, easing: Easing.linear }),
       -1,
       false
     );
@@ -41,34 +41,40 @@ const LivenessWatermark = React.memo(function LivenessWatermark({
   if (!showEmblem) return null;
 
   return (
-    <View style={StyleSheet.absoluteFill} pointerEvents="none">
-      <Animated.View
-        style={[
-          {
-            position: 'absolute',
-            top: (SH - WATERMARK_SIZE) * 0.4,
-            left: (SW - WATERMARK_SIZE) / 2,
-          },
-          emblemStyle,
-        ]}
-      >
+    <View style={styles.container} pointerEvents="none">
+      <Animated.View style={[styles.centerWrap, emblemStyle]}>
         <Image
           source={config.emblemAsset}
-          style={
-            config.emblemTinted !== false
-              ? {
-                  width: WATERMARK_SIZE,
-                  height: WATERMARK_SIZE,
-                  tintColor: colors.goldLight,
-                  opacity: 0.08,
-                }
-              : { width: WATERMARK_SIZE, height: WATERMARK_SIZE, opacity: 0.08 }
-          }
+          style={[
+            styles.emblemImage,
+            config.emblemTinted !== false ? { tintColor: colors.goldLight } : undefined,
+          ]}
           resizeMode="contain"
         />
       </Animated.View>
     </View>
   );
+});
+
+const styles = StyleSheet.create({
+  container: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    paddingTop: Platform.OS === 'web' ? 140 : 130,
+    zIndex: 0,
+  },
+  centerWrap: {
+    width: WATERMARK_SIZE,
+    height: WATERMARK_SIZE,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emblemImage: {
+    width: WATERMARK_SIZE,
+    height: WATERMARK_SIZE,
+    opacity: 0.14,
+  },
 });
 
 export default LivenessWatermark;
