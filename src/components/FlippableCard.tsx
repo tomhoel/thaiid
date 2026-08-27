@@ -74,15 +74,19 @@ export default function FlippableCard() {
   // Sensor tracking for mobile devices
   useEffect(() => {
     let sub: ReturnType<typeof Accelerometer.addListener> | null = null;
-    Accelerometer.isAvailableAsync().then(available => {
-      if (!available) return;
-      Accelerometer.setUpdateInterval(32);
-      sub = Accelerometer.addListener(({ x, y }) => {
-        if (isDragging.value) return;
-        hoverTiltX.value = withSpring(Math.max(-1, Math.min(1, x)), { damping: 20, stiffness: 120 });
-        hoverTiltY.value = withSpring(Math.max(-1, Math.min(1, y - 0.5)), { damping: 20, stiffness: 120 });
-      });
-    });
+    if (Platform.OS !== 'web') {
+      Accelerometer.isAvailableAsync().then(available => {
+        if (!available) return;
+        try {
+          Accelerometer.setUpdateInterval(32);
+          sub = Accelerometer.addListener(({ x, y }) => {
+            if (isDragging.value) return;
+            hoverTiltX.value = withSpring(Math.max(-1, Math.min(1, x)), { damping: 20, stiffness: 120 });
+            hoverTiltY.value = withSpring(Math.max(-1, Math.min(1, y - 0.5)), { damping: 20, stiffness: 120 });
+          });
+        } catch {}
+      }).catch(() => {});
+    }
 
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
       const handleOrientation = (e: DeviceOrientationEvent) => {
