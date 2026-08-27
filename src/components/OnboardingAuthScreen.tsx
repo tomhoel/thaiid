@@ -5,7 +5,6 @@ import {
   Text,
   Pressable,
   Image,
-  ScrollView,
   ActivityIndicator,
   useWindowDimensions,
   Platform,
@@ -26,6 +25,9 @@ export default function OnboardingAuthScreen() {
   const snackbar = useSnackbar();
   const { width } = useWindowDimensions();
 
+  const NAVY = colors.navy;
+  const GOLD = colors.goldLight;
+
   const handleGoogleSignIn = async () => {
     try {
       await signInWithGoogle();
@@ -37,109 +39,44 @@ export default function OnboardingAuthScreen() {
   const handleGuestContinue = async () => {
     try {
       await completeOnboarding();
-      snackbar.show('Entered Demo & Offline Mode', 'info');
     } catch (err: any) {
       snackbar.show(err?.message || 'Failed to enter demo mode', 'error');
     }
   };
 
-  const isDesktop = Platform.OS === 'web' && width > 540;
+  const isDesktop = Platform.OS === 'web' && width > 500;
 
   return (
-    <View style={[styles.screen, { backgroundColor: colors.bg, paddingTop: top + 20, paddingBottom: bottom + 20 }]}>
+    <View style={[styles.screen, { paddingTop: top, paddingBottom: bottom, backgroundColor: NAVY }]}>
       <BackgroundAtmosphere tintCenter={0.5} />
 
-      <ScrollView
-        contentContainerStyle={[
-          styles.scrollContent,
-          isDesktop && { maxWidth: 500, alignSelf: 'center', width: '100%' },
-        ]}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* ── Top Emblem & Title ── */}
-        <View style={styles.header}>
-          <View style={[styles.emblemGlowContainer, { borderColor: colors.b2, backgroundColor: colors.bgSurface }]}>
-            <Image
-              source={config.emblemAsset}
-              style={
-                config.emblemTinted !== false
-                  ? { width: 68, height: 68, tintColor: colors.goldLight }
-                  : { width: 68, height: 68 }
-              }
-              resizeMode="contain"
-            />
-          </View>
+      <View style={[styles.content, isDesktop && { maxWidth: 420, width: '100%' }]}>
+        {/* ── Official Emblem ── */}
+        <Image
+          source={config.emblemAsset}
+          style={
+            config.emblemTinted !== false
+              ? [styles.emblem, { tintColor: GOLD }]
+              : styles.emblem
+          }
+          resizeMode="contain"
+        />
 
-          <View style={styles.badgeRow}>
-            <View style={styles.officialBadge}>
-              <Ionicons name="shield-checkmark" size={12} color="#10B981" />
-              <Text style={styles.officialBadgeText}>Sovereign Digital Identity</Text>
-            </View>
-            <View style={[styles.officialBadge, { backgroundColor: 'rgba(217, 119, 6, 0.15)' }]}>
-              <Ionicons name="hardware-chip-outline" size={12} color="#F59E0B" />
-              <Text style={[styles.officialBadgeText, { color: '#F59E0B' }]}>e-ID Vault</Text>
-            </View>
-          </View>
+        {/* ── Official Authority Titles ── */}
+        <Text style={styles.title}>{config.name.english}</Text>
+        <Text style={styles.titleTh}>{config.name.primary}</Text>
+        <Text style={styles.dept}>{config.issuer.english}</Text>
+        <Text style={styles.deptTh}>{config.issuer.primary}</Text>
 
-          <Text style={[styles.title, { color: colors.t1 }]}>
-            {config.name.english}
-          </Text>
-          <Text style={[styles.subtitle, { color: colors.t2 }]}>
-            {config.issuer.primary} • Digital Credential & Biometric System
-          </Text>
-        </View>
+        {/* ── Subtle Divider ── */}
+        <View style={styles.divider} />
 
-        {/* ── Feature Highlights ── */}
-        <View style={styles.featuresList}>
-          <View style={[styles.featureCard, { backgroundColor: colors.bgCard, borderColor: colors.b2 }]}>
-            <View style={[styles.featureIconBox, { backgroundColor: 'rgba(66, 133, 244, 0.15)' }]}>
-              <Ionicons name="card-outline" size={22} color="#4285F4" />
-            </View>
-            <View style={styles.featureTextCol}>
-              <Text style={[styles.featureTitle, { color: colors.t1 }]}>
-                Photorealistic 3D Smart Card
-              </Text>
-              <Text style={[styles.featureDesc, { color: colors.t2 }]}>
-                True-to-life official card with gyroscopic motion physics, specular light beam, and flip animation.
-              </Text>
-            </View>
-          </View>
-
-          <View style={[styles.featureCard, { backgroundColor: colors.bgCard, borderColor: colors.b2 }]}>
-            <View style={[styles.featureIconBox, { backgroundColor: 'rgba(16, 185, 129, 0.15)' }]}>
-              <Ionicons name="qr-code-outline" size={22} color="#10B981" />
-            </View>
-            <View style={styles.featureTextCol}>
-              <Text style={[styles.featureTitle, { color: colors.t1 }]}>
-                Dynamic 15-Second Offline QR
-              </Text>
-              <Text style={[styles.featureDesc, { color: colors.t2 }]}>
-                Rotating TOTP cryptographic tokens with digital signatures for instant offline presentation.
-              </Text>
-            </View>
-          </View>
-
-          <View style={[styles.featureCard, { backgroundColor: colors.bgCard, borderColor: colors.b2 }]}>
-            <View style={[styles.featureIconBox, { backgroundColor: 'rgba(245, 158, 11, 0.15)' }]}>
-              <Ionicons name="finger-print-outline" size={22} color="#F59E0B" />
-            </View>
-            <View style={styles.featureTextCol}>
-              <Text style={[styles.featureTitle, { color: colors.t1 }]}>
-                WebAuthn Passkey Protection
-              </Text>
-              <Text style={[styles.featureDesc, { color: colors.t2 }]}>
-                Biometric hardware lock protecting your credentials on-device with zero-knowledge encryption.
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        {/* ── Action Buttons ── */}
-        <View style={styles.actionContainer}>
+        {/* ── Auth Actions ── */}
+        <View style={styles.actionsBox}>
           <Pressable
             style={({ pressed }) => [
-              styles.googleButton,
-              pressed && { opacity: 0.88, transform: [{ scale: 0.99 }] },
+              styles.googleBtn,
+              pressed && { opacity: 0.85, transform: [{ scale: 0.99 }] },
             ]}
             onPress={handleGoogleSignIn}
             disabled={loading}
@@ -148,32 +85,28 @@ export default function OnboardingAuthScreen() {
               <ActivityIndicator size="small" color="#0C1526" />
             ) : (
               <>
-                <Ionicons name="logo-google" size={20} color="#0C1526" style={{ marginRight: 10 }} />
-                <Text style={styles.googleButtonText}>Sign in with Google</Text>
+                <Ionicons name="logo-google" size={18} color="#0C1526" style={{ marginRight: 8 }} />
+                <Text style={styles.googleBtnText}>Sign in with Google</Text>
               </>
             )}
           </Pressable>
 
           <Pressable
             style={({ pressed }) => [
-              styles.guestButton,
-              { borderColor: colors.b2, backgroundColor: colors.bgSurface },
-              pressed && { opacity: 0.7 },
+              styles.guestBtn,
+              pressed && { opacity: 0.6 },
             ]}
             onPress={handleGuestContinue}
             disabled={loading}
           >
-            <Ionicons name="shield-outline" size={16} color={colors.t1} style={{ marginRight: 6 }} />
-            <Text style={[styles.guestButtonText, { color: colors.t1 }]}>
-              Explore Demo / Offline Mode
-            </Text>
+            <Text style={styles.guestBtnText}>Continue as Guest</Text>
+            <Ionicons name="chevron-forward" size={14} color="rgba(255, 255, 255, 0.45)" />
           </Pressable>
-
-          <Text style={[styles.securityFooter, { color: colors.t3 }]}>
-            ISO/IEC 7810 ID-1 Standard • AES-256 GCM Local Hardware Vault
-          </Text>
         </View>
-      </ScrollView>
+      </View>
+
+      {/* ── Official Footer ── */}
+      <Text style={styles.footer}>{config.splashFooter}</Text>
     </View>
   );
 }
@@ -181,132 +114,101 @@ export default function OnboardingAuthScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    width: '100%',
-    height: '100%',
-  },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    justifyContent: 'space-between',
-    minHeight: '100%',
-  },
-  header: {
+    backgroundColor: '#0C1526',
     alignItems: 'center',
-    marginBottom: 20,
-    gap: 8,
+    justifyContent: 'center',
   },
-  emblemGlowContainer: {
+  content: {
+    alignItems: 'center',
+    gap: 6,
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  emblem: {
     width: 90,
     height: 90,
-    borderRadius: 45,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 4,
-    borderWidth: 1,
-  },
-  badgeRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 4,
-  },
-  officialBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(16, 185, 129, 0.15)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
-    gap: 4,
-  },
-  officialBadgeText: {
-    color: '#10B981',
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.2,
+    tintColor: '#D4AF37',
+    marginBottom: 20,
   },
   title: {
-    fontSize: 24,
-    fontWeight: '800',
-    letterSpacing: -0.5,
-    textAlign: 'center',
-    marginTop: 4,
-  },
-  subtitle: {
-    fontSize: 13,
-    textAlign: 'center',
-    lineHeight: 18,
-    paddingHorizontal: 16,
-  },
-  featuresList: {
-    gap: 12,
-    marginVertical: 16,
-  },
-  featureCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 14,
-    borderRadius: 16,
-    borderWidth: 1,
-    gap: 14,
-  },
-  featureIconBox: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  featureTextCol: {
-    flex: 1,
-    gap: 2,
-  },
-  featureTitle: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '800',
+    color: 'rgba(255, 255, 255, 0.92)',
+    letterSpacing: 3,
+    textAlign: 'center',
   },
-  featureDesc: {
-    fontSize: 12,
-    lineHeight: 16,
+  titleTh: {
+    fontSize: 11,
+    color: 'rgba(255, 255, 255, 0.55)',
+    letterSpacing: 1,
+    marginTop: 2,
+    textAlign: 'center',
   },
-  actionContainer: {
+  dept: {
+    fontSize: 9,
+    color: 'rgba(255, 255, 255, 0.38)',
+    letterSpacing: 1.2,
+    marginTop: 18,
+    textTransform: 'uppercase',
+    textAlign: 'center',
+  },
+  deptTh: {
+    fontSize: 9,
+    color: 'rgba(255, 255, 255, 0.28)',
+    marginTop: 2,
+    textAlign: 'center',
+  },
+  divider: {
+    width: 60,
+    height: 1.5,
+    backgroundColor: 'rgba(212, 175, 55, 0.3)',
+    marginVertical: 24,
+    borderRadius: 1,
+  },
+  actionsBox: {
+    width: '100%',
+    maxWidth: 320,
     gap: 12,
-    marginTop: 10,
+    alignItems: 'center',
   },
-  googleButton: {
+  googleBtn: {
+    width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#FFFFFF',
-    paddingVertical: 14,
-    borderRadius: 14,
+    paddingVertical: 13,
+    borderRadius: 12,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
-    shadowRadius: 6,
+    shadowRadius: 4,
     elevation: 3,
   },
-  googleButtonText: {
+  googleBtnText: {
     color: '#0C1526',
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '700',
     letterSpacing: 0.2,
   },
-  guestButton: {
+  guestBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    borderRadius: 14,
-    borderWidth: 1,
+    gap: 4,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
   },
-  guestButtonText: {
+  guestBtnText: {
+    color: 'rgba(255, 255, 255, 0.55)',
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '500',
+    letterSpacing: 0.3,
   },
-  securityFooter: {
-    fontSize: 10,
-    textAlign: 'center',
-    marginTop: 4,
-    letterSpacing: 0.2,
+  footer: {
+    fontSize: 8,
+    color: 'rgba(255, 255, 255, 0.20)',
+    letterSpacing: 1.5,
+    marginBottom: 16,
   },
 });

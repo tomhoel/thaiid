@@ -11,8 +11,8 @@ const path = require('path');
   await page.goto('http://127.0.0.1:5173/', { waitUntil: 'networkidle' });
   await page.waitForTimeout(1000);
 
-  console.log('Clicking Explore Demo / Offline Mode button...');
-  await page.click('text="Explore Demo / Offline Mode"');
+  console.log('Clicking Continue as Guest button...');
+  await page.click('text="Continue as Guest"');
 
   await page.waitForTimeout(1500);
 
