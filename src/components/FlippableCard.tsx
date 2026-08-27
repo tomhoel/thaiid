@@ -1,13 +1,12 @@
 /**
- * FlippableCard — High-Performance Pure White Solid 3D Box Engine with Rounded Corners.
+ * FlippableCard — High-Performance Pure White Solid 3D Box Engine with Clean Rounded Corners.
  * Features:
  *   1. Tap / Click to flip 180°
  *   2. Drag / Swipe horizontally in real time with continuous pure white 3D volume
- *   3. Rounded 3D Chassis (4 Straight White Perimeter Walls + 4 Smoothly Curved 3D Corner Arcs)
- *   4. Zero sharp corner protrusion — walls and faces match the 14px corner radius seamlessly
- *   5. Zero interior plates / slices — 100% clean hollow-core solid geometry
- *   6. Long Press to open Version History
- *   7. Smooth 3D mouse hover & gyroscope tilt
+ *   3. Clean 3D Rounded Chassis (4 Straight White Perimeter Walls + Mid Bevel Ring)
+ *   4. Zero corner squares or visual defects — 100% pristine front and back faces
+ *   5. Long Press to open Version History
+ *   6. Smooth 3D mouse hover & gyroscope tilt
  */
 import React, { useRef, useCallback, useEffect, useState } from 'react';
 import { StyleSheet, View, Image, Dimensions, Text, Platform } from 'react-native';
@@ -35,9 +34,6 @@ const CARD_W = Math.min(SCREEN_W - 40, 390);
 const CARD_H = CARD_W * 0.63;
 const CARD_DEPTH = 6; // 6px clean physical card thickness (±3px Z-depth)
 const CORNER_R = 14;
-
-// Micro-depth layers for the 4 rounded corner arcs
-const CORNER_DEPTHS = [-3.0, -2.25, -1.5, -0.75, 0, 0.75, 1.5, 2.25, 3.0];
 
 export default function FlippableCard() {
   const { profile, isGenerating } = useProfile();
@@ -257,43 +253,14 @@ export default function FlippableCard() {
         {...(Platform.OS === 'web' ? ({ onPointerMove: handlePointerMove, onPointerLeave: handlePointerLeave } as any) : {})}
       >
         <Animated.View style={[styles.card3DContainer, card3DStyle]}>
-          {/* ═══ 4 Rounded 3D Corner Arcs (R = 14px, Seamless depth transition) ═══ */}
-          {CORNER_DEPTHS.map((z, idx) => (
-            <React.Fragment key={idx}>
-              {/* Top-Left Corner */}
-              <View
-                pointerEvents="none"
-                style={[
-                  styles.cornerBlock,
-                  { top: 0, left: 0, borderTopLeftRadius: CORNER_R, transform: [{ translateZ: z }] as any },
-                ]}
-              />
-              {/* Top-Right Corner */}
-              <View
-                pointerEvents="none"
-                style={[
-                  styles.cornerBlock,
-                  { top: 0, right: 0, borderTopRightRadius: CORNER_R, transform: [{ translateZ: z }] as any },
-                ]}
-              />
-              {/* Bottom-Left Corner */}
-              <View
-                pointerEvents="none"
-                style={[
-                  styles.cornerBlock,
-                  { bottom: 0, left: 0, borderBottomLeftRadius: CORNER_R, transform: [{ translateZ: z }] as any },
-                ]}
-              />
-              {/* Bottom-Right Corner */}
-              <View
-                pointerEvents="none"
-                style={[
-                  styles.cornerBlock,
-                  { bottom: 0, right: 0, borderBottomRightRadius: CORNER_R, transform: [{ translateZ: z }] as any },
-                ]}
-              />
-            </React.Fragment>
-          ))}
+          {/* ═══ Mid-Depth Perimeter Bevel Ring (Z = 0) ═══ */}
+          <View
+            pointerEvents="none"
+            style={[
+              styles.midBevelRing,
+              { transform: [{ translateZ: 0 }] as any },
+            ]}
+          />
 
           {/* ═══ 4 Straight Pure White 3D Walls (Meeting the Corner Arcs at R = 14px) ═══ */}
           {/* Left Wall (Between Top-Left and Bottom-Left corner arcs) */}
@@ -427,14 +394,13 @@ const styles = StyleSheet.create({
   },
   cardImage: { width: '100%', height: '100%', borderRadius: CORNER_R },
 
-  /* 4 Rounded Corner 3D Blocks */
-  cornerBlock: {
-    position: 'absolute',
-    width: CORNER_R,
-    height: CORNER_R,
-    backgroundColor: '#FFFFFF',
-    borderColor: 'rgba(255, 255, 255, 0.95)',
-    borderWidth: 0.5,
+  /* Mid-Depth Bevel Ring for continuous 3D corner curvature */
+  midBevelRing: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: CORNER_R,
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
+    backgroundColor: 'transparent',
     zIndex: 4,
   },
 
