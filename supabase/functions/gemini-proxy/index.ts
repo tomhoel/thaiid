@@ -7,7 +7,7 @@
 // Deploy with: supabase functions deploy gemini-proxy
 
 const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
-const DEFAULT_MODEL = 'gemini-2.5-flash';
+const DEFAULT_MODEL = 'gemini-3-pro-image-preview';
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',

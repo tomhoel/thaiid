@@ -1,11 +1,12 @@
 /**
  * GeminiService — High-Performance AI Image Generation & Vision Pipeline.
  * Features:
- *   1. Latest Google Multimodal Architecture (gemini-2.5-flash / gemini-2.5-pro)
- *   2. Perfectionized Official Document Engraving & Typography Prompts
- *   3. Direct / Supabase Proxy Dual-Route Execution with Automatic Failover
- *   4. Strict Aspect-Ratio Guarantee (1013x638 ISO/IEC 7810 ID-1 Standard)
- *   5. Intelligent Exponential Backoff with Rate-Limit (429/503) Handling
+ *   1. Latest Google Gemini 3.x Multimodal Image Architecture (gemini-3-pro-image-preview / gemini-3.1-flash-image)
+ *   2. Automatic Model Fallback Cascade (gemini-3-pro-image-preview -> gemini-3.1-flash-image -> gemini-2.5-flash-image)
+ *   3. Perfectionized Official Document Engraving & Typography Prompts
+ *   4. Direct / Supabase Proxy Dual-Route Execution with Automatic Failover
+ *   5. Strict Aspect-Ratio Guarantee (1013x638 ISO/IEC 7810 ID-1 Standard)
+ *   6. Intelligent Exponential Backoff with Rate-Limit (429/503) Handling
  */
 
 import Constants from 'expo-constants';
@@ -14,7 +15,15 @@ import { reportError } from '../utils/reportError';
 
 const MAX_RETRIES = 3;
 const INITIAL_RETRY_DELAY = 1500;
-const DEFAULT_MODEL = 'gemini-2.5-flash';
+const DEFAULT_MODEL = 'gemini-3-pro-image-preview';
+const FALLBACK_MODELS = [
+  'gemini-3-pro-image-preview',
+  'gemini-3.1-flash-image',
+  'gemini-3-pro-image',
+  'gemini-2.5-flash-image',
+  'gemini-2.5-flash',
+];
+
 const GEMINI_DIRECT_ENDPOINT = (model: string) =>
   `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 
@@ -46,7 +55,7 @@ export class GeminiService {
           contents: [{ role: 'user', parts }],
           generationConfig: {
             responseModalities: ['TEXT', 'IMAGE'],
-            temperature: 0.2, // Low temperature for high factual & typography precision
+            temperature: 0.2, // Low temperature for factual typography & layout consistency
           },
         }),
       });
@@ -60,6 +69,14 @@ export class GeminiService {
         // If server proxy is unconfigured or unauthorized, attempt direct API fallback if key exists
         if ((errMsg.includes('not configured') || resp.status === 401 || resp.status === 403) && directApiKey) {
           return this.callDirect(parts, model, directApiKey);
+        }
+
+        // Model not found (404) -> cascade to next supported model
+        if ((errCode === 404 || errMsg.includes('not found') || errMsg.includes('unsupported')) && model !== FALLBACK_MODELS[FALLBACK_MODELS.length - 1]) {
+          const nextIdx = (FALLBACK_MODELS.indexOf(model) + 1) || 1;
+          const nextModel = FALLBACK_MODELS[nextIdx];
+          console.warn(`[GeminiService] Model ${model} not available. Cascading to ${nextModel}...`);
+          return this.callProxy(parts, nextModel, 1);
         }
 
         if ((errCode === 429 || errCode === 503 || resp.status === 429) && attempt <= MAX_RETRIES) {
@@ -113,7 +130,14 @@ export class GeminiService {
 
     const json = await resp.json();
     if (!resp.ok || json.error) {
-      throw new Error(`Direct API Error: ${json.error?.message || resp.statusText}`);
+      // If 404, try next model in direct fallback
+      const errMsg = json.error?.message || resp.statusText;
+      if ((resp.status === 404 || errMsg.includes('not found')) && model !== FALLBACK_MODELS[FALLBACK_MODELS.length - 1]) {
+        const nextIdx = (FALLBACK_MODELS.indexOf(model) + 1) || 1;
+        const nextModel = FALLBACK_MODELS[nextIdx];
+        return this.callDirect(parts, nextModel, apiKey);
+      }
+      throw new Error(`Direct API Error: ${errMsg}`);
     }
     return json;
   }
