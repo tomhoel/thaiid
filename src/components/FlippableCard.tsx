@@ -1,15 +1,18 @@
 /**
- * FlippableCard — High-Performance Continuous 360° Solid 3D Smart Card Engine.
+ * FlippableCard — High-Performance Ultra-Realistic 3D Smart Card Engine.
  * Features:
- *   1. Full Continuous 3D Perimeter Walls (4 Straight Walls + 4 Pure White Curved Corner Arc Enclosures)
- *   2. High-FPS 60-120 FPS Performance with Hardware-Accelerated 3D Transforms
- *   3. Intuitive Fast Swipe Fling Snap (Flicking left advances +180°, flicking right flips -180°)
- *   4. Continuous, Unclamped Rotational Drag (Spin left or right infinitely in real-time)
- *   5. Dual-Axis 3D Spatial Physics (Horizontal drag spins Y, vertical drag pitches X)
- *   6. Tap / Click to flip 180° with crisp subtle settling bounce
- *   7. Front face (Z = +3.0px) and Back face (Z = -3.0px) with clean, unobstructed artwork
- *   8. Long Press to open Version History
- *   9. Smooth 3D mouse hover & gyroscope tilt
+ *   1. Dynamic Specular Gloss Sheen (Sweeping light reflection matching real-time tilt)
+ *   2. Iridescent Holographic Security Shimmer (Polycarbonate kinegram light refraction)
+ *   3. Dynamic 3D Ambient Drop Shadow (Responds to 3D pitch and roll)
+ *   4. Full Continuous 3D Perimeter Walls with directional lighting highlights
+ *   5. High-FPS 60-120 FPS Performance with Hardware-Accelerated 3D Transforms
+ *   6. Intuitive Fast Swipe Fling Snap (Flicking left advances +180°, flicking right flips -180°)
+ *   7. Continuous, Unclamped Rotational Drag (Spin left or right infinitely in real-time)
+ *   8. Dual-Axis 3D Spatial Physics (Horizontal drag spins Y, vertical drag pitches X)
+ *   9. Tap / Click to flip 180° with crisp subtle settling bounce
+ *   10. Front face (Z = +3.0px) and Back face (Z = -3.0px) with clean, unobstructed artwork
+ *   11. Long Press to open Version History
+ *   12. Smooth 3D mouse hover & gyroscope tilt
  */
 import React, { useRef, useCallback, useEffect, useState } from 'react';
 import { StyleSheet, View, Image, Dimensions, Text, Platform } from 'react-native';
@@ -26,6 +29,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { GestureDetector, Gesture } from 'react-native-gesture-handler';
 import { Accelerometer } from 'expo-sensors';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { useProfile } from '../context/ProfileContext';
 import { useCountry } from '../context/CountryContext';
@@ -258,6 +262,29 @@ export default function FlippableCard() {
     };
   });
 
+  // Dynamic 3D Shadow Style (shifts realistically based on card tilt)
+  const shadow3DStyle = useAnimatedStyle(() => {
+    'worklet';
+    const hoverY = interpolate(hoverTiltX.value, [-1, 1], [-16, 16]);
+    const hoverX = interpolate(hoverTiltY.value, [-1, 1], [14, -14]);
+    const totalY = rotY.value + (isDragging.value ? 0 : hoverY);
+    const totalX = rotX.value + (isDragging.value ? 0 : hoverX);
+
+    const shiftX = interpolate(totalY % 180, [-90, 0, 90], [28, 0, -28], Extrapolation.CLAMP);
+    const shiftY = interpolate(totalX, [-25, 0, 25], [-12, 14, 30], Extrapolation.CLAMP);
+    const scale = interpolate(Math.abs(totalY % 180), [0, 90], [1, 0.75], Extrapolation.CLAMP);
+    const shadowOpacity = interpolate(Math.abs(totalY % 180), [0, 90], [0.38, 0.18], Extrapolation.CLAMP);
+
+    return {
+      transform: [
+        { translateX: shiftX },
+        { translateY: shiftY },
+        { scale },
+      ],
+      opacity: shadowOpacity,
+    };
+  });
+
   // Continuous normalized opacity for 360° rotations
   const frontOpacityStyle = useAnimatedStyle(() => {
     'worklet';
@@ -277,12 +304,74 @@ export default function FlippableCard() {
     };
   });
 
+  // Dynamic Specular Gloss Highlight for Front Face
+  const frontGlossStyle = useAnimatedStyle(() => {
+    'worklet';
+    const norm = ((rotY.value % 360) + 360) % 360;
+    const relAngle = norm > 180 ? norm - 360 : norm;
+
+    const sweepX = interpolate(relAngle, [-60, 0, 60], [-CARD_W * 0.85, 0, CARD_W * 0.85], Extrapolation.CLAMP);
+    const sweepY = interpolate(rotX.value, [-25, 0, 25], [CARD_H * 0.45, 0, -CARD_H * 0.45], Extrapolation.CLAMP);
+    const opacity = interpolate(Math.abs(relAngle), [0, 40, 85], [0.4, 0.2, 0], Extrapolation.CLAMP);
+
+    return {
+      transform: [
+        { translateX: sweepX },
+        { translateY: sweepY },
+        { rotate: '28deg' },
+      ],
+      opacity,
+    };
+  });
+
+  // Dynamic Specular Gloss Highlight for Back Face
+  const backGlossStyle = useAnimatedStyle(() => {
+    'worklet';
+    const norm = ((rotY.value % 360) + 360) % 360;
+    const relAngle = norm - 180;
+
+    const sweepX = interpolate(relAngle, [-60, 0, 60], [-CARD_W * 0.85, 0, CARD_W * 0.85], Extrapolation.CLAMP);
+    const sweepY = interpolate(rotX.value, [-25, 0, 25], [CARD_H * 0.45, 0, -CARD_H * 0.45], Extrapolation.CLAMP);
+    const opacity = interpolate(Math.abs(relAngle), [0, 40, 85], [0.4, 0.2, 0], Extrapolation.CLAMP);
+
+    return {
+      transform: [
+        { translateX: sweepX },
+        { translateY: sweepY },
+        { rotate: '28deg' },
+      ],
+      opacity,
+    };
+  });
+
+  // Iridescent Holographic Security Shimmer (Front Face Kinegram effect)
+  const holoShimmerStyle = useAnimatedStyle(() => {
+    'worklet';
+    const norm = ((rotY.value % 360) + 360) % 360;
+    const rel = norm > 180 ? norm - 360 : norm;
+    const shiftX = interpolate(rel, [-55, 0, 55], [-CARD_W * 0.7, 0, CARD_W * 0.7], Extrapolation.CLAMP);
+    const shiftY = interpolate(rotX.value, [-25, 0, 25], [-CARD_H * 0.35, 0, CARD_H * 0.35], Extrapolation.CLAMP);
+    const intensity = interpolate(Math.abs(rel), [0, 25, 65], [0.08, 0.42, 0.05], Extrapolation.CLAMP);
+
+    return {
+      transform: [
+        { translateX: shiftX },
+        { translateY: shiftY },
+        { rotate: '-22deg' },
+      ],
+      opacity: intensity,
+    };
+  });
+
   return (
     <GestureDetector gesture={composedGesture}>
       <Animated.View
         style={styles.container}
         {...(Platform.OS === 'web' ? ({ onPointerMove: handlePointerMove, onPointerLeave: handlePointerLeave } as any) : {})}
       >
+        {/* ═══ Dynamic 3D Ambient Drop Shadow ═══ */}
+        <Animated.View pointerEvents="none" style={[styles.ambientShadow, shadow3DStyle]} />
+
         <Animated.View style={[styles.card3DContainer, card3DStyle]} renderToHardwareTextureAndroid>
           {/* ═══ Solid Pure White Chassis Core Layers ═══ */}
           {CHASSIS_SLICES.map((z, idx) => (
@@ -296,30 +385,32 @@ export default function FlippableCard() {
             />
           ))}
 
-          {/* ═══ 4 Straight Pure White 3D Perimeter Walls ═══ */}
-          {/* Top Wall (between corner curves) */}
+          {/* ═══ 4 Straight Pure White 3D Perimeter Walls with Directional Lighting ═══ */}
+          {/* Top Wall (Light highlight) */}
           <View
             pointerEvents="none"
             style={[
               styles.sideWallH,
+              styles.topWallHighlight,
               {
                 top: -CARD_DEPTH / 2,
                 transform: [{ rotateX: '90deg' }] as any,
               },
             ]}
           />
-          {/* Bottom Wall (between corner curves) */}
+          {/* Bottom Wall (Ambient shade) */}
           <View
             pointerEvents="none"
             style={[
               styles.sideWallH,
+              styles.bottomWallShade,
               {
                 bottom: -CARD_DEPTH / 2,
                 transform: [{ rotateX: '-90deg' }] as any,
               },
             ]}
           />
-          {/* Left Wall (between corner curves) */}
+          {/* Left Wall */}
           <View
             pointerEvents="none"
             style={[
@@ -330,7 +421,7 @@ export default function FlippableCard() {
               },
             ]}
           />
-          {/* Right Wall (between corner curves) */}
+          {/* Right Wall */}
           <View
             pointerEvents="none"
             style={[
@@ -369,6 +460,43 @@ export default function FlippableCard() {
               style={styles.cardImage}
               resizeMode="cover"
             />
+
+            {/* Iridescent Holographic Security Shimmer Layer */}
+            <View pointerEvents="none" style={[StyleSheet.absoluteFillObject, styles.opticalOverlay]}>
+              <Animated.View style={[styles.holoGradientBox, holoShimmerStyle]}>
+                <LinearGradient
+                  colors={[
+                    'transparent',
+                    'rgba(70, 230, 255, 0.08)',
+                    'rgba(255, 215, 80, 0.14)',
+                    'rgba(255, 110, 200, 0.11)',
+                    'rgba(140, 255, 190, 0.08)',
+                    'transparent',
+                  ]}
+                  start={{ x: 0.1, y: 0.2 }}
+                  end={{ x: 0.9, y: 0.8 }}
+                  style={StyleSheet.absoluteFillObject}
+                />
+              </Animated.View>
+            </View>
+
+            {/* Dynamic Specular Gloss Sheen Layer */}
+            <View pointerEvents="none" style={[StyleSheet.absoluteFillObject, styles.opticalOverlay]}>
+              <Animated.View style={[styles.glossGradientBox, frontGlossStyle]}>
+                <LinearGradient
+                  colors={[
+                    'transparent',
+                    'rgba(255, 255, 255, 0.04)',
+                    'rgba(255, 255, 255, 0.32)',
+                    'rgba(255, 255, 255, 0.08)',
+                    'transparent',
+                  ]}
+                  start={{ x: 0.25, y: 0 }}
+                  end={{ x: 0.75, y: 1 }}
+                  style={StyleSheet.absoluteFillObject}
+                />
+              </Animated.View>
+            </View>
           </Animated.View>
 
           {/* ═══ Back Face (Z = -3.0px, pre-rotated 180°, exact R = 14px) ═══ */}
@@ -380,6 +508,24 @@ export default function FlippableCard() {
             ]}
           >
             <Image source={config.cardImages.back} style={styles.cardImage} resizeMode="cover" />
+
+            {/* Dynamic Specular Gloss Sheen Layer (Back Face) */}
+            <View pointerEvents="none" style={[StyleSheet.absoluteFillObject, styles.opticalOverlay]}>
+              <Animated.View style={[styles.glossGradientBox, backGlossStyle]}>
+                <LinearGradient
+                  colors={[
+                    'transparent',
+                    'rgba(255, 255, 255, 0.04)',
+                    'rgba(255, 255, 255, 0.30)',
+                    'rgba(255, 255, 255, 0.08)',
+                    'transparent',
+                  ]}
+                  start={{ x: 0.25, y: 0 }}
+                  end={{ x: 0.75, y: 1 }}
+                  style={StyleSheet.absoluteFillObject}
+                />
+              </Animated.View>
+            </View>
           </Animated.View>
         </Animated.View>
 
@@ -419,6 +565,26 @@ const styles = StyleSheet.create({
     userSelect: 'none',
     cursor: 'grab',
   } as any,
+  ambientShadow: {
+    position: 'absolute',
+    top: 14,
+    left: 12,
+    right: 12,
+    bottom: -18,
+    borderRadius: 24,
+    backgroundColor: '#000000',
+    ...(Platform.OS === 'web'
+      ? ({
+          filter: 'blur(16px)',
+        } as any)
+      : {
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 16 },
+          shadowOpacity: 0.45,
+          shadowRadius: 20,
+          elevation: 12,
+        }),
+  },
   card3DContainer: {
     width: '100%',
     height: '100%',
@@ -433,6 +599,26 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   cardImage: { width: '100%', height: '100%', borderRadius: CORNER_R },
+
+  /* Optical Overlays (Gloss & Hologram) */
+  opticalOverlay: {
+    borderRadius: CORNER_R,
+    overflow: 'hidden',
+  },
+  glossGradientBox: {
+    position: 'absolute',
+    top: -CARD_H * 0.8,
+    bottom: -CARD_H * 0.8,
+    left: -CARD_W * 0.6,
+    right: -CARD_W * 0.6,
+  },
+  holoGradientBox: {
+    position: 'absolute',
+    top: -CARD_H * 0.9,
+    bottom: -CARD_H * 0.9,
+    left: -CARD_W * 0.7,
+    right: -CARD_W * 0.7,
+  },
 
   /* Solid Pure White Chassis Core */
   chassisSlice: {
@@ -451,12 +637,20 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     zIndex: 10,
   },
+  topWallHighlight: {
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 0.5,
+    borderBottomColor: 'rgba(255, 255, 255, 0.6)',
+  },
+  bottomWallShade: {
+    backgroundColor: '#EDEDED',
+  },
   sideWallV: {
     position: 'absolute',
     top: CORNER_R,
     bottom: CORNER_R,
     width: CARD_DEPTH,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F6F6F6',
     zIndex: 10,
   },
 
