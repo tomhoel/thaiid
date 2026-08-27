@@ -595,23 +595,23 @@ const styles = StyleSheet.create({
   } as any,
   ambientShadow: {
     position: 'absolute',
-    top: 10,
-    left: 10,
-    right: 10,
-    bottom: -16,
-    borderRadius: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    top: 12,
+    left: 14,
+    right: 14,
+    bottom: -14,
+    borderRadius: 24,
+    backgroundColor: 'transparent',
     ...(Platform.OS === 'web'
       ? ({
-          boxShadow: '0 20px 36px rgba(0, 0, 0, 0.45)',
+          boxShadow: '0 28px 52px rgba(0, 0, 0, 0.65)',
           willChange: 'transform, opacity',
         } as any)
       : {
           shadowColor: '#000',
-          shadowOffset: { width: 0, height: 14 },
-          shadowOpacity: 0.35,
-          shadowRadius: 18,
-          elevation: 10,
+          shadowOffset: { width: 0, height: 20 },
+          shadowOpacity: 0.5,
+          shadowRadius: 26,
+          elevation: 12,
         }),
   },
   card3DContainer: {
