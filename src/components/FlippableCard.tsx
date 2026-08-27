@@ -1,9 +1,13 @@
 /**
  * FlippableCard — High-Performance Single-Matrix 3D Card Engine.
- * Combines 3D mouse/gyroscope perspective tilt + 180° flip into a unified GPU transform.
+ * Supports:
+ *   1. Tap / Click to flip 180°
+ *   2. Drag / Swipe horizontally in real time to flip with physical inertia
+ *   3. Long Press to open Version History
+ *   4. Smooth 3D mouse hover & gyroscope tilt
  */
 import React, { useRef, useCallback, useEffect, useState } from 'react';
-import { StyleSheet, View, Image, Pressable, Dimensions, Text, Platform } from 'react-native';
+import { StyleSheet, View, Image, Dimensions, Text, Platform } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -13,7 +17,9 @@ import Animated, {
   interpolate,
   Easing,
   Extrapolation,
+  runOnJS,
 } from 'react-native-reanimated';
+import { GestureDetector, Gesture } from 'react-native-gesture-handler';
 import { Accelerometer } from 'expo-sensors';
 import * as Haptics from 'expo-haptics';
 import { useProfile } from '../context/ProfileContext';
@@ -31,10 +37,21 @@ export default function FlippableCard() {
   const { t } = useLang();
 
   const flipProgress = useSharedValue(0);
-  const flipTarget = useRef(0);
+  const startFlip = useSharedValue(0);
+  const isDragging = useSharedValue(false);
 
   const tiltX = useSharedValue(0);
   const tiltY = useSharedValue(0);
+
+  // Trigger light haptic feedback
+  const triggerHaptic = useCallback(() => {
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } catch {}
+    if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.vibrate) {
+      try { navigator.vibrate(10); } catch {}
+    }
+  }, []);
 
   // Sensor tracking for mobile devices
   useEffect(() => {
@@ -43,6 +60,7 @@ export default function FlippableCard() {
       if (!available) return;
       Accelerometer.setUpdateInterval(32);
       sub = Accelerometer.addListener(({ x, y }) => {
+        if (isDragging.value) return;
         tiltX.value = withSpring(Math.max(-1, Math.min(1, x)), { damping: 18, stiffness: 100 });
         tiltY.value = withSpring(Math.max(-1, Math.min(1, y - 0.5)), { damping: 18, stiffness: 100 });
       });
@@ -50,7 +68,7 @@ export default function FlippableCard() {
 
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
       const handleOrientation = (e: DeviceOrientationEvent) => {
-        if (e.gamma === null || e.beta === null) return;
+        if (isDragging.value || e.gamma === null || e.beta === null) return;
         const x = Math.max(-1, Math.min(1, e.gamma / 25));
         const y = Math.max(-1, Math.min(1, (e.beta - 45) / 30));
         tiltX.value = withSpring(x, { damping: 20, stiffness: 150 });
@@ -64,11 +82,11 @@ export default function FlippableCard() {
     }
 
     return () => { sub?.remove(); };
-  }, [tiltX, tiltY]);
+  }, [tiltX, tiltY, isDragging]);
 
   // Mouse hover tracking for desktop web
   const handlePointerMove = useCallback((e: any) => {
-    if (Platform.OS !== 'web') return;
+    if (Platform.OS !== 'web' || isDragging.value) return;
     const target = e.currentTarget;
     if (!target) return;
     const rect = target.getBoundingClientRect ? target.getBoundingClientRect() : null;
@@ -77,19 +95,21 @@ export default function FlippableCard() {
     const y = ((e.clientY - rect.top) / rect.height) * 2 - 1;
     tiltX.value = withSpring(Math.max(-1, Math.min(1, x)), { damping: 24, stiffness: 220 });
     tiltY.value = withSpring(Math.max(-1, Math.min(1, y)), { damping: 24, stiffness: 220 });
-  }, [tiltX, tiltY]);
+  }, [tiltX, tiltY, isDragging]);
 
   const handlePointerLeave = useCallback(() => {
-    if (Platform.OS !== 'web') return;
+    if (Platform.OS !== 'web' || isDragging.value) return;
     tiltX.value = withSpring(0, { damping: 20, stiffness: 180 });
     tiltY.value = withSpring(0, { damping: 20, stiffness: 180 });
-  }, [tiltX, tiltY]);
+  }, [tiltX, tiltY, isDragging]);
 
   // Version history sheet
   const [showHistory, setShowHistory] = useState(false);
-  const handleLongPress = useCallback(() => {
+  const openHistory = useCallback(() => {
     if (isGenerating) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    } catch {}
     setShowHistory(true);
   }, [isGenerating]);
 
@@ -135,21 +155,62 @@ export default function FlippableCard() {
     opacity: interpolate(genPulse.value, [0, 1], [0.6, 1]),
   }));
 
-  const handleFlip = useCallback(() => {
-    try {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    } catch {}
-    if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.vibrate) {
-      try { navigator.vibrate(10); } catch {}
-    }
-    flipTarget.current = flipTarget.current === 0 ? 1 : 0;
-    flipProgress.value = withTiming(flipTarget.current, {
-      duration: 380,
-      easing: Easing.out(Easing.cubic),
-    });
-  }, [flipProgress]);
+  /* ── Interactive Gestures: Pan to Drag Flip + Tap to Flip + LongPress ── */
+  const panGesture = Gesture.Pan()
+    .activeOffsetX([-6, 6])
+    .onBegin(() => {
+      'worklet';
+      startFlip.value = flipProgress.value;
+      isDragging.value = true;
+    })
+    .onUpdate((e) => {
+      'worklet';
+      // Dragging across card width rotates 180°
+      const dragFactor = startFlip.value < 0.5 ? -1 : 1;
+      const delta = (e.translationX / (CARD_W * 0.75)) * dragFactor;
+      const raw = startFlip.value + delta;
+      flipProgress.value = Math.max(0, Math.min(1, raw));
+    })
+    .onEnd((e) => {
+      'worklet';
+      isDragging.value = false;
+      let target = flipProgress.value > 0.5 ? 1 : 0;
+      if (e.velocityX < -350) target = 1;
+      if (e.velocityX > 350) target = 0;
 
-  // Unified single-matrix 3D transform for Tilt + Flip
+      flipProgress.value = withSpring(target, {
+        damping: 22,
+        stiffness: 260,
+        overshootClamping: true,
+      });
+      runOnJS(triggerHaptic)();
+    });
+
+  const tapGesture = Gesture.Tap()
+    .maxDuration(250)
+    .onEnd(() => {
+      'worklet';
+      const target = flipProgress.value > 0.5 ? 0 : 1;
+      flipProgress.value = withSpring(target, {
+        damping: 22,
+        stiffness: 260,
+        overshootClamping: true,
+      });
+      runOnJS(triggerHaptic)();
+    });
+
+  const longPressGesture = Gesture.LongPress()
+    .minDuration(500)
+    .onStart(() => {
+      runOnJS(openHistory)();
+    });
+
+  const composedGesture = Gesture.Race(
+    panGesture,
+    Gesture.Exclusive(longPressGesture, tapGesture),
+  );
+
+  // Unified single-matrix 3D transform for Tilt + Drag Flip
   const card3DStyle = useAnimatedStyle(() => {
     'worklet';
     const flipRot = interpolate(flipProgress.value, [0, 1], [0, 180]);
@@ -183,57 +244,63 @@ export default function FlippableCard() {
   });
 
   return (
-    <Pressable
-      onPress={handleFlip}
-      onLongPress={handleLongPress}
-      delayLongPress={500}
-      style={styles.container}
-      {...(Platform.OS === 'web' ? ({ onPointerMove: handlePointerMove, onPointerLeave: handlePointerLeave } as any) : {})}
-    >
-      <Animated.View style={[styles.card3DContainer, card3DStyle]}>
-        {/* Front face */}
-        <Animated.View style={[styles.face, frontOpacityStyle]}>
-          <Image
-            source={profile.cardFrontUri ? { uri: profile.cardFrontUri } : config.cardImages.front}
-            style={styles.cardImage}
-            resizeMode="cover"
-          />
+    <GestureDetector gesture={composedGesture}>
+      <Animated.View
+        style={styles.container}
+        {...(Platform.OS === 'web' ? ({ onPointerMove: handlePointerMove, onPointerLeave: handlePointerLeave } as any) : {})}
+      >
+        <Animated.View style={[styles.card3DContainer, card3DStyle]}>
+          {/* Front face */}
+          <Animated.View style={[styles.face, frontOpacityStyle]}>
+            <Image
+              source={profile.cardFrontUri ? { uri: profile.cardFrontUri } : config.cardImages.front}
+              style={styles.cardImage}
+              resizeMode="cover"
+            />
+          </Animated.View>
+
+          {/* Back face — pre-rotated 180° so it reads correctly when flipped */}
+          <Animated.View style={[styles.face, { transform: [{ rotateY: '180deg' }] }, backOpacityStyle]}>
+            <Image source={config.cardImages.back} style={styles.cardImage} resizeMode="cover" />
+          </Animated.View>
         </Animated.View>
 
-        {/* Back face — pre-rotated 180° so it reads correctly when flipped */}
-        <Animated.View style={[styles.face, { transform: [{ rotateY: '180deg' }] }, backOpacityStyle]}>
-          <Image source={config.cardImages.back} style={styles.cardImage} resizeMode="cover" />
-        </Animated.View>
-      </Animated.View>
-
-      {/* Generating overlay — percentage progress */}
-      {isGenerating && (
-        <View pointerEvents="none" style={styles.genOverlay}>
-          <View style={styles.genCenter}>
-            <Text style={styles.genPercent}>{genPercent}%</Text>
-            <Text style={styles.genLabel}>PROCESSING</Text>
-            <View style={styles.genBarTrack}>
-              <Animated.View style={[styles.genBarFill, { width: `${genPercent}%` }, progressBarStyle]} />
+        {/* Generating overlay — percentage progress */}
+        {isGenerating && (
+          <View pointerEvents="none" style={styles.genOverlay}>
+            <View style={styles.genCenter}>
+              <Text style={styles.genPercent}>{genPercent}%</Text>
+              <Text style={styles.genLabel}>PROCESSING</Text>
+              <View style={styles.genBarTrack}>
+                <Animated.View style={[styles.genBarFill, { width: `${genPercent}%` }, progressBarStyle]} />
+              </View>
             </View>
           </View>
-        </View>
-      )}
+        )}
 
-      {/* Success toast */}
-      {showSuccess && (
-        <View pointerEvents="none" style={styles.successBadge}>
-          <Text style={styles.successIcon}>✓</Text>
-          <Text style={styles.successText}>{t('card.updated')}</Text>
-        </View>
-      )}
+        {/* Success toast */}
+        {showSuccess && (
+          <View pointerEvents="none" style={styles.successBadge}>
+            <Text style={styles.successIcon}>✓</Text>
+            <Text style={styles.successText}>{t('card.updated')}</Text>
+          </View>
+        )}
 
-      <VersionHistorySheet visible={showHistory} onClose={() => setShowHistory(false)} />
-    </Pressable>
+        <VersionHistorySheet visible={showHistory} onClose={() => setShowHistory(false)} />
+      </Animated.View>
+    </GestureDetector>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { alignSelf: 'center', width: CARD_W, height: CARD_H, backgroundColor: 'transparent' },
+  container: {
+    alignSelf: 'center',
+    width: CARD_W,
+    height: CARD_H,
+    backgroundColor: 'transparent',
+    userSelect: 'none',
+    cursor: 'grab',
+  } as any,
   card3DContainer: {
     width: '100%',
     height: '100%',
