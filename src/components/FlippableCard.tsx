@@ -1,18 +1,19 @@
 /**
  * FlippableCard — High-Performance Ultra-Realistic 3D Smart Card Engine.
  * Features:
- *   1. Dynamic Specular Gloss Sheen (Sweeping light reflection matching real-time tilt)
+ *   1. Vivid Dynamic Specular Gloss Beam (Brilliant glass reflection sweeping across surface)
  *   2. Iridescent Holographic Security Shimmer (Polycarbonate kinegram light refraction)
- *   3. Smooth Trigonometric 3D Ambient Drop Shadow (Zero flicker, zero lag, GPU-accelerated)
- *   4. Full Continuous 3D Perimeter Walls with directional lighting highlights
- *   5. High-FPS 60-120 FPS Performance with Hardware-Accelerated 3D Transforms
- *   6. Intuitive Fast Swipe Fling Snap (Flicking left advances +180°, flicking right flips -180°)
- *   7. Continuous, Unclamped Rotational Drag (Spin left or right infinitely in real-time)
- *   8. Dual-Axis 3D Spatial Physics (Horizontal drag spins Y, vertical drag pitches X)
- *   9. Tap / Click to flip 180° with crisp subtle settling bounce
- *   10. Front face (Z = +3.0px) and Back face (Z = -3.0px) with clean, unobstructed artwork
- *   11. Long Press to open Version History
- *   12. Smooth 3D mouse hover & gyroscope tilt
+ *   3. Ambient Glass Surface Sheen & Glare
+ *   4. Smooth Trigonometric 3D Ambient Drop Shadow (Zero flicker, zero lag, GPU-accelerated)
+ *   5. Full Continuous 3D Perimeter Walls with directional lighting highlights
+ *   6. High-FPS 60-120 FPS Performance with Hardware-Accelerated 3D Transforms
+ *   7. Intuitive Fast Swipe Fling Snap (Flicking left advances +180°, flicking right flips -180°)
+ *   8. Continuous, Unclamped Rotational Drag (Spin left or right infinitely in real-time)
+ *   9. Dual-Axis 3D Spatial Physics (Horizontal drag spins Y, vertical drag pitches X)
+ *   10. Tap / Click to flip 180° with crisp subtle settling bounce
+ *   11. Front face (Z = +3.0px) and Back face (Z = -3.0px) with clean, unobstructed artwork
+ *   12. Long Press to open Version History
+ *   13. Smooth 3D mouse hover & gyroscope tilt
  */
 import React, { useRef, useCallback, useEffect, useState } from 'react';
 import { StyleSheet, View, Image, Dimensions, Text, Platform } from 'react-native';
@@ -271,11 +272,9 @@ export default function FlippableCard() {
     const cosY = Math.cos(radY);
     const sinY = Math.sin(radY);
 
-    // Smooth continuous lateral and vertical displacement
     const shiftX = -sinY * 16;
     const shiftY = 16 - Math.sin(radX) * 8;
 
-    // Smooth continuous width scaling when card turns edge-on
     const scaleX = 0.55 + 0.45 * Math.abs(cosY);
     const scaleY = 0.92 + 0.08 * Math.abs(cosY);
     const shadowOpacity = 0.12 + 0.14 * Math.abs(cosY);
@@ -310,21 +309,22 @@ export default function FlippableCard() {
     };
   });
 
-  // Dynamic Specular Gloss Highlight for Front Face
+  // Dynamic Specular Gloss Highlight for Front Face (Vivid sweeping light beam)
   const frontGlossStyle = useAnimatedStyle(() => {
     'worklet';
     const norm = ((rotY.value % 360) + 360) % 360;
     const relAngle = norm > 180 ? norm - 360 : norm;
 
-    const sweepX = interpolate(relAngle, [-60, 0, 60], [-CARD_W * 0.85, 0, CARD_W * 0.85], Extrapolation.CLAMP);
-    const sweepY = interpolate(rotX.value, [-25, 0, 25], [CARD_H * 0.45, 0, -CARD_H * 0.45], Extrapolation.CLAMP);
-    const opacity = interpolate(Math.abs(relAngle), [0, 40, 85], [0.35, 0.18, 0], Extrapolation.CLAMP);
+    // Sweep across the width of the card as angle changes from -60° to +60°
+    const sweepX = interpolate(relAngle, [-60, 0, 60], [-CARD_W * 0.9, 0, CARD_W * 0.9], Extrapolation.CLAMP);
+    const sweepY = interpolate(rotX.value, [-25, 0, 25], [CARD_H * 0.4, 0, -CARD_H * 0.4], Extrapolation.CLAMP);
+    const opacity = interpolate(Math.abs(relAngle), [0, 45, 85], [0.85, 0.45, 0], Extrapolation.CLAMP);
 
     return {
       transform: [
         { translateX: sweepX },
         { translateY: sweepY },
-        { rotate: '28deg' },
+        { rotate: '25deg' },
       ],
       opacity,
     };
@@ -336,15 +336,15 @@ export default function FlippableCard() {
     const norm = ((rotY.value % 360) + 360) % 360;
     const relAngle = norm - 180;
 
-    const sweepX = interpolate(relAngle, [-60, 0, 60], [-CARD_W * 0.85, 0, CARD_W * 0.85], Extrapolation.CLAMP);
-    const sweepY = interpolate(rotX.value, [-25, 0, 25], [CARD_H * 0.45, 0, -CARD_H * 0.45], Extrapolation.CLAMP);
-    const opacity = interpolate(Math.abs(relAngle), [0, 40, 85], [0.35, 0.18, 0], Extrapolation.CLAMP);
+    const sweepX = interpolate(relAngle, [-60, 0, 60], [-CARD_W * 0.9, 0, CARD_W * 0.9], Extrapolation.CLAMP);
+    const sweepY = interpolate(rotX.value, [-25, 0, 25], [CARD_H * 0.4, 0, -CARD_H * 0.4], Extrapolation.CLAMP);
+    const opacity = interpolate(Math.abs(relAngle), [0, 45, 85], [0.85, 0.45, 0], Extrapolation.CLAMP);
 
     return {
       transform: [
         { translateX: sweepX },
         { translateY: sweepY },
-        { rotate: '28deg' },
+        { rotate: '25deg' },
       ],
       opacity,
     };
@@ -355,15 +355,15 @@ export default function FlippableCard() {
     'worklet';
     const norm = ((rotY.value % 360) + 360) % 360;
     const rel = norm > 180 ? norm - 360 : norm;
-    const shiftX = interpolate(rel, [-55, 0, 55], [-CARD_W * 0.7, 0, CARD_W * 0.7], Extrapolation.CLAMP);
+    const shiftX = interpolate(rel, [-50, 0, 50], [-CARD_W * 0.75, 0, CARD_W * 0.75], Extrapolation.CLAMP);
     const shiftY = interpolate(rotX.value, [-25, 0, 25], [-CARD_H * 0.35, 0, CARD_H * 0.35], Extrapolation.CLAMP);
-    const intensity = interpolate(Math.abs(rel), [0, 25, 65], [0.06, 0.38, 0.04], Extrapolation.CLAMP);
+    const intensity = interpolate(Math.abs(rel), [0, 25, 65], [0.15, 0.75, 0.1], Extrapolation.CLAMP);
 
     return {
       transform: [
         { translateX: shiftX },
         { translateY: shiftY },
-        { rotate: '-22deg' },
+        { rotate: '-20deg' },
       ],
       opacity: intensity,
     };
@@ -467,16 +467,25 @@ export default function FlippableCard() {
               resizeMode="cover"
             />
 
+            {/* Ambient Glass Surface Luster */}
+            <LinearGradient
+              colors={['rgba(255, 255, 255, 0.12)', 'transparent', 'rgba(0, 0, 0, 0.08)']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 0.3, y: 1 }}
+              style={StyleSheet.absoluteFillObject}
+              pointerEvents="none"
+            />
+
             {/* Iridescent Holographic Security Shimmer Layer */}
             <View pointerEvents="none" style={[StyleSheet.absoluteFillObject, styles.opticalOverlay]}>
-              <Animated.View style={[styles.holoGradientBox, holoShimmerStyle]}>
+              <Animated.View style={[styles.holoBeam, holoShimmerStyle]}>
                 <LinearGradient
                   colors={[
                     'transparent',
-                    'rgba(70, 230, 255, 0.08)',
-                    'rgba(255, 215, 80, 0.14)',
-                    'rgba(255, 110, 200, 0.11)',
-                    'rgba(140, 255, 190, 0.08)',
+                    'rgba(0, 230, 255, 0.32)',
+                    'rgba(255, 235, 60, 0.40)',
+                    'rgba(255, 50, 180, 0.35)',
+                    'rgba(50, 255, 140, 0.28)',
                     'transparent',
                   ]}
                   start={{ x: 0.1, y: 0.2 }}
@@ -486,19 +495,21 @@ export default function FlippableCard() {
               </Animated.View>
             </View>
 
-            {/* Dynamic Specular Gloss Sheen Layer */}
+            {/* Dynamic Specular Gloss Beam Layer */}
             <View pointerEvents="none" style={[StyleSheet.absoluteFillObject, styles.opticalOverlay]}>
-              <Animated.View style={[styles.glossGradientBox, frontGlossStyle]}>
+              <Animated.View style={[styles.glossBeam, frontGlossStyle]}>
                 <LinearGradient
                   colors={[
                     'transparent',
-                    'rgba(255, 255, 255, 0.04)',
-                    'rgba(255, 255, 255, 0.28)',
-                    'rgba(255, 255, 255, 0.06)',
+                    'rgba(255, 255, 255, 0.05)',
+                    'rgba(255, 255, 255, 0.35)',
+                    'rgba(255, 255, 255, 0.85)',
+                    'rgba(255, 255, 255, 0.35)',
+                    'rgba(255, 255, 255, 0.05)',
                     'transparent',
                   ]}
-                  start={{ x: 0.25, y: 0 }}
-                  end={{ x: 0.75, y: 1 }}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
                   style={StyleSheet.absoluteFillObject}
                 />
               </Animated.View>
@@ -515,19 +526,30 @@ export default function FlippableCard() {
           >
             <Image source={config.cardImages.back} style={styles.cardImage} resizeMode="cover" />
 
-            {/* Dynamic Specular Gloss Sheen Layer (Back Face) */}
+            {/* Ambient Glass Surface Luster (Back Face) */}
+            <LinearGradient
+              colors={['rgba(255, 255, 255, 0.12)', 'transparent', 'rgba(0, 0, 0, 0.08)']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 0.3, y: 1 }}
+              style={StyleSheet.absoluteFillObject}
+              pointerEvents="none"
+            />
+
+            {/* Dynamic Specular Gloss Beam Layer (Back Face) */}
             <View pointerEvents="none" style={[StyleSheet.absoluteFillObject, styles.opticalOverlay]}>
-              <Animated.View style={[styles.glossGradientBox, backGlossStyle]}>
+              <Animated.View style={[styles.glossBeam, backGlossStyle]}>
                 <LinearGradient
                   colors={[
                     'transparent',
-                    'rgba(255, 255, 255, 0.04)',
-                    'rgba(255, 255, 255, 0.26)',
-                    'rgba(255, 255, 255, 0.06)',
+                    'rgba(255, 255, 255, 0.05)',
+                    'rgba(255, 255, 255, 0.35)',
+                    'rgba(255, 255, 255, 0.85)',
+                    'rgba(255, 255, 255, 0.35)',
+                    'rgba(255, 255, 255, 0.05)',
                     'transparent',
                   ]}
-                  start={{ x: 0.25, y: 0 }}
-                  end={{ x: 0.75, y: 1 }}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
                   style={StyleSheet.absoluteFillObject}
                 />
               </Animated.View>
@@ -612,19 +634,19 @@ const styles = StyleSheet.create({
     borderRadius: CORNER_R,
     overflow: 'hidden',
   },
-  glossGradientBox: {
+  glossBeam: {
     position: 'absolute',
-    top: -CARD_H * 0.8,
-    bottom: -CARD_H * 0.8,
-    left: -CARD_W * 0.6,
-    right: -CARD_W * 0.6,
+    top: -CARD_H,
+    left: CARD_W * 0.15,
+    width: CARD_W * 0.7,
+    height: CARD_H * 3,
   },
-  holoGradientBox: {
+  holoBeam: {
     position: 'absolute',
-    top: -CARD_H * 0.9,
-    bottom: -CARD_H * 0.9,
-    left: -CARD_W * 0.7,
-    right: -CARD_W * 0.7,
+    top: -CARD_H,
+    left: CARD_W * 0.1,
+    width: CARD_W * 0.8,
+    height: CARD_H * 3,
   },
 
   /* Solid Pure White Chassis Core */
