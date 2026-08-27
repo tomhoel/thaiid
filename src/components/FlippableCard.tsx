@@ -161,59 +161,100 @@ function HoloSurface({ tiltX, tiltY }: { tiltX: SharedValue<number>; tiltY: Shar
   );
 }
 
-/* ── Edge highlights — 1px lines simulate card edge catching light ── */
-function EdgeHighlights({ tiltX, tiltY }: { tiltX: SharedValue<number>; tiltY: SharedValue<number> }) {
-  const topStyle    = useAnimatedStyle(() => { 'worklet'; return { opacity: interpolate(tiltY.value, [-1,0,1], [0.06,0.18,0.65], Extrapolation.CLAMP) }; });
-  const bottomStyle = useAnimatedStyle(() => { 'worklet'; return { opacity: interpolate(tiltY.value, [-1,0,1], [0.60,0.14,0.05], Extrapolation.CLAMP) }; });
-  const leftStyle   = useAnimatedStyle(() => { 'worklet'; return { opacity: interpolate(tiltX.value, [-1,0,1], [0.06,0.15,0.60], Extrapolation.CLAMP) }; });
-  const rightStyle  = useAnimatedStyle(() => { 'worklet'; return { opacity: interpolate(tiltX.value, [-1,0,1], [0.55,0.12,0.05], Extrapolation.CLAMP) }; });
-  const E = 'rgba(255,255,255,0.92)';
-  return (
-    <>
-      <Animated.View pointerEvents="none" style={[{ position:'absolute', top:0,    left:14,   right:14,  height:1, backgroundColor:E }, topStyle]}    />
-      <Animated.View pointerEvents="none" style={[{ position:'absolute', bottom:0, left:14,   right:14,  height:1, backgroundColor:E }, bottomStyle]} />
-      <Animated.View pointerEvents="none" style={[{ position:'absolute', left:0,   top:14,    bottom:14, width:1,  backgroundColor:E }, leftStyle]}   />
-      <Animated.View pointerEvents="none" style={[{ position:'absolute', right:0,  top:14,    bottom:14, width:1,  backgroundColor:E }, rightStyle]}  />
-    </>
-  );
-}
-
-
-/* ── Entrance shimmer — single sweep on mount ── */
-function EntranceShimmer() {
-  const sweepX = useSharedValue(-CARD_W * 0.3);
-
-  useEffect(() => {
-    sweepX.value = withDelay(550, withTiming(CARD_W * 1.4, {
-      duration: 650,
-      easing: Easing.inOut(Easing.quad),
-    }));
-  }, []);
-
-  const style = useAnimatedStyle(() => {
+/* ── Physical Card Extruded Thickness (0.76mm PVC Core + Bevel Rims) ── */
+function CardExtrudedThickness({ tiltX, tiltY }: { tiltX: SharedValue<number>; tiltY: SharedValue<number> }) {
+  // Layer 1: Inner white PVC core
+  const core1Style = useAnimatedStyle(() => {
     'worklet';
     return {
-      transform: [{ translateX: sweepX.value }, { rotate: '18deg' }],
+      transform: [
+        { translateX: -tiltX.value * 2.2 },
+        { translateY: -tiltY.value * 1.6 },
+      ],
       opacity: interpolate(
-        sweepX.value,
-        [-CARD_W * 0.3, CARD_W * 0.4, CARD_W * 1.4],
-        [0, 0.45, 0],
-        Extrapolation.CLAMP,
+        Math.abs(tiltX.value) + Math.abs(tiltY.value),
+        [0, 0.08, 1],
+        [0, 0.75, 0.95],
+        Extrapolation.CLAMP
       ),
     };
   });
 
+  // Layer 2: Deep bevel edge
+  const core2Style = useAnimatedStyle(() => {
+    'worklet';
+    return {
+      transform: [
+        { translateX: -tiltX.value * 3.8 },
+        { translateY: -tiltY.value * 2.9 },
+      ],
+      opacity: interpolate(
+        Math.abs(tiltX.value) + Math.abs(tiltY.value),
+        [0, 0.1, 1],
+        [0, 0.55, 0.85],
+        Extrapolation.CLAMP
+      ),
+    };
+  });
+
+  // Dynamic Specular Rim Bevels — lights up the exposed 0.76mm edge
+  const topRim = useAnimatedStyle(() => {
+    'worklet';
+    return { opacity: interpolate(tiltY.value, [-1, -0.2, 0.2, 1], [0.05, 0.1, 0.4, 0.95], Extrapolation.CLAMP) };
+  });
+  const bottomRim = useAnimatedStyle(() => {
+    'worklet';
+    return { opacity: interpolate(tiltY.value, [-1, -0.2, 0.2, 1], [0.95, 0.4, 0.1, 0.05], Extrapolation.CLAMP) };
+  });
+  const leftRim = useAnimatedStyle(() => {
+    'worklet';
+    return { opacity: interpolate(tiltX.value, [-1, -0.2, 0.2, 1], [0.05, 0.1, 0.4, 0.95], Extrapolation.CLAMP) };
+  });
+  const rightRim = useAnimatedStyle(() => {
+    'worklet';
+    return { opacity: interpolate(tiltX.value, [-1, -0.2, 0.2, 1], [0.95, 0.4, 0.1, 0.05], Extrapolation.CLAMP) };
+  });
+
   return (
-    <Animated.View
-      pointerEvents="none"
-      style={[{
-        position: 'absolute',
-        top: -30, bottom: -30,
-        width: 55,
-        backgroundColor: 'rgba(255,255,255,0.3)',
-        borderRadius: 25,
-      }, style]}
-    />
+    <>
+      {/* 3D Extruded Deep Edge */}
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          StyleSheet.absoluteFillObject,
+          {
+            borderRadius: 14,
+            backgroundColor: '#8FA4B8',
+            borderColor: 'rgba(255, 255, 255, 0.5)',
+            borderWidth: 1.2,
+            zIndex: -2,
+          },
+          core2Style,
+        ]}
+      />
+
+      {/* 3D Extruded Mid PVC Core */}
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          StyleSheet.absoluteFillObject,
+          {
+            borderRadius: 14,
+            backgroundColor: '#DCE6F2',
+            borderColor: 'rgba(255, 255, 255, 0.9)',
+            borderWidth: 1,
+            zIndex: -1,
+          },
+          core1Style,
+        ]}
+      />
+
+      {/* Specular Rim Highlights on exposed card edges */}
+      <Animated.View pointerEvents="none" style={[{ position: 'absolute', top: 0, left: 14, right: 14, height: 1.5, backgroundColor: '#FFFFFF', zIndex: 10 }, topRim]} />
+      <Animated.View pointerEvents="none" style={[{ position: 'absolute', bottom: 0, left: 14, right: 14, height: 1.5, backgroundColor: '#FFFFFF', zIndex: 10 }, bottomRim]} />
+      <Animated.View pointerEvents="none" style={[{ position: 'absolute', top: 14, bottom: 14, left: 0, width: 1.5, backgroundColor: '#FFFFFF', zIndex: 10 }, leftRim]} />
+      <Animated.View pointerEvents="none" style={[{ position: 'absolute', top: 14, bottom: 14, right: 0, width: 1.5, backgroundColor: '#FFFFFF', zIndex: 10 }, rightRim]} />
+    </>
   );
 }
 
@@ -395,6 +436,9 @@ export default function FlippableCard() {
       {...(Platform.OS === 'web' ? ({ onPointerMove: handlePointerMove, onPointerLeave: handlePointerLeave } as any) : {})}
     >
 <Animated.View style={[styles.shadowWrap, bodyStyle]}>
+        {/* Physical 3D Extruded Thickness Sandwich */}
+        <CardExtrudedThickness tiltX={tiltX} tiltY={tiltY} />
+
         {/* Single rotating container — one transform for the flip */}
         <Animated.View style={[StyleSheet.absoluteFillObject, { borderRadius: 14, backgroundColor: 'transparent' }, flipStyle]}>
           {/* Front face */}
