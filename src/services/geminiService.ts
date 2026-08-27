@@ -7,6 +7,7 @@
  *   4. Direct / Supabase Proxy Dual-Route Execution with Automatic Failover
  *   5. Strict Aspect-Ratio Guarantee (1013x638 ISO/IEC 7810 ID-1 Standard)
  *   6. Intelligent Exponential Backoff with Rate-Limit (429/503) Handling
+ *   7. Zero-Config Country Template Resolution (TH, SG, BR, US, VN)
  */
 
 import Constants from 'expo-constants';
@@ -26,6 +27,32 @@ const FALLBACK_MODELS = [
 
 const GEMINI_DIRECT_ENDPOINT = (model: string) =>
   `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+
+/** Get the base64 template for a country code */
+export function getCountryCardTemplate(countryCode: string): string {
+  switch (countryCode) {
+    case 'SG': return require('../constants/sgCardTemplate').SG_CARD_TEMPLATE_BASE64;
+    case 'BR': return require('../constants/brCardTemplate').BR_CARD_TEMPLATE_BASE64;
+    case 'US': return require('../constants/usCardTemplate').US_CARD_TEMPLATE_BASE64;
+    case 'VN': return require('../constants/vnCardTemplate').VN_CARD_TEMPLATE_BASE64;
+    case 'TH':
+    default:
+      return require('../constants/cardTemplate').CARD_TEMPLATE_BASE64;
+  }
+}
+
+/** Get official card metadata for a country */
+export function getCountryMetadata(countryCode: string): { cardDescription: string; secondaryLangName: string } {
+  switch (countryCode) {
+    case 'SG': return { cardDescription: 'Singapore National Identity Card (NRIC)', secondaryLangName: 'Chinese / Malay' };
+    case 'BR': return { cardDescription: 'Brazilian Identity Card (Registro Geral)', secondaryLangName: 'Portuguese' };
+    case 'US': return { cardDescription: 'United States Real ID Driver License', secondaryLangName: 'State ID' };
+    case 'VN': return { cardDescription: 'Vietnam Citizen Identity Card (Căn cước công dân)', secondaryLangName: 'Vietnamese' };
+    case 'TH':
+    default:
+      return { cardDescription: 'Thai National Identity Card', secondaryLangName: 'Thai' };
+  }
+}
 
 export class GeminiService {
   private static getCredentials() {
@@ -253,46 +280,26 @@ Output: Return ONLY the final composited high-resolution card image.`;
     model?: string;
   }): Promise<string> {
     const {
+      countryCode,
       profileData,
       selectedPhotoBase64,
       selectedPhotoMime = 'image/jpeg',
-      templateBase64,
-      cardDescription = 'National Identity Card',
-      secondaryLangName = 'Native Language',
       model = DEFAULT_MODEL,
     } = params;
 
-    let parts: any[];
+    const meta = getCountryMetadata(countryCode);
+    const templateBase64 = params.templateBase64 || getCountryCardTemplate(countryCode);
+    const cardDescription = params.cardDescription || meta.cardDescription;
+    const secondaryLangName = params.secondaryLangName || meta.secondaryLangName;
 
-    if (templateBase64) {
-      parts = this.buildCardParts({
-        templateBase64,
-        cardDescription,
-        secondaryLangName,
-        profileData,
-        selectedPhotoBase64,
-        selectedPhotoMime,
-      });
-    } else {
-      parts = [];
-      if (selectedPhotoBase64) {
-        parts.push({
-          inlineData: {
-            mimeType: selectedPhotoMime,
-            data: selectedPhotoBase64,
-          },
-        });
-      }
-      const promptText = `Generate a realistic national identity card image for ${profileData.fullNameEnglish}.
-Fields:
-- Full Name: ${profileData.fullNameEnglish}
-- ID Number: ${profileData.idNumber}
-- Date of Birth: ${profileData.dateOfBirth}
-- Date of Issue: ${profileData.dateOfIssue}
-- Date of Expiry: ${profileData.dateOfExpiry}
-Dimensions: exactly 1013x638 pixels. Clean, official layout.`;
-      parts.push({ text: promptText });
-    }
+    const parts = this.buildCardParts({
+      templateBase64,
+      cardDescription,
+      secondaryLangName,
+      profileData,
+      selectedPhotoBase64,
+      selectedPhotoMime,
+    });
 
     const response = await this.callProxy(parts, model);
     const uri = this.extractImageUri(response);
