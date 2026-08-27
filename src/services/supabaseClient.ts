@@ -4,8 +4,12 @@ import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 
 const extra = Constants.expoConfig?.extra ?? {};
-const supabaseUrl = (extra.supabaseUrl as string) || 'https://iufuxlkskczdhlptszdf.supabase.co';
+const supabaseUrl =
+  process.env.EXPO_PUBLIC_SUPABASE_URL ||
+  (extra.supabaseUrl as string) ||
+  'https://iufuxlkskczdhlptszdf.supabase.co';
 const supabaseAnonKey =
+  process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ||
   (extra.supabaseAnonKey as string) ||
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1ZnV4bGtzY2N6ZGhscHRzemRmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDIzMTcyMjMsImV4cCI6MjA1Nzg5MzIyM30.6tUjVb-b-722s4C_Z3aF-h8jR_6y4fU4b2g9p_yX1_A';
 
