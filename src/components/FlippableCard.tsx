@@ -1,12 +1,13 @@
 /**
- * FlippableCard — High-Performance Pure White Solid 3D Box Engine.
+ * FlippableCard — High-Performance Pure White Solid 3D Box Engine with Rounded Corners.
  * Features:
  *   1. Tap / Click to flip 180°
  *   2. Drag / Swipe horizontally in real time with continuous pure white 3D volume
- *   3. True 6-Sided Solid 3D Box (Front plate + Back plate + 4 Seamless White Perimeter Walls reaching 100% of all edges)
- *   4. Zero interior plates / slices — 100% clean hollow-core solid geometry
- *   5. Long Press to open Version History
- *   6. Smooth 3D mouse hover & gyroscope tilt
+ *   3. Rounded 3D Chassis (4 Straight White Perimeter Walls + 4 Smoothly Curved 3D Corner Arcs)
+ *   4. Zero sharp corner protrusion — walls and faces match the 14px corner radius seamlessly
+ *   5. Zero interior plates / slices — 100% clean hollow-core solid geometry
+ *   6. Long Press to open Version History
+ *   7. Smooth 3D mouse hover & gyroscope tilt
  */
 import React, { useRef, useCallback, useEffect, useState } from 'react';
 import { StyleSheet, View, Image, Dimensions, Text, Platform } from 'react-native';
@@ -33,6 +34,10 @@ const { width: SCREEN_W } = Dimensions.get('window');
 const CARD_W = Math.min(SCREEN_W - 40, 390);
 const CARD_H = CARD_W * 0.63;
 const CARD_DEPTH = 6; // 6px clean physical card thickness (±3px Z-depth)
+const CORNER_R = 14;
+
+// Micro-depth layers for the 4 rounded corner arcs
+const CORNER_DEPTHS = [-3.0, -2.25, -1.5, -0.75, 0, 0.75, 1.5, 2.25, 3.0];
 
 export default function FlippableCard() {
   const { profile, isGenerating } = useProfile();
@@ -252,8 +257,46 @@ export default function FlippableCard() {
         {...(Platform.OS === 'web' ? ({ onPointerMove: handlePointerMove, onPointerLeave: handlePointerLeave } as any) : {})}
       >
         <Animated.View style={[styles.card3DContainer, card3DStyle]}>
-          {/* ═══ 4 Seamless Pure White 3D Outer Perimeter Walls (Zero interior plates) ═══ */}
-          {/* Left Wall (Reaches full height from top to bottom at X = 0) */}
+          {/* ═══ 4 Rounded 3D Corner Arcs (R = 14px, Seamless depth transition) ═══ */}
+          {CORNER_DEPTHS.map((z, idx) => (
+            <React.Fragment key={idx}>
+              {/* Top-Left Corner */}
+              <View
+                pointerEvents="none"
+                style={[
+                  styles.cornerBlock,
+                  { top: 0, left: 0, borderTopLeftRadius: CORNER_R, transform: [{ translateZ: z }] as any },
+                ]}
+              />
+              {/* Top-Right Corner */}
+              <View
+                pointerEvents="none"
+                style={[
+                  styles.cornerBlock,
+                  { top: 0, right: 0, borderTopRightRadius: CORNER_R, transform: [{ translateZ: z }] as any },
+                ]}
+              />
+              {/* Bottom-Left Corner */}
+              <View
+                pointerEvents="none"
+                style={[
+                  styles.cornerBlock,
+                  { bottom: 0, left: 0, borderBottomLeftRadius: CORNER_R, transform: [{ translateZ: z }] as any },
+                ]}
+              />
+              {/* Bottom-Right Corner */}
+              <View
+                pointerEvents="none"
+                style={[
+                  styles.cornerBlock,
+                  { bottom: 0, right: 0, borderBottomRightRadius: CORNER_R, transform: [{ translateZ: z }] as any },
+                ]}
+              />
+            </React.Fragment>
+          ))}
+
+          {/* ═══ 4 Straight Pure White 3D Walls (Meeting the Corner Arcs at R = 14px) ═══ */}
+          {/* Left Wall (Between Top-Left and Bottom-Left corner arcs) */}
           <View
             pointerEvents="none"
             style={[
@@ -266,7 +309,7 @@ export default function FlippableCard() {
             ]}
           />
 
-          {/* Right Wall (Reaches full height from top to bottom at X = CARD_W) */}
+          {/* Right Wall (Between Top-Right and Bottom-Right corner arcs) */}
           <View
             pointerEvents="none"
             style={[
@@ -279,7 +322,7 @@ export default function FlippableCard() {
             ]}
           />
 
-          {/* Top Wall (Reaches full width from left to right at Y = 0) */}
+          {/* Top Wall (Between Top-Left and Top-Right corner arcs) */}
           <View
             pointerEvents="none"
             style={[
@@ -292,7 +335,7 @@ export default function FlippableCard() {
             ]}
           />
 
-          {/* Bottom Wall (Reaches full width from left to right at Y = CARD_H) */}
+          {/* Bottom Wall (Between Bottom-Left and Bottom-Right corner arcs) */}
           <View
             pointerEvents="none"
             style={[
@@ -371,24 +414,35 @@ const styles = StyleSheet.create({
   card3DContainer: {
     width: '100%',
     height: '100%',
-    borderRadius: 14,
+    borderRadius: CORNER_R,
     backgroundColor: 'transparent',
     transformStyle: 'preserve-3d',
   } as any,
   face: {
     ...StyleSheet.absoluteFillObject,
-    borderRadius: 14,
+    borderRadius: CORNER_R,
     overflow: 'hidden',
     borderWidth: 0.5,
     borderColor: 'rgba(255, 255, 255, 0.35)',
   },
-  cardImage: { width: '100%', height: '100%', borderRadius: 14 },
+  cardImage: { width: '100%', height: '100%', borderRadius: CORNER_R },
 
-  /* 3D Pure White Perimeter Walls spanning 100% of all edges */
+  /* 4 Rounded Corner 3D Blocks */
+  cornerBlock: {
+    position: 'absolute',
+    width: CORNER_R,
+    height: CORNER_R,
+    backgroundColor: '#FFFFFF',
+    borderColor: 'rgba(255, 255, 255, 0.95)',
+    borderWidth: 0.5,
+    zIndex: 4,
+  },
+
+  /* 4 Straight Pure White Perimeter Walls (Connecting at R = 14px) */
   sideWallLeft: {
     position: 'absolute',
-    top: 0,
-    bottom: 0,
+    top: CORNER_R,
+    bottom: CORNER_R,
     backgroundColor: '#FFFFFF',
     borderTopWidth: 0.5,
     borderBottomWidth: 0.5,
@@ -397,8 +451,8 @@ const styles = StyleSheet.create({
   },
   sideWallRight: {
     position: 'absolute',
-    top: 0,
-    bottom: 0,
+    top: CORNER_R,
+    bottom: CORNER_R,
     backgroundColor: '#FFFFFF',
     borderTopWidth: 0.5,
     borderBottomWidth: 0.5,
@@ -407,8 +461,8 @@ const styles = StyleSheet.create({
   },
   sideWallTop: {
     position: 'absolute',
-    left: 0,
-    right: 0,
+    left: CORNER_R,
+    right: CORNER_R,
     backgroundColor: '#FFFFFF',
     borderLeftWidth: 0.5,
     borderRightWidth: 0.5,
@@ -417,8 +471,8 @@ const styles = StyleSheet.create({
   },
   sideWallBottom: {
     position: 'absolute',
-    left: 0,
-    right: 0,
+    left: CORNER_R,
+    right: CORNER_R,
     backgroundColor: '#FFFFFF',
     borderLeftWidth: 0.5,
     borderRightWidth: 0.5,
@@ -428,7 +482,7 @@ const styles = StyleSheet.create({
 
   genOverlay: {
     ...StyleSheet.absoluteFillObject,
-    borderRadius: 14,
+    borderRadius: CORNER_R,
     overflow: 'hidden',
     backgroundColor: 'rgba(6,10,20,0.92)',
     alignItems: 'center',
