@@ -19,13 +19,26 @@ export default function TabLayout() {
       backgroundColor: theme === 'dark' ? colors.navy : colors.bgCard,
       borderTopWidth: 1,
       borderTopColor: colors.b1,
-      height: Platform.OS === 'web' ? 62 : 78,
+      height: Platform.OS === 'web' ? 68 : 82,
       paddingTop: 6,
-      paddingBottom: Platform.OS === 'web' ? 10 : 28,
+      paddingBottom: Platform.OS === 'web' ? 10 : 26,
       elevation: 0,
     },
-    tabBarLabelStyle: { fontSize: 10, fontWeight: '600' as const, marginTop: 1 },
-    tabBarIconStyle: { marginBottom: -2 },
+    tabBarItemStyle: {
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    tabBarLabelStyle: {
+      fontSize: 10.5,
+      fontWeight: '600' as const,
+      lineHeight: 14,
+      marginTop: 2,
+      paddingBottom: 2,
+    },
+    tabBarIconStyle: {
+      marginTop: 2,
+      marginBottom: 0,
+    },
   }), [theme, colors]);
 
   return (
