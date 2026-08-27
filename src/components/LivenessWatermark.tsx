@@ -9,14 +9,13 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useCountry } from '../context/CountryContext';
 import { useTheme } from '../context/ThemeContext';
-import GuillocheLivenessWatermark from './GuillocheLivenessWatermark';
 
 const { width: SW, height: SH } = Dimensions.get('window');
 const WATERMARK_SIZE = SW * 0.60;
 
 /**
- * LivenessWatermark — Government-Grade Kinetic Security Atmosphere.
- * Combines rotating National Security Emblem + Harmonic Micro-Guilloche Waves.
+ * LivenessWatermark — Clean, subtle background rotating national emblem.
+ * Rendered behind all content via StyleSheet.absoluteFill + pointerEvents="none".
  */
 const LivenessWatermark = React.memo(function LivenessWatermark({
   showEmblem = true,
@@ -43,16 +42,6 @@ const LivenessWatermark = React.memo(function LivenessWatermark({
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
-      {/* Background Micro-Guilloche Waves */}
-      <GuillocheLivenessWatermark
-        width={SW}
-        height={SH}
-        opacity={0.08}
-        tintColor={colors.goldLight}
-        showRosette={false}
-      />
-
-      {/* Rotating Security Emblem */}
       <Animated.View
         style={[
           {
@@ -71,9 +60,9 @@ const LivenessWatermark = React.memo(function LivenessWatermark({
                   width: WATERMARK_SIZE,
                   height: WATERMARK_SIZE,
                   tintColor: colors.goldLight,
-                  opacity: 0.09,
+                  opacity: 0.08,
                 }
-              : { width: WATERMARK_SIZE, height: WATERMARK_SIZE, opacity: 0.09 }
+              : { width: WATERMARK_SIZE, height: WATERMARK_SIZE, opacity: 0.08 }
           }
           resizeMode="contain"
         />
