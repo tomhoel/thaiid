@@ -1,11 +1,11 @@
 /**
- * FlippableCard — High-Performance Pure White Solid 3D Smart Card Engine.
+ * FlippableCard — High-Performance Continuous 360° Solid 3D Smart Card Engine.
  * Features:
- *   1. Tap / Click to flip 180°
- *   2. Drag / Swipe horizontally in real time with continuous pure white 3D volume
- *   3. 100% Curvature Alignment (All chassis slices share the exact R = 14px radius)
- *   4. Zero 90-degree square corner protrusions — 100% smooth rounded corners all around
- *   5. Front face (Z = +3.0px) and Back face (Z = -3.0px) with clean, unobstructed artwork
+ *   1. Continuous, Unclamped Rotational Drag (Spin left or right infinitely in real-time)
+ *   2. Dual-Axis 3D Spatial Physics (Horizontal drag spins Y, vertical drag pitches X)
+ *   3. Dynamic Inertia & Velocity Fling Snap (Snaps to nearest 180° face on release)
+ *   4. Tap / Click to flip 180°
+ *   5. Solid Pure White Chassis Core with identical R = 14px curvature
  *   6. Long Press to open Version History
  *   7. Smooth 3D mouse hover & gyroscope tilt
  */
@@ -47,12 +47,17 @@ export default function FlippableCard() {
   const { config } = useCountry();
   const { t } = useLang();
 
-  const flipProgress = useSharedValue(0);
-  const startFlip = useSharedValue(0);
+  // Continuous unclamped rotational angle in degrees (0, 180, 360, etc.)
+  const rotY = useSharedValue(0);
+  const startRotY = useSharedValue(0);
+
+  const rotX = useSharedValue(0);
+  const startRotX = useSharedValue(0);
+
   const isDragging = useSharedValue(false);
 
-  const tiltX = useSharedValue(0);
-  const tiltY = useSharedValue(0);
+  const hoverTiltX = useSharedValue(0);
+  const hoverTiltY = useSharedValue(0);
 
   // Trigger light haptic feedback
   const triggerHaptic = useCallback(() => {
@@ -72,8 +77,8 @@ export default function FlippableCard() {
       Accelerometer.setUpdateInterval(32);
       sub = Accelerometer.addListener(({ x, y }) => {
         if (isDragging.value) return;
-        tiltX.value = withSpring(Math.max(-1, Math.min(1, x)), { damping: 20, stiffness: 120 });
-        tiltY.value = withSpring(Math.max(-1, Math.min(1, y - 0.5)), { damping: 20, stiffness: 120 });
+        hoverTiltX.value = withSpring(Math.max(-1, Math.min(1, x)), { damping: 20, stiffness: 120 });
+        hoverTiltY.value = withSpring(Math.max(-1, Math.min(1, y - 0.5)), { damping: 20, stiffness: 120 });
       });
     });
 
@@ -82,8 +87,8 @@ export default function FlippableCard() {
         if (isDragging.value || e.gamma === null || e.beta === null) return;
         const x = Math.max(-1, Math.min(1, e.gamma / 25));
         const y = Math.max(-1, Math.min(1, (e.beta - 45) / 30));
-        tiltX.value = withSpring(x, { damping: 22, stiffness: 160 });
-        tiltY.value = withSpring(y, { damping: 22, stiffness: 160 });
+        hoverTiltX.value = withSpring(x, { damping: 22, stiffness: 160 });
+        hoverTiltY.value = withSpring(y, { damping: 22, stiffness: 160 });
       };
       window.addEventListener('deviceorientation', handleOrientation);
       return () => {
@@ -93,7 +98,7 @@ export default function FlippableCard() {
     }
 
     return () => { sub?.remove(); };
-  }, [tiltX, tiltY, isDragging]);
+  }, [hoverTiltX, hoverTiltY, isDragging]);
 
   // Mouse hover tracking for desktop web
   const handlePointerMove = useCallback((e: any) => {
@@ -104,15 +109,15 @@ export default function FlippableCard() {
     if (!rect) return;
     const x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
     const y = ((e.clientY - rect.top) / rect.height) * 2 - 1;
-    tiltX.value = withSpring(Math.max(-1, Math.min(1, x)), { damping: 24, stiffness: 220 });
-    tiltY.value = withSpring(Math.max(-1, Math.min(1, y)), { damping: 24, stiffness: 220 });
-  }, [tiltX, tiltY, isDragging]);
+    hoverTiltX.value = withSpring(Math.max(-1, Math.min(1, x)), { damping: 24, stiffness: 220 });
+    hoverTiltY.value = withSpring(Math.max(-1, Math.min(1, y)), { damping: 24, stiffness: 220 });
+  }, [hoverTiltX, hoverTiltY, isDragging]);
 
   const handlePointerLeave = useCallback(() => {
     if (Platform.OS !== 'web' || isDragging.value) return;
-    tiltX.value = withSpring(0, { damping: 20, stiffness: 180 });
-    tiltY.value = withSpring(0, { damping: 20, stiffness: 180 });
-  }, [tiltX, tiltY, isDragging]);
+    hoverTiltX.value = withSpring(0, { damping: 20, stiffness: 180 });
+    hoverTiltY.value = withSpring(0, { damping: 20, stiffness: 180 });
+  }, [hoverTiltX, hoverTiltY, isDragging]);
 
   // Version history sheet
   const [showHistory, setShowHistory] = useState(false);
@@ -166,32 +171,37 @@ export default function FlippableCard() {
     opacity: interpolate(genPulse.value, [0, 1], [0.6, 1]),
   }));
 
-  /* ── Interactive Gestures: Pan to Drag Flip + Tap to Flip + LongPress ── */
+  /* ── Interactive Gestures: Continuous 360° Pan + Tap to Flip + LongPress ── */
   const panGesture = Gesture.Pan()
-    .activeOffsetX([-6, 6])
     .onBegin(() => {
       'worklet';
-      startFlip.value = flipProgress.value;
+      startRotY.value = rotY.value;
+      startRotX.value = rotX.value;
       isDragging.value = true;
     })
     .onUpdate((e) => {
       'worklet';
-      const dragFactor = startFlip.value < 0.5 ? -1 : 1;
-      const delta = (e.translationX / (CARD_W * 0.75)) * dragFactor;
-      const raw = startFlip.value + delta;
-      flipProgress.value = Math.max(0, Math.min(1, raw));
+      // Dragging left rotates positive Y (front -> back), dragging right rotates negative Y
+      const degPerPixel = 180 / (CARD_W * 0.75);
+      rotY.value = startRotY.value - e.translationX * degPerPixel;
+      // Vertical drag applies realistic 3D pitch
+      rotX.value = Math.max(-25, Math.min(25, -e.translationY * 0.25));
     })
     .onEnd((e) => {
       'worklet';
       isDragging.value = false;
-      let target = flipProgress.value > 0.5 ? 1 : 0;
-      if (e.velocityX < -350) target = 1;
-      if (e.velocityX > 350) target = 0;
+      // Calculate snap target to the nearest multiple of 180°
+      let targetDeg = Math.round(rotY.value / 180) * 180;
+      if (e.velocityX < -350) targetDeg = Math.floor((rotY.value - 45) / 180) * 180;
+      if (e.velocityX > 350) targetDeg = Math.ceil((rotY.value + 45) / 180) * 180;
 
-      flipProgress.value = withSpring(target, {
+      rotY.value = withSpring(targetDeg, {
         damping: 24,
-        stiffness: 240,
-        overshootClamping: true,
+        stiffness: 220,
+      });
+      rotX.value = withSpring(0, {
+        damping: 20,
+        stiffness: 200,
       });
       runOnJS(triggerHaptic)();
     });
@@ -200,11 +210,11 @@ export default function FlippableCard() {
     .maxDuration(250)
     .onEnd(() => {
       'worklet';
-      const target = flipProgress.value > 0.5 ? 0 : 1;
-      flipProgress.value = withSpring(target, {
+      const currentNearest = Math.round(rotY.value / 180);
+      const nextTarget = (currentNearest + 1) * 180;
+      rotY.value = withSpring(nextTarget, {
         damping: 24,
-        stiffness: 240,
-        overshootClamping: true,
+        stiffness: 220,
       });
       runOnJS(triggerHaptic)();
     });
@@ -220,36 +230,42 @@ export default function FlippableCard() {
     Gesture.Exclusive(longPressGesture, tapGesture),
   );
 
-  // Unified single-matrix 3D transform for Tilt + Drag Flip
+  // Unified single-matrix 3D transform for Continuous Rotations + Hover Tilt
   const card3DStyle = useAnimatedStyle(() => {
     'worklet';
-    const flipRot = interpolate(flipProgress.value, [0, 1], [0, 180]);
-    const tiltYDeg = interpolate(tiltX.value, [-1, 1], [-18, 18]);
-    const tiltXDeg = interpolate(tiltY.value, [-1, 1], [15, -15]);
+    const hoverY = interpolate(hoverTiltX.value, [-1, 1], [-16, 16]);
+    const hoverX = interpolate(hoverTiltY.value, [-1, 1], [14, -14]);
 
-    const effectiveTiltY = flipProgress.value > 0.5 ? -tiltYDeg : tiltYDeg;
-    const effectiveTiltX = flipProgress.value > 0.5 ? -tiltXDeg : tiltXDeg;
+    const totalY = rotY.value + (isDragging.value ? 0 : hoverY);
+    const totalX = rotX.value + (isDragging.value ? 0 : hoverX);
 
     return {
       transform: [
         { perspective: 1000 },
-        { rotateY: `${flipRot + effectiveTiltY}deg` },
-        { rotateX: `${effectiveTiltX}deg` },
+        { rotateY: `${totalY}deg` },
+        { rotateX: `${totalX}deg` },
       ],
     };
   });
 
+  // Continuous normalized opacity for 360° rotations
   const frontOpacityStyle = useAnimatedStyle(() => {
     'worklet';
+    const norm = ((rotY.value % 360) + 360) % 360;
+    // Front face is visible in [0..90] and [270..360]
+    const isFront = norm <= 90 || norm >= 270;
     return {
-      opacity: interpolate(flipProgress.value, [0, 0.48, 0.52, 1], [1, 1, 0, 0], Extrapolation.CLAMP),
+      opacity: isFront ? 1 : 0,
     };
   });
 
   const backOpacityStyle = useAnimatedStyle(() => {
     'worklet';
+    const norm = ((rotY.value % 360) + 360) % 360;
+    // Back face is visible in [90..270]
+    const isBack = norm > 90 && norm < 270;
     return {
-      opacity: interpolate(flipProgress.value, [0, 0.48, 0.52, 1], [0, 0, 1, 1], Extrapolation.CLAMP),
+      opacity: isBack ? 1 : 0,
     };
   });
 
