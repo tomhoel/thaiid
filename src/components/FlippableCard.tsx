@@ -180,9 +180,9 @@ export default function FlippableCard() {
     })
     .onUpdate((e) => {
       'worklet';
-      // Dragging left rotates positive Y (front -> back), dragging right rotates negative Y
+      // Direct 1:1 tactile tracking: dragging right rotates right (+Y), dragging left rotates left (-Y)
       const degPerPixel = 180 / (CARD_W * 0.75);
-      rotY.value = startRotY.value - e.translationX * degPerPixel;
+      rotY.value = startRotY.value + e.translationX * degPerPixel;
       // Vertical drag applies realistic 3D pitch
       rotX.value = Math.max(-25, Math.min(25, -e.translationY * 0.25));
     })
@@ -192,12 +192,12 @@ export default function FlippableCard() {
       let targetDeg = Math.round(rotY.value / 180) * 180;
 
       // Fast swipe / fling velocity detection (advances in the direction of swipe)
-      if (e.velocityX < -250) {
-        // Fast swipe LEFT -> advance forward (+180°)
+      if (e.velocityX > 250) {
+        // Fast swipe RIGHT -> advance in positive direction (+180°)
         targetDeg = Math.ceil((rotY.value + 20) / 180) * 180;
         if (targetDeg === startRotY.value) targetDeg += 180;
-      } else if (e.velocityX > 250) {
-        // Fast swipe RIGHT -> rotate backwards (-180°)
+      } else if (e.velocityX < -250) {
+        // Fast swipe LEFT -> advance in negative direction (-180°)
         targetDeg = Math.floor((rotY.value - 20) / 180) * 180;
         if (targetDeg === startRotY.value) targetDeg -= 180;
       }
