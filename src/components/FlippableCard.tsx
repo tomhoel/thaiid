@@ -1,12 +1,12 @@
 /**
  * FlippableCard — High-Performance Continuous 360° Solid 3D Smart Card Engine.
  * Features:
- *   1. High-FPS 60-120 FPS Performance with Hardware-Accelerated 5-Layer Chassis
- *   2. Intuitive Fast Swipe Fling Snap (Flicking left advances +180°, flicking right flips -180°)
- *   3. Continuous, Unclamped Rotational Drag (Spin left or right infinitely in real-time)
- *   4. Dual-Axis 3D Spatial Physics (Horizontal drag spins Y, vertical drag pitches X)
- *   5. Tap / Click to flip 180° with crisp subtle settling bounce
- *   6. Seamless 1:1 Pixel-Matched Pure White Chassis (Zero border overhang, identical R = 14px curvature)
+ *   1. Full Continuous 3D Perimeter Walls (4 Straight Walls + 4 Pure White Curved Corner Arc Enclosures)
+ *   2. High-FPS 60-120 FPS Performance with Hardware-Accelerated 3D Transforms
+ *   3. Intuitive Fast Swipe Fling Snap (Flicking left advances +180°, flicking right flips -180°)
+ *   4. Continuous, Unclamped Rotational Drag (Spin left or right infinitely in real-time)
+ *   5. Dual-Axis 3D Spatial Physics (Horizontal drag spins Y, vertical drag pitches X)
+ *   6. Tap / Click to flip 180° with crisp subtle settling bounce
  *   7. Front face (Z = +3.0px) and Back face (Z = -3.0px) with clean, unobstructed artwork
  *   8. Long Press to open Version History
  *   9. Smooth 3D mouse hover & gyroscope tilt
@@ -38,7 +38,7 @@ const CARD_H = CARD_W * 0.63;
 const CARD_DEPTH = 6; // 6px physical card thickness (±3px)
 const CORNER_R = 14;
 
-// 5 high-performance hardware-accelerated white chassis layers for locked 60-120 FPS
+// 5 dense hardware-accelerated white core layers
 const CHASSIS_SLICES = [-2.6, -1.3, 0.0, 1.3, 2.6];
 
 export default function FlippableCard() {
@@ -284,7 +284,7 @@ export default function FlippableCard() {
         {...(Platform.OS === 'web' ? ({ onPointerMove: handlePointerMove, onPointerLeave: handlePointerLeave } as any) : {})}
       >
         <Animated.View style={[styles.card3DContainer, card3DStyle]} renderToHardwareTextureAndroid>
-          {/* ═══ Solid Pure White Chassis Core (5 Dense Hardware-Accelerated Layers) ═══ */}
+          {/* ═══ Solid Pure White Chassis Core Layers ═══ */}
           {CHASSIS_SLICES.map((z, idx) => (
             <View
               key={idx}
@@ -295,6 +295,66 @@ export default function FlippableCard() {
               ]}
             />
           ))}
+
+          {/* ═══ 4 Straight Pure White 3D Perimeter Walls ═══ */}
+          {/* Top Wall (between corner curves) */}
+          <View
+            pointerEvents="none"
+            style={[
+              styles.sideWallH,
+              {
+                top: -CARD_DEPTH / 2,
+                transform: [{ rotateX: '90deg' }] as any,
+              },
+            ]}
+          />
+          {/* Bottom Wall (between corner curves) */}
+          <View
+            pointerEvents="none"
+            style={[
+              styles.sideWallH,
+              {
+                bottom: -CARD_DEPTH / 2,
+                transform: [{ rotateX: '-90deg' }] as any,
+              },
+            ]}
+          />
+          {/* Left Wall (between corner curves) */}
+          <View
+            pointerEvents="none"
+            style={[
+              styles.sideWallV,
+              {
+                left: -CARD_DEPTH / 2,
+                transform: [{ rotateY: '-90deg' }] as any,
+              },
+            ]}
+          />
+          {/* Right Wall (between corner curves) */}
+          <View
+            pointerEvents="none"
+            style={[
+              styles.sideWallV,
+              {
+                right: -CARD_DEPTH / 2,
+                transform: [{ rotateY: '90deg' }] as any,
+              },
+            ]}
+          />
+
+          {/* ═══ 4 Rounded 3D Corner Wall Arcs (Seamlessly joining straight walls) ═══ */}
+          <View pointerEvents="none" style={[styles.cornerArcWrap, { top: 0, left: 0 }]}>
+            <View style={[styles.cornerArcElement, { top: 0, left: 0, borderTopLeftRadius: CORNER_R }]} />
+          </View>
+          <View pointerEvents="none" style={[styles.cornerArcWrap, { top: 0, right: 0 }]}>
+            <View style={[styles.cornerArcElement, { top: 0, right: 0, borderTopRightRadius: CORNER_R }]} />
+          </View>
+          <View pointerEvents="none" style={[styles.cornerArcWrap, { bottom: 0, left: 0 }]}>
+            <View style={[styles.cornerArcElement, { bottom: 0, left: 0, borderBottomLeftRadius: CORNER_R }]} />
+          </View>
+          <View pointerEvents="none" style={[styles.cornerArcWrap, { bottom: 0, right: 0 }]}>
+            <View style={[styles.cornerArcElement, { bottom: 0, right: 0, borderBottomRightRadius: CORNER_R }]} />
+          </View>
 
           {/* ═══ Front Face (Z = +3.0px, exact R = 14px) ═══ */}
           <Animated.View
@@ -374,12 +434,45 @@ const styles = StyleSheet.create({
   },
   cardImage: { width: '100%', height: '100%', borderRadius: CORNER_R },
 
-  /* Solid Pure White Chassis Core — exact 1:1 pixel match with zero border overhang */
+  /* Solid Pure White Chassis Core */
   chassisSlice: {
     ...StyleSheet.absoluteFillObject,
     borderRadius: CORNER_R,
     backgroundColor: '#FFFFFF',
     zIndex: 5,
+  },
+
+  /* 4 Straight Pure White Perimeter Walls */
+  sideWallH: {
+    position: 'absolute',
+    left: CORNER_R,
+    right: CORNER_R,
+    height: CARD_DEPTH,
+    backgroundColor: '#FFFFFF',
+    zIndex: 10,
+  },
+  sideWallV: {
+    position: 'absolute',
+    top: CORNER_R,
+    bottom: CORNER_R,
+    width: CARD_DEPTH,
+    backgroundColor: '#FFFFFF',
+    zIndex: 10,
+  },
+
+  /* 4 Rounded Corner Arc Perimeter Walls */
+  cornerArcWrap: {
+    position: 'absolute',
+    width: CORNER_R,
+    height: CORNER_R,
+    overflow: 'hidden',
+    zIndex: 10,
+  },
+  cornerArcElement: {
+    position: 'absolute',
+    width: CORNER_R,
+    height: CORNER_R,
+    backgroundColor: '#FFFFFF',
   },
 
   genOverlay: {
