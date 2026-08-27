@@ -1,13 +1,14 @@
 /**
- * FlippableCard — High-Performance Single-Matrix 3D Card Engine.
+ * FlippableCard — High-Performance Solid Volumetric 3D Card Engine.
  * Features:
  *   1. Tap / Click to flip 180°
- *   2. Drag / Swipe horizontally in real time to flip with physical inertia
- *   3. Real 3D Physical Card Thickness (0.76mm Polycarbonate / PVC multi-ply core visible at all angles)
- *   4. Long Press to open Version History
- *   5. Smooth 3D mouse hover & gyroscope tilt
+ *   2. Drag / Swipe horizontally in real time with continuous 3D physical volume
+ *   3. Solid 3D Polycarbonate/PVC Extruded Body (16 gapless micro-slices + 4 planar side walls)
+ *   4. Zero gaps, zero see-through artifacts at any rotation angle (0° to 180°)
+ *   5. Long Press to open Version History
+ *   6. Smooth 3D mouse hover & gyroscope tilt
  */
-import React, { useRef, useCallback, useEffect, useState } from 'react';
+import React, { useRef, useCallback, useEffect, useState, useMemo } from 'react';
 import { StyleSheet, View, Image, Dimensions, Text, Platform } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -31,6 +32,13 @@ import VersionHistorySheet from './VersionHistorySheet';
 const { width: SCREEN_W } = Dimensions.get('window');
 const CARD_W = Math.min(SCREEN_W - 40, 390);
 const CARD_H = CARD_W * 0.63;
+const CARD_DEPTH = 6.4; // 0.76mm equivalent physical card thickness
+
+// 16 gapless micro-slices spanning the full card depth from -3.0px to +3.0px
+const CORE_SLICES = [
+  -3.0, -2.6, -2.2, -1.8, -1.4, -1.0, -0.6, -0.2,
+   0.2,  0.6,  1.0,  1.4,  1.8,  2.2,  2.6,  3.0,
+];
 
 export default function FlippableCard() {
   const { profile, isGenerating } = useProfile();
@@ -229,23 +237,6 @@ export default function FlippableCard() {
     };
   });
 
-  // Physical 0.76mm Card Thickness: dynamically expands up to 7px when viewed edge-on (at 90°)
-  const edgeThicknessStyle = useAnimatedStyle(() => {
-    'worklet';
-    const flipRot = interpolate(flipProgress.value, [0, 1], [0, 180]);
-    const sinFactor = Math.sin((flipRot * Math.PI) / 180);
-    const visibleWidth = Math.max(0.5, Math.abs(sinFactor) * 7);
-    const isEdgeOn = Math.abs(sinFactor) > 0.08;
-
-    return {
-      opacity: isEdgeOn ? 1 : 0,
-      width: visibleWidth,
-      transform: [
-        { translateX: -visibleWidth / 2 },
-      ],
-    };
-  });
-
   const frontOpacityStyle = useAnimatedStyle(() => {
     'worklet';
     return {
@@ -267,31 +258,91 @@ export default function FlippableCard() {
         {...(Platform.OS === 'web' ? ({ onPointerMove: handlePointerMove, onPointerLeave: handlePointerLeave } as any) : {})}
       >
         <Animated.View style={[styles.card3DContainer, card3DStyle]}>
-          {/* Physical 3D Core Layer 1 (Back Layer, Z = -2.5px) */}
-          <View style={[styles.face, styles.coreLayer, { transform: [{ translateZ: -2.5 }] as any }]} />
+          {/* ═══ Continuous Solid Volumetric 3D Core (16 Gapless Micro-Slices) ═══ */}
+          {CORE_SLICES.map((z, idx) => {
+            const isCore = Math.abs(z) < 2.0;
+            return (
+              <View
+                key={idx}
+                pointerEvents="none"
+                style={[
+                  styles.face,
+                  {
+                    backgroundColor: isCore ? '#94A3B8' : '#E2E8F0',
+                    borderColor: isCore ? '#CBD5E1' : '#FFFFFF',
+                    borderWidth: 0.5,
+                    transform: [{ translateZ: z }] as any,
+                  },
+                ]}
+              />
+            );
+          })}
 
-          {/* Physical 3D Core Layer 2 (Mid Polycarbonate Layer, Z = 0px) */}
-          <View style={[styles.face, styles.coreLayer, { backgroundColor: '#F1F5F9', transform: [{ translateZ: 0 }] as any }]} />
-
-          {/* Physical 3D Core Layer 3 (Front Layer, Z = +2.5px) */}
-          <View style={[styles.face, styles.coreLayer, { transform: [{ translateZ: 2.5 }] as any }]} />
-
-          {/* Physical 0.76mm Plastic Edge Slab (Visible during 3D rotation and 90° Edge-on view) */}
-          <Animated.View
+          {/* ═══ 4 Orthogonal 3D Wall Enclosures ═══ */}
+          {/* Left Wall (X = 0) */}
+          <View
             pointerEvents="none"
             style={[
-              styles.edgeSlab,
-              edgeThicknessStyle,
+              styles.sideWallV,
+              {
+                left: -CARD_DEPTH / 2,
+                transform: [{ rotateY: '-90deg' }] as any,
+              },
             ]}
           >
-            {/* Multi-ply PVC sandwich laminates inside the edge */}
-            <View style={{ flex: 1, backgroundColor: '#E2E8F0', borderWidth: 0.5, borderColor: '#FFFFFF' }}>
-              <View style={{ position: 'absolute', top: 0, bottom: 0, left: '30%', width: '40%', backgroundColor: '#94A3B8' }} />
-            </View>
-          </Animated.View>
+            <View style={styles.wallCoreStripe} />
+          </View>
 
-          {/* Front face (Z = +3px) */}
-          <Animated.View style={[styles.face, frontOpacityStyle, { transform: [{ translateZ: 3 }] as any }]}>
+          {/* Right Wall (X = CARD_W) */}
+          <View
+            pointerEvents="none"
+            style={[
+              styles.sideWallV,
+              {
+                right: -CARD_DEPTH / 2,
+                transform: [{ rotateY: '90deg' }] as any,
+              },
+            ]}
+          >
+            <View style={styles.wallCoreStripe} />
+          </View>
+
+          {/* Top Wall (Y = 0) */}
+          <View
+            pointerEvents="none"
+            style={[
+              styles.sideWallH,
+              {
+                top: -CARD_DEPTH / 2,
+                transform: [{ rotateX: '90deg' }] as any,
+              },
+            ]}
+          >
+            <View style={styles.wallCoreStripeH} />
+          </View>
+
+          {/* Bottom Wall (Y = CARD_H) */}
+          <View
+            pointerEvents="none"
+            style={[
+              styles.sideWallH,
+              {
+                bottom: -CARD_DEPTH / 2,
+                transform: [{ rotateX: '-90deg' }] as any,
+              },
+            ]}
+          >
+            <View style={styles.wallCoreStripeH} />
+          </View>
+
+          {/* ═══ Front Face (Z = +3.2px) ═══ */}
+          <Animated.View
+            style={[
+              styles.face,
+              frontOpacityStyle,
+              { transform: [{ translateZ: CARD_DEPTH / 2 }] as any },
+            ]}
+          >
             <Image
               source={profile.cardFrontUri ? { uri: profile.cardFrontUri } : config.cardImages.front}
               style={styles.cardImage}
@@ -299,8 +350,14 @@ export default function FlippableCard() {
             />
           </Animated.View>
 
-          {/* Back face (Z = -3px, pre-rotated 180°) */}
-          <Animated.View style={[styles.face, { transform: [{ rotateY: '180deg' }, { translateZ: 3 }] as any }, backOpacityStyle]}>
+          {/* ═══ Back Face (Z = -3.2px, pre-rotated 180°) ═══ */}
+          <Animated.View
+            style={[
+              styles.face,
+              { transform: [{ rotateY: '180deg' }, { translateZ: CARD_DEPTH / 2 }] as any },
+              backOpacityStyle,
+            ]}
+          >
             <Image source={config.cardImages.back} style={styles.cardImage} resizeMode="cover" />
           </Animated.View>
         </Animated.View>
@@ -352,24 +409,52 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     borderRadius: 14,
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.14)',
+    borderWidth: 0.5,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
   },
-  coreLayer: {
+  cardImage: { width: '100%', height: '100%', borderRadius: 14 },
+
+  /* 3D Orthogonal Side Walls */
+  sideWallV: {
+    position: 'absolute',
+    top: 14,
+    bottom: 14,
+    width: CARD_DEPTH,
     backgroundColor: '#E2E8F0',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.85)',
+    borderTopWidth: 0.5,
+    borderBottomWidth: 0.5,
+    borderColor: '#FFFFFF',
+    overflow: 'hidden',
+    zIndex: 5,
   },
-  edgeSlab: {
+  sideWallH: {
+    position: 'absolute',
+    left: 14,
+    right: 14,
+    height: CARD_DEPTH,
+    backgroundColor: '#E2E8F0',
+    borderLeftWidth: 0.5,
+    borderRightWidth: 0.5,
+    borderColor: '#FFFFFF',
+    overflow: 'hidden',
+    zIndex: 5,
+  },
+  wallCoreStripe: {
     position: 'absolute',
     top: 0,
     bottom: 0,
-    left: '50%',
-    borderRadius: 2,
-    overflow: 'hidden',
-    zIndex: 15,
+    left: '25%',
+    width: '50%',
+    backgroundColor: '#94A3B8',
   },
-  cardImage: { width: '100%', height: '100%', borderRadius: 14 },
+  wallCoreStripeH: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: '25%',
+    height: '50%',
+    backgroundColor: '#94A3B8',
+  },
 
   genOverlay: {
     ...StyleSheet.absoluteFillObject,
