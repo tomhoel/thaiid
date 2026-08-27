@@ -20,6 +20,7 @@ import { useSnackbar } from '../../src/context/SnackbarContext';
 import { reportError } from '../../src/utils/reportError';
 import { saveCardImage, savePortraitImage, clearCardImages } from '../../src/utils/cardImageStore';
 import { saveVersion, findMatchingVersion, clearAllHistory } from '../../src/utils/versionHistory';
+import { usePWA } from '../../src/hooks/usePWA';
 
 function getCardTemplate(countryCode: string): string {
   switch (countryCode) {
@@ -78,6 +79,7 @@ export default function SettingsScreen() {
   const { theme, setTheme, colors: Colors } = useTheme();
   const snackbar = useSnackbar();
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
+  const { canInstall, isStandalone, isOnline, promptInstall } = usePWA();
   const [showDemoModal, setShowDemoModal] = useState(false);
   const [syncAll, setSyncAll] = useState(false);
   const [notif, setNotif] = useState(true);
@@ -562,7 +564,26 @@ CRITICAL: The layout must remain IDENTICAL. Everything else must remain PIXEL-PE
 
         {/* ── System ── */}
         <Text style={styles.sectionLabel}>SYSTEM</Text>
-        <Item icon="information-circle-outline" label="Application Version" value={Constants.expoConfig?.version ?? '1.0.0'} colors={Colors} styles={styles} />
+        <Item icon="information-circle-outline" label="Application Version" value={Constants.expoConfig?.version ?? '4.0.4'} colors={Colors} styles={styles} />
+        {Platform.OS === 'web' && (
+          <>
+            <Item
+              icon="phone-portrait-outline"
+              label="PWA Installation"
+              value={isStandalone ? "Installed (Standalone)" : canInstall ? "Install to Home Screen" : "Ready (Offline Vault)"}
+              onPress={canInstall ? () => promptInstall() : undefined}
+              colors={Colors}
+              styles={styles}
+            />
+            <Item
+              icon={isOnline ? "cloud-done-outline" : "cloud-offline-outline"}
+              label="Network Status"
+              value={isOnline ? "Online (Encrypted)" : "Offline (Local Vault)"}
+              colors={Colors}
+              styles={styles}
+            />
+          </>
+        )}
         <Item icon="document-text-outline" label="Official Reference" value={config.systemReference} colors={Colors} styles={styles} />
         <Item icon="shield-checkmark-outline" label="Certification Status" value="Active" last colors={Colors} styles={styles} />
 

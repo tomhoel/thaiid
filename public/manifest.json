@@ -1,17 +1,70 @@
 {
+  "id": "com.tomhoel.thaiid",
+  "name": "Digital ID — Sovereign Identity Wallet",
   "short_name": "Digital ID",
-  "name": "Digital Identification Application",
+  "description": "Government-grade Digital Identity Wallet with Offline Verification & 3D Smart Card Biometrics",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": [
+    "window-controls-overlay",
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "portrait-primary",
+  "theme_color": "#0C1526",
+  "background_color": "#0C1526",
+  "categories": [
+    "utilities",
+    "finance",
+    "productivity",
+    "government"
+  ],
+  "lang": "en",
+  "dir": "ltr",
+  "prefer_related_applications": false,
   "icons": [
     {
-      "src": "/assets/icon.png",
-      "sizes": "192x192 512x512",
+      "src": "/favicon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon.png",
+      "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
     }
   ],
-  "start_url": "/",
-  "display": "standalone",
-  "orientation": "portrait",
-  "theme_color": "#0C1526",
-  "background_color": "#0C1526"
+  "shortcuts": [
+    {
+      "name": "View ID Card",
+      "short_name": "ID Card",
+      "description": "Open your sovereign 3D identity card",
+      "url": "/",
+      "icons": [{ "src": "/favicon.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Digital QR & Barcode",
+      "short_name": "Digital Code",
+      "description": "Scan official QR and barcode verification token",
+      "url": "/digital",
+      "icons": [{ "src": "/favicon.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Identity Details",
+      "short_name": "Details",
+      "description": "View official personal credentials and data",
+      "url": "/details",
+      "icons": [{ "src": "/favicon.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Security Settings",
+      "short_name": "Settings",
+      "description": "Manage biometric security and card configuration",
+      "url": "/settings",
+      "icons": [{ "src": "/favicon.png", "sizes": "192x192" }]
+    }
+  ]
 }

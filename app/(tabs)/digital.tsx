@@ -25,6 +25,7 @@ import { type ColorPalette } from '../../src/constants/colors';
 import { useProfile } from '../../src/context/ProfileContext';
 import { useLang } from '../../src/i18n/LanguageContext';
 import { useCountry } from '../../src/context/CountryContext';
+import { usePWA } from '../../src/hooks/usePWA';
 
 const { width: SW } = Dimensions.get('window');
 const REGEN_SECS = 15;
@@ -85,6 +86,13 @@ export default function DigitalScreen() {
   const { config } = useCountry();
 
   const [timer, setTimer] = useState({ epoch: 0, remaining: REGEN_SECS });
+  const { requestWakeLock, releaseWakeLock } = usePWA();
+
+  // Keep screen awake while displaying digital verification code
+  useEffect(() => {
+    requestWakeLock();
+    return () => { releaseWakeLock(); };
+  }, [requestWakeLock, releaseWakeLock]);
 
   useEffect(() => {
     const tick = setInterval(() => {

@@ -82,10 +82,40 @@ function AppShell() {
 
   useEffect(() => {
     SystemUI.setBackgroundColorAsync('#0C1526').catch(() => {});
-    if (Platform.OS === 'web' && typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-      navigator.serviceWorker.getRegistrations().then(registrations => {
-        for (const registration of registrations) {
-          registration.unregister();
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      // 1. Register Service Worker for PWA Offline Caching
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').then((reg) => {
+            console.log('[PWA] Service Worker registered with scope:', reg.scope);
+          }).catch((err) => {
+            console.log('[PWA] Service Worker registration failed:', err);
+          });
+        });
+      }
+
+      // 2. Ensure PWA Manifest link tag is present
+      if (!document.querySelector('link[rel="manifest"]')) {
+        const link = document.createElement('link');
+        link.rel = 'manifest';
+        link.href = '/manifest.json';
+        document.head.appendChild(link);
+      }
+
+      // 3. Apple Touch Icon and Mobile Web App Meta Tags
+      const metaTags = [
+        { name: 'mobile-web-app-capable', content: 'yes' },
+        { name: 'apple-mobile-web-app-capable', content: 'yes' },
+        { name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' },
+        { name: 'apple-mobile-web-app-title', content: 'Digital ID' },
+        { name: 'theme-color', content: '#0C1526' },
+      ];
+      metaTags.forEach(({ name, content }) => {
+        if (!document.querySelector(`meta[name="${name}"]`)) {
+          const meta = document.createElement('meta');
+          meta.name = name;
+          meta.content = content;
+          document.head.appendChild(meta);
         }
       });
     }
