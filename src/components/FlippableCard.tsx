@@ -1,12 +1,13 @@
 /**
- * FlippableCard — High-Performance Pure White Solid 3D Box Engine with Clean Rounded Corners.
+ * FlippableCard — High-Performance Pure White Solid 3D Smart Card Engine.
  * Features:
  *   1. Tap / Click to flip 180°
  *   2. Drag / Swipe horizontally in real time with continuous pure white 3D volume
- *   3. Clean 3D Rounded Chassis (4 Straight White Perimeter Walls + Mid Bevel Ring)
- *   4. Zero corner squares or visual defects — 100% pristine front and back faces
- *   5. Long Press to open Version History
- *   6. Smooth 3D mouse hover & gyroscope tilt
+ *   3. Solid White Chassis (Continuous white core from -2.8px to +2.8px + 4 white side walls)
+ *   4. Perfectly rounded pure white corners (R = 14px) and pure white straight walls
+ *   5. Front face (Z = +3.1px) and Back face (Z = -3.1px) with clean, unobstructed artwork
+ *   6. Long Press to open Version History
+ *   7. Smooth 3D mouse hover & gyroscope tilt
  */
 import React, { useRef, useCallback, useEffect, useState } from 'react';
 import { StyleSheet, View, Image, Dimensions, Text, Platform } from 'react-native';
@@ -32,8 +33,14 @@ import VersionHistorySheet from './VersionHistorySheet';
 const { width: SCREEN_W } = Dimensions.get('window');
 const CARD_W = Math.min(SCREEN_W - 40, 390);
 const CARD_H = CARD_W * 0.63;
-const CARD_DEPTH = 6; // 6px clean physical card thickness (±3px Z-depth)
+const CARD_DEPTH = 6; // 6px physical card thickness (±3px)
 const CORNER_R = 14;
+
+// 15 dense white chassis micro-slices spanning from -2.8px to +2.8px
+const CHASSIS_SLICES = [
+  -2.8, -2.4, -2.0, -1.6, -1.2, -0.8, -0.4,
+   0.0,  0.4,  0.8,  1.2,  1.6,  2.0,  2.4,  2.8,
+];
 
 export default function FlippableCard() {
   const { profile, isGenerating } = useProfile();
@@ -253,17 +260,20 @@ export default function FlippableCard() {
         {...(Platform.OS === 'web' ? ({ onPointerMove: handlePointerMove, onPointerLeave: handlePointerLeave } as any) : {})}
       >
         <Animated.View style={[styles.card3DContainer, card3DStyle]}>
-          {/* ═══ Mid-Depth Perimeter Bevel Ring (Z = 0) ═══ */}
-          <View
-            pointerEvents="none"
-            style={[
-              styles.midBevelRing,
-              { transform: [{ translateZ: 0 }] as any },
-            ]}
-          />
+          {/* ═══ Solid Pure White Chassis Core (15 Micro-Slices covering all corners & volume) ═══ */}
+          {CHASSIS_SLICES.map((z, idx) => (
+            <View
+              key={idx}
+              pointerEvents="none"
+              style={[
+                styles.chassisSlice,
+                { transform: [{ translateZ: z }] as any },
+              ]}
+            />
+          ))}
 
-          {/* ═══ 4 Straight Pure White 3D Walls (Meeting the Corner Arcs at R = 14px) ═══ */}
-          {/* Left Wall (Between Top-Left and Bottom-Left corner arcs) */}
+          {/* ═══ 4 Straight Pure White Perimeter Walls ═══ */}
+          {/* Left Wall */}
           <View
             pointerEvents="none"
             style={[
@@ -276,7 +286,7 @@ export default function FlippableCard() {
             ]}
           />
 
-          {/* Right Wall (Between Top-Right and Bottom-Right corner arcs) */}
+          {/* Right Wall */}
           <View
             pointerEvents="none"
             style={[
@@ -289,7 +299,7 @@ export default function FlippableCard() {
             ]}
           />
 
-          {/* Top Wall (Between Top-Left and Top-Right corner arcs) */}
+          {/* Top Wall */}
           <View
             pointerEvents="none"
             style={[
@@ -302,7 +312,7 @@ export default function FlippableCard() {
             ]}
           />
 
-          {/* Bottom Wall (Between Bottom-Left and Bottom-Right corner arcs) */}
+          {/* Bottom Wall */}
           <View
             pointerEvents="none"
             style={[
@@ -315,12 +325,12 @@ export default function FlippableCard() {
             ]}
           />
 
-          {/* ═══ Front Face (Z = +3px) ═══ */}
+          {/* ═══ Front Face (Z = +3.1px, Sitting on top of the white chassis) ═══ */}
           <Animated.View
             style={[
               styles.face,
               frontOpacityStyle,
-              { transform: [{ translateZ: CARD_DEPTH / 2 }] as any },
+              { transform: [{ translateZ: CARD_DEPTH / 2 + 0.1 }] as any, zIndex: 20 },
             ]}
           >
             <Image
@@ -330,11 +340,11 @@ export default function FlippableCard() {
             />
           </Animated.View>
 
-          {/* ═══ Back Face (Z = -3px, pre-rotated 180°) ═══ */}
+          {/* ═══ Back Face (Z = -3.1px, pre-rotated 180°, Sitting on back of the white chassis) ═══ */}
           <Animated.View
             style={[
               styles.face,
-              { transform: [{ rotateY: '180deg' }, { translateZ: CARD_DEPTH / 2 }] as any },
+              { transform: [{ rotateY: '180deg' }, { translateZ: CARD_DEPTH / 2 + 0.1 }] as any, zIndex: 20 },
               backOpacityStyle,
             ]}
           >
@@ -389,61 +399,59 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     borderRadius: CORNER_R,
     overflow: 'hidden',
-    borderWidth: 0.5,
-    borderColor: 'rgba(255, 255, 255, 0.35)',
   },
   cardImage: { width: '100%', height: '100%', borderRadius: CORNER_R },
 
-  /* Mid-Depth Bevel Ring for continuous 3D corner curvature */
-  midBevelRing: {
+  /* Solid Pure White Chassis Core */
+  chassisSlice: {
     ...StyleSheet.absoluteFillObject,
     borderRadius: CORNER_R,
-    borderWidth: 1.5,
-    borderColor: '#FFFFFF',
-    backgroundColor: 'transparent',
-    zIndex: 4,
+    backgroundColor: '#FFFFFF',
+    borderColor: 'rgba(255, 255, 255, 0.95)',
+    borderWidth: 0.5,
+    zIndex: 5,
   },
 
-  /* 4 Straight Pure White Perimeter Walls (Connecting at R = 14px) */
+  /* 4 Straight Pure White Perimeter Walls */
   sideWallLeft: {
     position: 'absolute',
-    top: CORNER_R,
-    bottom: CORNER_R,
+    top: 0,
+    bottom: 0,
     backgroundColor: '#FFFFFF',
     borderTopWidth: 0.5,
     borderBottomWidth: 0.5,
     borderColor: 'rgba(255, 255, 255, 0.95)',
-    zIndex: 5,
+    zIndex: 10,
   },
   sideWallRight: {
     position: 'absolute',
-    top: CORNER_R,
-    bottom: CORNER_R,
+    top: 0,
+    bottom: 0,
     backgroundColor: '#FFFFFF',
     borderTopWidth: 0.5,
     borderBottomWidth: 0.5,
     borderColor: 'rgba(255, 255, 255, 0.95)',
-    zIndex: 5,
+    zIndex: 10,
   },
   sideWallTop: {
     position: 'absolute',
-    left: CORNER_R,
-    right: CORNER_R,
+    left: 0,
+    right: 0,
     backgroundColor: '#FFFFFF',
     borderLeftWidth: 0.5,
     borderRightWidth: 0.5,
     borderColor: 'rgba(255, 255, 255, 0.95)',
-    zIndex: 5,
+    zIndex: 10,
   },
   sideWallBottom: {
     position: 'absolute',
-    left: CORNER_R,
-    right: CORNER_R,
+    left: 0,
+    right: 0,
     backgroundColor: '#FFFFFF',
     borderLeftWidth: 0.5,
     borderRightWidth: 0.5,
     borderColor: 'rgba(255, 255, 255, 0.95)',
-    zIndex: 5,
+    zIndex: 10,
   },
 
   genOverlay: {
