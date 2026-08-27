@@ -3,9 +3,9 @@
  * Features:
  *   1. Tap / Click to flip 180°
  *   2. Drag / Swipe horizontally in real time with continuous pure white 3D volume
- *   3. Solid White Chassis (Continuous white core from -2.8px to +2.8px + 4 white side walls)
- *   4. Perfectly rounded pure white corners (R = 14px) and pure white straight walls
- *   5. Front face (Z = +3.1px) and Back face (Z = -3.1px) with clean, unobstructed artwork
+ *   3. 100% Curvature Alignment (All chassis slices share the exact R = 14px radius)
+ *   4. Zero 90-degree square corner protrusions — 100% smooth rounded corners all around
+ *   5. Front face (Z = +3.0px) and Back face (Z = -3.0px) with clean, unobstructed artwork
  *   6. Long Press to open Version History
  *   7. Smooth 3D mouse hover & gyroscope tilt
  */
@@ -36,10 +36,10 @@ const CARD_H = CARD_W * 0.63;
 const CARD_DEPTH = 6; // 6px physical card thickness (±3px)
 const CORNER_R = 14;
 
-// 15 dense white chassis micro-slices spanning from -2.8px to +2.8px
+// 24 dense white chassis micro-slices with exact R = 14px corner radius from -2.8px to +2.8px
 const CHASSIS_SLICES = [
-  -2.8, -2.4, -2.0, -1.6, -1.2, -0.8, -0.4,
-   0.0,  0.4,  0.8,  1.2,  1.6,  2.0,  2.4,  2.8,
+  -2.8, -2.56, -2.32, -2.08, -1.84, -1.6, -1.36, -1.12, -0.88, -0.64, -0.4, -0.16,
+   0.08,  0.32,  0.56,  0.8,  1.04,  1.28,  1.52,  1.76,  2.0,  2.24,  2.48,  2.8,
 ];
 
 export default function FlippableCard() {
@@ -260,7 +260,7 @@ export default function FlippableCard() {
         {...(Platform.OS === 'web' ? ({ onPointerMove: handlePointerMove, onPointerLeave: handlePointerLeave } as any) : {})}
       >
         <Animated.View style={[styles.card3DContainer, card3DStyle]}>
-          {/* ═══ Solid Pure White Chassis Core (15 Micro-Slices covering all corners & volume) ═══ */}
+          {/* ═══ Solid Pure White Chassis Core (24 Dense Micro-Slices, 100% exact R = 14px) ═══ */}
           {CHASSIS_SLICES.map((z, idx) => (
             <View
               key={idx}
@@ -272,65 +272,12 @@ export default function FlippableCard() {
             />
           ))}
 
-          {/* ═══ 4 Straight Pure White Perimeter Walls ═══ */}
-          {/* Left Wall */}
-          <View
-            pointerEvents="none"
-            style={[
-              styles.sideWallLeft,
-              {
-                width: CARD_DEPTH,
-                left: -CARD_DEPTH / 2,
-                transform: [{ rotateY: '-90deg' }] as any,
-              },
-            ]}
-          />
-
-          {/* Right Wall */}
-          <View
-            pointerEvents="none"
-            style={[
-              styles.sideWallRight,
-              {
-                width: CARD_DEPTH,
-                right: -CARD_DEPTH / 2,
-                transform: [{ rotateY: '90deg' }] as any,
-              },
-            ]}
-          />
-
-          {/* Top Wall */}
-          <View
-            pointerEvents="none"
-            style={[
-              styles.sideWallTop,
-              {
-                height: CARD_DEPTH,
-                top: -CARD_DEPTH / 2,
-                transform: [{ rotateX: '90deg' }] as any,
-              },
-            ]}
-          />
-
-          {/* Bottom Wall */}
-          <View
-            pointerEvents="none"
-            style={[
-              styles.sideWallBottom,
-              {
-                height: CARD_DEPTH,
-                bottom: -CARD_DEPTH / 2,
-                transform: [{ rotateX: '-90deg' }] as any,
-              },
-            ]}
-          />
-
-          {/* ═══ Front Face (Z = +3.1px, Sitting on top of the white chassis) ═══ */}
+          {/* ═══ Front Face (Z = +3.0px, exact R = 14px) ═══ */}
           <Animated.View
             style={[
               styles.face,
               frontOpacityStyle,
-              { transform: [{ translateZ: CARD_DEPTH / 2 + 0.1 }] as any, zIndex: 20 },
+              { transform: [{ translateZ: CARD_DEPTH / 2 }] as any, zIndex: 20 },
             ]}
           >
             <Image
@@ -340,11 +287,11 @@ export default function FlippableCard() {
             />
           </Animated.View>
 
-          {/* ═══ Back Face (Z = -3.1px, pre-rotated 180°, Sitting on back of the white chassis) ═══ */}
+          {/* ═══ Back Face (Z = -3.0px, pre-rotated 180°, exact R = 14px) ═══ */}
           <Animated.View
             style={[
               styles.face,
-              { transform: [{ rotateY: '180deg' }, { translateZ: CARD_DEPTH / 2 + 0.1 }] as any, zIndex: 20 },
+              { transform: [{ rotateY: '180deg' }, { translateZ: CARD_DEPTH / 2 }] as any, zIndex: 20 },
               backOpacityStyle,
             ]}
           >
@@ -402,56 +349,14 @@ const styles = StyleSheet.create({
   },
   cardImage: { width: '100%', height: '100%', borderRadius: CORNER_R },
 
-  /* Solid Pure White Chassis Core */
+  /* Solid Pure White Chassis Core with identical R = 14px curvature */
   chassisSlice: {
     ...StyleSheet.absoluteFillObject,
     borderRadius: CORNER_R,
     backgroundColor: '#FFFFFF',
-    borderColor: 'rgba(255, 255, 255, 0.95)',
+    borderColor: 'rgba(255, 255, 255, 0.98)',
     borderWidth: 0.5,
     zIndex: 5,
-  },
-
-  /* 4 Straight Pure White Perimeter Walls */
-  sideWallLeft: {
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    backgroundColor: '#FFFFFF',
-    borderTopWidth: 0.5,
-    borderBottomWidth: 0.5,
-    borderColor: 'rgba(255, 255, 255, 0.95)',
-    zIndex: 10,
-  },
-  sideWallRight: {
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    backgroundColor: '#FFFFFF',
-    borderTopWidth: 0.5,
-    borderBottomWidth: 0.5,
-    borderColor: 'rgba(255, 255, 255, 0.95)',
-    zIndex: 10,
-  },
-  sideWallTop: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    backgroundColor: '#FFFFFF',
-    borderLeftWidth: 0.5,
-    borderRightWidth: 0.5,
-    borderColor: 'rgba(255, 255, 255, 0.95)',
-    zIndex: 10,
-  },
-  sideWallBottom: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    backgroundColor: '#FFFFFF',
-    borderLeftWidth: 0.5,
-    borderRightWidth: 0.5,
-    borderColor: 'rgba(255, 255, 255, 0.95)',
-    zIndex: 10,
   },
 
   genOverlay: {
