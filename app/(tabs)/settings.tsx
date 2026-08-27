@@ -22,6 +22,7 @@ import { StorageService } from '../../src/services/storageService';
 import { GeminiService } from '../../src/services/geminiService';
 import { saveVersion, findMatchingVersion, clearAllHistory } from '../../src/utils/versionHistory';
 import { usePWA } from '../../src/hooks/usePWA';
+import GoogleAuthCard from '../../src/components/GoogleAuthCard';
 
 function getCardTemplate(countryCode: string): string {
   switch (countryCode) {
@@ -416,6 +417,9 @@ export default function SettingsScreen() {
       <View style={styles.separator} />
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+
+        {/* ── Google Account & Cloud Sync ── */}
+        <GoogleAuthCard />
 
         {/* ── Security ── */}
         <Text style={styles.sectionLabel}>{t('settings.security')}</Text>

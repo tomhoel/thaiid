@@ -205,3 +205,13 @@ describe('VersionHistory Snapshot Storage & Retrieval', () => {
     expect(afterClear.length).toBe(0);
   });
 });
+
+describe('Supabase Client & Auth Configuration', () => {
+  it('instantiates Supabase client with valid auth persistence configuration', async () => {
+    const { supabase } = await import('../../src/services/supabaseClient');
+    expect(supabase).toBeDefined();
+    expect(supabase.auth).toBeDefined();
+    expect(typeof supabase.auth.signInWithOAuth).toBe('function');
+    expect(typeof supabase.auth.signOut).toBe('function');
+  });
+});

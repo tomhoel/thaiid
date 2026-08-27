@@ -16,6 +16,7 @@ import { ProfileProvider, useProfile } from '../src/context/ProfileContext';
 import { ThemeProvider, ThemeAccentBridge, useTheme } from '../src/context/ThemeContext';
 import { CountryProvider, useCountry } from '../src/context/CountryContext';
 import { SnackbarProvider } from '../src/context/SnackbarContext';
+import { AuthProvider } from '../src/context/AuthContext';
 import LockScreen from '../src/components/LockScreen';
 import AppSplash from '../src/components/AppSplash';
 
@@ -182,21 +183,23 @@ export default function RootLayout() {
         persistOptions={{ persister: asyncStoragePersister }}
       >
         <GestureHandlerRootView style={{ flex: 1 }}>
-          <ThemeProvider>
-            <CountryProvider>
-              <ThemeAccentBridge>
-              <SnackbarProvider>
-              <LanguageProvider>
-                <ProfileProvider>
-                  <BiometricProvider>
-                    <AppShell />
-                  </BiometricProvider>
-                </ProfileProvider>
-              </LanguageProvider>
-              </SnackbarProvider>
-              </ThemeAccentBridge>
-            </CountryProvider>
-          </ThemeProvider>
+          <AuthProvider>
+            <ThemeProvider>
+              <CountryProvider>
+                <ThemeAccentBridge>
+                <SnackbarProvider>
+                <LanguageProvider>
+                  <ProfileProvider>
+                    <BiometricProvider>
+                      <AppShell />
+                    </BiometricProvider>
+                  </ProfileProvider>
+                </LanguageProvider>
+                </SnackbarProvider>
+                </ThemeAccentBridge>
+              </CountryProvider>
+            </ThemeProvider>
+          </AuthProvider>
         </GestureHandlerRootView>
         {Platform.OS === 'web' && (
           <ReactQueryDevtools initialIsOpen={false} buttonPosition="bottom-right" />
