@@ -152,12 +152,7 @@ function AppShell() {
     }
   }, [isAuthenticated, appReady, splashRemoved]);
 
-  // 1. Initial auth check loading
-  if (!authReady) {
-    return <View style={{ flex: 1, backgroundColor: colors.navy }} />;
-  }
-
-  // 2. Unauthenticated: Strict Google Sign-In gatekeeper
+  // 1. Unauthenticated: Strict Google Sign-In gatekeeper (renders on frame 0 with zero flicker)
   if (!isAuthenticated) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.navy }}>
