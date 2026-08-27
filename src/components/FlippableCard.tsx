@@ -3,7 +3,7 @@
  * Features:
  *   1. Dynamic Specular Gloss Sheen (Sweeping light reflection matching real-time tilt)
  *   2. Iridescent Holographic Security Shimmer (Polycarbonate kinegram light refraction)
- *   3. Dynamic 3D Ambient Drop Shadow (Responds to 3D pitch and roll)
+ *   3. Smooth Trigonometric 3D Ambient Drop Shadow (Zero flicker, zero lag, GPU-accelerated)
  *   4. Full Continuous 3D Perimeter Walls with directional lighting highlights
  *   5. High-FPS 60-120 FPS Performance with Hardware-Accelerated 3D Transforms
  *   6. Intuitive Fast Swipe Fling Snap (Flicking left advances +180°, flicking right flips -180°)
@@ -262,24 +262,30 @@ export default function FlippableCard() {
     };
   });
 
-  // Dynamic 3D Shadow Style (shifts realistically based on card tilt)
+  // Smooth, mathematically continuous Trigonometric 3D Ambient Shadow (Zero flickering)
   const shadow3DStyle = useAnimatedStyle(() => {
     'worklet';
-    const hoverY = interpolate(hoverTiltX.value, [-1, 1], [-16, 16]);
-    const hoverX = interpolate(hoverTiltY.value, [-1, 1], [14, -14]);
-    const totalY = rotY.value + (isDragging.value ? 0 : hoverY);
-    const totalX = rotX.value + (isDragging.value ? 0 : hoverX);
+    const radY = (rotY.value * Math.PI) / 180;
+    const radX = (rotX.value * Math.PI) / 180;
 
-    const shiftX = interpolate(totalY % 180, [-90, 0, 90], [28, 0, -28], Extrapolation.CLAMP);
-    const shiftY = interpolate(totalX, [-25, 0, 25], [-12, 14, 30], Extrapolation.CLAMP);
-    const scale = interpolate(Math.abs(totalY % 180), [0, 90], [1, 0.75], Extrapolation.CLAMP);
-    const shadowOpacity = interpolate(Math.abs(totalY % 180), [0, 90], [0.38, 0.18], Extrapolation.CLAMP);
+    const cosY = Math.cos(radY);
+    const sinY = Math.sin(radY);
+
+    // Smooth continuous lateral and vertical displacement
+    const shiftX = -sinY * 16;
+    const shiftY = 16 - Math.sin(radX) * 8;
+
+    // Smooth continuous width scaling when card turns edge-on
+    const scaleX = 0.55 + 0.45 * Math.abs(cosY);
+    const scaleY = 0.92 + 0.08 * Math.abs(cosY);
+    const shadowOpacity = 0.12 + 0.14 * Math.abs(cosY);
 
     return {
       transform: [
         { translateX: shiftX },
         { translateY: shiftY },
-        { scale },
+        { scaleX },
+        { scaleY },
       ],
       opacity: shadowOpacity,
     };
@@ -312,7 +318,7 @@ export default function FlippableCard() {
 
     const sweepX = interpolate(relAngle, [-60, 0, 60], [-CARD_W * 0.85, 0, CARD_W * 0.85], Extrapolation.CLAMP);
     const sweepY = interpolate(rotX.value, [-25, 0, 25], [CARD_H * 0.45, 0, -CARD_H * 0.45], Extrapolation.CLAMP);
-    const opacity = interpolate(Math.abs(relAngle), [0, 40, 85], [0.4, 0.2, 0], Extrapolation.CLAMP);
+    const opacity = interpolate(Math.abs(relAngle), [0, 40, 85], [0.35, 0.18, 0], Extrapolation.CLAMP);
 
     return {
       transform: [
@@ -332,7 +338,7 @@ export default function FlippableCard() {
 
     const sweepX = interpolate(relAngle, [-60, 0, 60], [-CARD_W * 0.85, 0, CARD_W * 0.85], Extrapolation.CLAMP);
     const sweepY = interpolate(rotX.value, [-25, 0, 25], [CARD_H * 0.45, 0, -CARD_H * 0.45], Extrapolation.CLAMP);
-    const opacity = interpolate(Math.abs(relAngle), [0, 40, 85], [0.4, 0.2, 0], Extrapolation.CLAMP);
+    const opacity = interpolate(Math.abs(relAngle), [0, 40, 85], [0.35, 0.18, 0], Extrapolation.CLAMP);
 
     return {
       transform: [
@@ -351,7 +357,7 @@ export default function FlippableCard() {
     const rel = norm > 180 ? norm - 360 : norm;
     const shiftX = interpolate(rel, [-55, 0, 55], [-CARD_W * 0.7, 0, CARD_W * 0.7], Extrapolation.CLAMP);
     const shiftY = interpolate(rotX.value, [-25, 0, 25], [-CARD_H * 0.35, 0, CARD_H * 0.35], Extrapolation.CLAMP);
-    const intensity = interpolate(Math.abs(rel), [0, 25, 65], [0.08, 0.42, 0.05], Extrapolation.CLAMP);
+    const intensity = interpolate(Math.abs(rel), [0, 25, 65], [0.06, 0.38, 0.04], Extrapolation.CLAMP);
 
     return {
       transform: [
@@ -369,7 +375,7 @@ export default function FlippableCard() {
         style={styles.container}
         {...(Platform.OS === 'web' ? ({ onPointerMove: handlePointerMove, onPointerLeave: handlePointerLeave } as any) : {})}
       >
-        {/* ═══ Dynamic 3D Ambient Drop Shadow ═══ */}
+        {/* ═══ Smooth Trigonometric 3D Ambient Drop Shadow ═══ */}
         <Animated.View pointerEvents="none" style={[styles.ambientShadow, shadow3DStyle]} />
 
         <Animated.View style={[styles.card3DContainer, card3DStyle]} renderToHardwareTextureAndroid>
@@ -487,8 +493,8 @@ export default function FlippableCard() {
                   colors={[
                     'transparent',
                     'rgba(255, 255, 255, 0.04)',
-                    'rgba(255, 255, 255, 0.32)',
-                    'rgba(255, 255, 255, 0.08)',
+                    'rgba(255, 255, 255, 0.28)',
+                    'rgba(255, 255, 255, 0.06)',
                     'transparent',
                   ]}
                   start={{ x: 0.25, y: 0 }}
@@ -516,8 +522,8 @@ export default function FlippableCard() {
                   colors={[
                     'transparent',
                     'rgba(255, 255, 255, 0.04)',
-                    'rgba(255, 255, 255, 0.30)',
-                    'rgba(255, 255, 255, 0.08)',
+                    'rgba(255, 255, 255, 0.26)',
+                    'rgba(255, 255, 255, 0.06)',
                     'transparent',
                   ]}
                   start={{ x: 0.25, y: 0 }}
@@ -567,22 +573,23 @@ const styles = StyleSheet.create({
   } as any,
   ambientShadow: {
     position: 'absolute',
-    top: 14,
-    left: 12,
-    right: 12,
-    bottom: -18,
-    borderRadius: 24,
-    backgroundColor: '#000000',
+    top: 10,
+    left: 10,
+    right: 10,
+    bottom: -16,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     ...(Platform.OS === 'web'
       ? ({
-          filter: 'blur(16px)',
+          boxShadow: '0 20px 36px rgba(0, 0, 0, 0.45)',
+          willChange: 'transform, opacity',
         } as any)
       : {
           shadowColor: '#000',
-          shadowOffset: { width: 0, height: 16 },
-          shadowOpacity: 0.45,
-          shadowRadius: 20,
-          elevation: 12,
+          shadowOffset: { width: 0, height: 14 },
+          shadowOpacity: 0.35,
+          shadowRadius: 18,
+          elevation: 10,
         }),
   },
   card3DContainer: {
