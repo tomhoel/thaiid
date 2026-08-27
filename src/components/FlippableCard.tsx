@@ -194,12 +194,14 @@ export default function FlippableCard() {
       if (e.velocityX > 350) targetDeg = Math.ceil((rotY.value + 45) / 180) * 180;
 
       rotY.value = withSpring(targetDeg, {
-        damping: 24,
-        stiffness: 220,
+        damping: 30,
+        stiffness: 260,
+        mass: 0.9,
       });
       rotX.value = withSpring(0, {
-        damping: 20,
-        stiffness: 200,
+        damping: 26,
+        stiffness: 240,
+        mass: 0.9,
       });
       runOnJS(triggerHaptic)();
     });
@@ -211,8 +213,9 @@ export default function FlippableCard() {
       const currentNearest = Math.round(rotY.value / 180);
       const nextTarget = (currentNearest + 1) * 180;
       rotY.value = withSpring(nextTarget, {
-        damping: 24,
-        stiffness: 220,
+        damping: 30,
+        stiffness: 260,
+        mass: 0.9,
       });
       runOnJS(triggerHaptic)();
     });
