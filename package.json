@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit && tsc -p api --noEmit",
     "test": "vitest run --passWithNoTests",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "db:push": "node --env-file-if-exists=.env.local scripts/db-push.mjs"
   },
   "dependencies": {
     "@clerk/backend": "^3.17.1",

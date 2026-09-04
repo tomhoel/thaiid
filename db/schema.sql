@@ -1,6 +1,9 @@
 -- Neon Postgres schema for thaiid.
 --
--- Apply with:  psql "$DATABASE_URL" -f db/schema.sql
+-- Apply with:  npm run db:push        (no psql install required)
+-- Or:          psql "$DATABASE_URL" -f db/schema.sql
+--
+-- Re-runnable: every statement guards with "if not exists" or "or replace".
 --
 -- Differences from the Supabase version this replaces:
 --

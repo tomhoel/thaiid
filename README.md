@@ -39,15 +39,16 @@ runtime, so run `vercel dev` when you need the API as well.
 | `npm run preview` | Serve the production build locally |
 | `npm run typecheck` | `tsc` over `src/` and `api/` |
 | `npm test` | Vitest |
+| `npm run db:push` | Apply `db/schema.sql` to `DATABASE_URL` |
 
 ### First-time setup
 
+See **[SETUP.md](SETUP.md)** for the full walkthrough. In short:
+
 1. **Clerk** — create an application, enable the Google social connection, and
    copy the publishable and secret keys.
-2. **Neon** — create a project, then apply the schema:
-   ```bash
-   psql "$DATABASE_URL" -f db/schema.sql
-   ```
+2. **Neon** — create a project, put the pooled connection string in
+   `DATABASE_URL`, then apply the schema with `npm run db:push`.
 3. **Vercel Blob** — create a store with **private** access and link it to the
    project.
 4. **Gemini** — create an API key in Google AI Studio.
