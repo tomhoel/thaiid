@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { Navigate } from 'react-router-dom';
+import { useSignIn } from '@clerk/clerk-react';
 import { useAuth } from '@/features/auth/useAuth';
 import { Splash } from '@/components/Splash';
 import { reportError } from '@/lib/reportError';
 
 export function SignIn() {
-  const { isAuthenticated, loading, signInWithGoogle } = useAuth();
+  const { isAuthenticated, loading } = useAuth();
+  const { signIn, isLoaded } = useSignIn();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -13,12 +15,17 @@ export function SignIn() {
   if (isAuthenticated) return <Navigate to="/" replace />;
 
   const handleSignIn = async () => {
+    if (!isLoaded || !signIn) return;
     setSubmitting(true);
     setError(null);
     try {
-      await signInWithGoogle();
+      await signIn.authenticateWithRedirect({
+        strategy: 'oauth_google',
+        redirectUrl: '/auth/callback',
+        redirectUrlComplete: '/',
+      });
     } catch (err) {
-      reportError('SignIn.signInWithGoogle', err);
+      reportError('SignIn.authenticateWithRedirect', err);
       setError(err instanceof Error ? err.message : 'Google sign-in failed.');
       setSubmitting(false);
     }
@@ -37,7 +44,7 @@ export function SignIn() {
       <button
         type="button"
         onClick={handleSignIn}
-        disabled={submitting}
+        disabled={submitting || !isLoaded}
         className="w-full max-w-xs rounded-xl border border-b2 bg-bg-card px-5 py-3.5 text-sm font-medium text-t1 transition hover:bg-bg-elevated disabled:opacity-50"
       >
         {submitting ? 'Redirecting…' : 'Continue with Google'}

@@ -1,78 +1,57 @@
-import { createContext, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
-import type { Session, User } from '@supabase/supabase-js';
-import { supabase } from '@/lib/supabase';
-import { reportError } from '@/lib/reportError';
+import { useEffect, type ReactNode } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ClerkProvider, useAuth as useClerkAuth } from '@clerk/clerk-react';
+import { clearTokenGetter, registerTokenGetter } from '@/lib/apiClient';
 
-export interface AuthState {
-  session: Session | null;
-  user: User | null;
-  /** True until the initial session lookup settles. Gate rendering on this. */
-  loading: boolean;
-  isAuthenticated: boolean;
-  signInWithGoogle: () => Promise<void>;
-  signOut: () => Promise<void>;
-}
+const publishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
-export const AuthContext = createContext<AuthState | null>(null);
-
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
+/**
+ * Hands the API client a way to read the current Clerk session token. Must be
+ * rendered inside ClerkProvider, since getToken comes from Clerk's context.
+ */
+function TokenBridge() {
+  const { getToken } = useClerkAuth();
 
   useEffect(() => {
-    let active = true;
+    registerTokenGetter(() => getToken());
+    return clearTokenGetter;
+  }, [getToken]);
 
-    supabase.auth
-      .getSession()
-      .then(({ data }) => {
-        if (!active) return;
-        setSession(data.session);
-      })
-      .catch((error) => reportError('AuthProvider.getSession', error))
-      .finally(() => {
-        if (active) setLoading(false);
-      });
+  return null;
+}
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      setSession(nextSession);
-      setLoading(false);
-    });
-
-    return () => {
-      active = false;
-      subscription.unsubscribe();
-    };
-  }, []);
-
-  const signInWithGoogle = useCallback(async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-        queryParams: { prompt: 'select_account' },
-      },
-    });
-    if (error) throw error;
-  }, []);
-
-  const signOut = useCallback(async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
-  }, []);
-
-  const value = useMemo<AuthState>(
-    () => ({
-      session,
-      user: session?.user ?? null,
-      loading,
-      isAuthenticated: Boolean(session),
-      signInWithGoogle,
-      signOut,
-    }),
-    [session, loading, signInWithGoogle, signOut]
+/**
+ * A missing key would otherwise surface as an opaque Clerk crash on first
+ * render, so say plainly what is wrong instead.
+ */
+function MissingKeyNotice() {
+  return (
+    <main className="flex min-h-dvh flex-col items-center justify-center gap-3 px-6 text-center">
+      <h1 className="text-lg font-semibold text-t1">Authentication is not configured</h1>
+      <p className="max-w-sm text-sm text-t2">
+        Set <code className="font-mono text-t1">VITE_CLERK_PUBLISHABLE_KEY</code> in your
+        environment, then restart the dev server.
+      </p>
+    </main>
   );
+}
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const navigate = useNavigate();
+
+  if (!publishableKey) {
+    return <MissingKeyNotice />;
+  }
+
+  return (
+    <ClerkProvider
+      publishableKey={publishableKey}
+      routerPush={(to) => navigate(to)}
+      routerReplace={(to) => navigate(to, { replace: true })}
+      afterSignOutUrl="/sign-in"
+    >
+      <TokenBridge />
+      {children}
+    </ClerkProvider>
+  );
 }

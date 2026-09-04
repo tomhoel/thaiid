@@ -15,7 +15,8 @@ export function App() {
         <AuthProvider>
           <Routes>
             <Route path="/sign-in" element={<SignIn />} />
-            <Route path="/auth/callback" element={<AuthCallback />} />
+            {/* Clerk appends its own segments to the OAuth return URL. */}
+            <Route path="/auth/callback/*" element={<AuthCallback />} />
             <Route
               path="/"
               element={

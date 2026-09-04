@@ -14,6 +14,10 @@ dev-dist/
 supabase/.temp/
 supabase/.branches/
 
+# supabase project credentials generated locally
+.supabase-db-password
+.supabase-project-ref
+
 # secrets and signing material
 *.pem
 *.key

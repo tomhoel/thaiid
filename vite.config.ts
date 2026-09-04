@@ -9,7 +9,7 @@ import { fileURLToPath, URL } from 'node:url';
  * security boundary. Cache Storage is readable by any script on the origin, so
  * the runtime rules below are an explicit allowlist: hashed build output and
  * public template images may be cached, and everything that can carry identity
- * data (Supabase, auth, APIs) is denied and must go to the network.
+ * data (/api, auth) is denied and must go to the network.
  */
 export default defineConfig({
   plugins: [
@@ -79,6 +79,6 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
-    include: ['tests/**/*.test.ts'],
+    include: ['tests/**/*.test.{ts,tsx}'],
   },
 });

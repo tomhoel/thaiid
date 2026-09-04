@@ -1,7 +1,7 @@
 /**
  * GeminiService — AI image generation and vision pipeline.
  *
- * Routing: the Supabase edge function proxy is the primary path so the API key
+ * Routing: the /api/gemini Vercel Function is the primary path so the API key
  * stays server-side. The direct Google endpoint is a local-development-only
  * fallback, gated on VITE_GEMINI_API_KEY, which must never be set in a deployed
  * environment.
@@ -12,7 +12,7 @@
 
 import type { CountryCode } from '@/types/profile';
 import type { GenerateCardParams } from '@/types/profile';
-import { supabase } from '@/lib/supabase';
+import { ApiError, apiFetch } from '@/lib/apiClient';
 import { reportError } from '@/lib/reportError';
 
 const MAX_RETRIES = 3;
@@ -125,28 +125,18 @@ export class GeminiService {
   }
 
   /**
-   * Call the AI service through the Supabase edge function, authenticated as the
-   * signed-in user so the proxy can enforce access control.
+   * Call the AI service through the /api/gemini function, authenticated as the
+   * signed-in user so the proxy can enforce access control and the API key never
+   * reaches the browser.
    */
   static async callProxy(parts: GeminiPart[], model = DEFAULT_MODEL, attempt = 1): Promise<unknown> {
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
     const { directApiKey } = this;
 
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      const response = await fetch(
-        `${supabaseUrl}/functions/v1/gemini-proxy?model=${encodeURIComponent(model)}`,
+      const data = await apiFetch<Record<string, unknown>>(
+        `/api/gemini?model=${encodeURIComponent(model)}`,
         {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${session?.access_token ?? anonKey}`,
-            apikey: anonKey,
-          },
           body: JSON.stringify({
             contents: [{ role: 'user', parts }],
             generationConfig: {
@@ -158,43 +148,37 @@ export class GeminiService {
         }
       );
 
-      const data = await response.json();
-      const error = (data as { error?: { code?: number; message?: string } }).error;
-
-      if (!response.ok || error) {
-        const errorCode = error?.code ?? response.status;
-        const errorMessage = error?.message ?? `HTTP ${response.status}`;
-
-        if (
-          (errorMessage.includes('not configured') ||
-            response.status === 401 ||
-            response.status === 403) &&
-          directApiKey
-        ) {
-          return this.callDirect(parts, model, directApiKey);
-        }
-
-        if (errorCode === 404 || /not found|unsupported/.test(errorMessage)) {
-          const next = nextFallbackModel(model);
-          if (next) {
-            console.warn(`[GeminiService] Model ${model} unavailable. Cascading to ${next}.`);
-            return this.callProxy(parts, next, 1);
-          }
-        }
-
-        if ((errorCode === 429 || errorCode === 503) && attempt <= MAX_RETRIES) {
-          await sleep(INITIAL_RETRY_DELAY * 2 ** (attempt - 1));
-          return this.callProxy(parts, model, attempt + 1);
-        }
-
-        throw new Error(errorMessage);
+      // Gemini can answer 200 with an error envelope rather than an HTTP error.
+      const envelope = (data as { error?: { code?: number; message?: string } }).error;
+      if (envelope) {
+        throw new ApiError(envelope.message ?? 'Gemini returned an error.', envelope.code ?? 200);
       }
 
       return data;
     } catch (e) {
+      const status = e instanceof ApiError ? e.status : 0;
       const message = e instanceof Error ? e.message : String(e);
 
-      if (attempt <= MAX_RETRIES && /429|503|Failed to fetch|NetworkError/.test(message)) {
+      // The proxy is unavailable or refusing us. In local development only, fall
+      // back to calling Google directly.
+      if ((status === 401 || status === 403 || message.includes('not configured')) && directApiKey) {
+        return this.callDirect(parts, model, directApiKey);
+      }
+
+      // Model retired or renamed: walk down the cascade.
+      if (status === 404 || /not found|unsupported/i.test(message)) {
+        const next = nextFallbackModel(model);
+        if (next) {
+          console.warn(`[GeminiService] Model ${model} unavailable. Cascading to ${next}.`);
+          return this.callProxy(parts, next, 1);
+        }
+      }
+
+      // Transient upstream pressure or a flaky network: back off and retry.
+      if (
+        attempt <= MAX_RETRIES &&
+        (status === 429 || status === 503 || /Failed to fetch|NetworkError/i.test(message))
+      ) {
         await sleep(INITIAL_RETRY_DELAY * 2 ** (attempt - 1));
         return this.callProxy(parts, model, attempt + 1);
       }

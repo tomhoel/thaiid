@@ -1,8 +1,8 @@
 /// <reference types="vite/client" />
 
 interface ImportMetaEnv {
-  readonly VITE_SUPABASE_URL: string;
-  readonly VITE_SUPABASE_ANON_KEY: string;
+  /** Clerk publishable key. Safe to ship in the bundle. */
+  readonly VITE_CLERK_PUBLISHABLE_KEY: string;
   /** Optional: only set for local development against the Gemini API directly. */
   readonly VITE_GEMINI_API_KEY?: string;
 }
