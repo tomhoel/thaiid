@@ -219,7 +219,7 @@ export default function SettingsScreen() {
 
   const handleRevert = async () => {
     // Clear saved card image files and version history
-    await clearCardImages().catch((e) => reportError('settings.handleRevert.clearCardImages', e));
+    await StorageService.clearAllCardImages().catch((e) => reportError('settings.handleRevert.clearCardImages', e));
     await clearAllHistory().catch((e) => reportError('settings.handleRevert.clearAllHistory', e));
     // Reset current country
     updateProfile({ ...config.defaultCardData, cardFrontUri: undefined, pictureUri: config.defaultCardData.pictureUri });

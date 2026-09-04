@@ -1,26 +1,31 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
-import { Snackbar } from '../components/Snackbar';
+import { Snackbar, type SnackbarVariant } from '../components/Snackbar';
 import { setSnackbarHandler } from '../utils/reportError';
 
 interface SnackbarApi {
-  show: (text: string, opts?: { durationMs?: number }) => void;
+  show: (text: string, variant?: SnackbarVariant, opts?: { durationMs?: number }) => void;
 }
 
 const SnackbarContext = createContext<SnackbarApi>({ show: () => {} });
 
 export function SnackbarProvider({ children }: { children: React.ReactNode }) {
   const [text, setText] = useState<string | null>(null);
+  const [variant, setVariant] = useState<SnackbarVariant>('info');
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const show = useCallback((next: string, opts?: { durationMs?: number }) => {
-    if (timerRef.current) clearTimeout(timerRef.current);
-    setText(next);
-    timerRef.current = setTimeout(() => setText(null), opts?.durationMs ?? 4000);
-  }, []);
+  const show = useCallback(
+    (next: string, nextVariant: SnackbarVariant = 'info', opts?: { durationMs?: number }) => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+      setText(next);
+      setVariant(nextVariant);
+      timerRef.current = setTimeout(() => setText(null), opts?.durationMs ?? 4000);
+    },
+    []
+  );
 
   // Bridge reportError -> snackbar
   useEffect(() => {
-    setSnackbarHandler((t) => show(t));
+    setSnackbarHandler((t) => show(t, 'error'));
     return () => setSnackbarHandler(() => {});
   }, [show]);
 
@@ -32,7 +37,7 @@ export function SnackbarProvider({ children }: { children: React.ReactNode }) {
   return (
     <SnackbarContext.Provider value={{ show }}>
       {children}
-      <Snackbar text={text} />
+      <Snackbar text={text} variant={variant} />
     </SnackbarContext.Provider>
   );
 }

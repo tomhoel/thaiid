@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { type ImageSourcePropType } from 'react-native';
 import { reportError } from '../utils/reportError';
 
 export type CountryCode = 'TH' | 'SG' | 'BR' | 'US' | 'VN';
@@ -16,8 +15,9 @@ export interface CountryConfig {
   cardDescription: string;
   cardPromptHint: string;
 
-  emblemAsset: ImageSourcePropType;
-  cardImages: { front: ImageSourcePropType; back: ImageSourcePropType };
+  /** Metro asset module references (`require('...png')` resolves to a numeric module id). */
+  emblemAsset: number;
+  cardImages: { front: number; back: number };
 
   flagLabel: string;
 

@@ -25,8 +25,8 @@ export default function TabLayout() {
       elevation: 0,
     },
     tabBarItemStyle: {
-      justifyContent: 'center',
-      alignItems: 'center',
+      justifyContent: 'center' as const,
+      alignItems: 'center' as const,
       paddingVertical: 2,
     },
   }), [theme, colors]);

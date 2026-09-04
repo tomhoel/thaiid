@@ -6,7 +6,9 @@ import { useTheme } from '../context/ThemeContext';
 const ENTER_DURATION = 220;
 const EXIT_DURATION = 180;
 
-export function Snackbar({ text }: { text: string | null }) {
+export type SnackbarVariant = 'info' | 'error' | 'success';
+
+export function Snackbar({ text, variant = 'info' }: { text: string | null; variant?: SnackbarVariant }) {
   const visible = text !== null;
   const translateY = useSharedValue(80);
   const opacity = useSharedValue(0);
@@ -29,12 +31,16 @@ export function Snackbar({ text }: { text: string | null }) {
 
   if (!text) return null;
 
+  const accent =
+    variant === 'error' ? colors.flagRed : variant === 'success' ? colors.green : colors.b1;
+
   return (
     <Animated.View
       pointerEvents={visible ? 'auto' : 'none'}
       style={[
         styles.container,
-        { backgroundColor: colors.bgElevated, borderColor: colors.b1 },
+        { backgroundColor: colors.bgElevated, borderColor: accent },
+        variant !== 'info' && { borderLeftWidth: 3, borderLeftColor: accent },
         animatedStyle,
       ]}
     >

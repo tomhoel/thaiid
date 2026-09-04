@@ -32,10 +32,11 @@ function validityStatus(isValid: boolean, expiryEn: string) {
 /* ── Sub-components ── */
 
 function Row({ label, value, sub, copy, last, colors }: {
-  label: string; value: string; sub?: string; copy?: boolean; last?: boolean; colors: ColorPalette;
+  label: string; value?: string; sub?: string; copy?: boolean; last?: boolean; colors: ColorPalette;
 }) {
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const tap = async () => {
+    if (!value) return;
     await Clipboard.setStringAsync(value);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };

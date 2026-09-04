@@ -178,7 +178,7 @@ export class GeminiService {
     secondaryLangName: string;
     profileData: Record<string, any>;
     selectedPhotoBase64?: string | null;
-    selectedPhotoMime?: string;
+    selectedPhotoMime?: string | null;
   }): any[] {
     const {
       templateBase64,
