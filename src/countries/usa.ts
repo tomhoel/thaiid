@@ -1,5 +1,8 @@
-import { type CountryConfig } from '../context/CountryContext';
-import { DEFAULT_PORTRAIT_URI } from '../constants/defaultPortrait';
+import type { CountryConfig } from './types';
+import { DEFAULT_PORTRAIT_URI } from './assets';
+import usEmblem from '../../assets/us-emblem.png';
+import usCardFront from '../../assets/cards/us-front.webp';
+import usCardBack from '../../assets/cards/us-back.webp';
 
 function toUsDate(en: string): string {
   // Convert "27 Dec. 1996" → "12/27/1996"
@@ -23,11 +26,12 @@ export const USA_CONFIG: CountryConfig = {
   cardDescription: 'NYC IDNYC Identification Card',
   cardPromptHint: 'This is a horizontal NYC IDNYC municipal ID card. The portrait photo is on the LEFT side. Text fields (name, dates) are on the RIGHT side. The card has a blue header with the NYC skyline silhouette and the Statue of Liberty. Note: the layout is REVERSED from most ID cards — photo is LEFT, text is RIGHT.',
 
-  emblemAsset: require('../../assets/us-emblem.png'),
+  emblemAsset: usEmblem,
   cardImages: {
-    front: require('../../assets/cards/us-front.webp'),
-    back: require('../../assets/cards/us-back.webp'),
+    front: usCardFront,
+    back: usCardBack,
   },
+  cardTemplate: '/templates/us-template.jpg',
 
   flagLabel: 'NYC',
 

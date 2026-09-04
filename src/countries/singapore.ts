@@ -1,5 +1,8 @@
-import { type CountryConfig } from '../context/CountryContext';
-import { DEFAULT_PORTRAIT_URI } from '../constants/defaultPortrait';
+import type { CountryConfig } from './types';
+import { DEFAULT_PORTRAIT_URI } from './assets';
+import sgEmblem from '../../assets/sg-emblem.png';
+import sgCardFront from '../../assets/cards/sg-front.webp';
+import sgCardBack from '../../assets/cards/sg-back.webp';
 
 function toSgDate(en: string): string {
   // Convert "15 Mar. 1990" → "15/03/1990"
@@ -23,11 +26,12 @@ export const SINGAPORE_CONFIG: CountryConfig = {
   cardDescription: 'Singapore NRIC card',
   cardPromptHint: 'This is a horizontal NRIC card. The portrait photo is on the LEFT side. Text fields (name, race, dates) are on the RIGHT side. The card has a red gradient header bar and light grey body with a pink security pattern. The national coat of arms is in the upper right area.',
 
-  emblemAsset: require('../../assets/sg-emblem.png'),
+  emblemAsset: sgEmblem,
   cardImages: {
-    front: require('../../assets/cards/sg-front.webp'),
-    back: require('../../assets/cards/sg-back.webp'),
+    front: sgCardFront,
+    back: sgCardBack,
   },
+  cardTemplate: '/templates/sg-template.jpg',
 
   flagLabel: 'SG',
 

@@ -1,5 +1,8 @@
-import { type CountryConfig } from '../context/CountryContext';
-import { DEFAULT_PORTRAIT_URI } from '../constants/defaultPortrait';
+import type { CountryConfig } from './types';
+import { DEFAULT_PORTRAIT_URI } from './assets';
+import vnEmblem from '../../assets/vn-emblem.png';
+import vnCardFront from '../../assets/cards/vn-front.webp';
+import vnCardBack from '../../assets/cards/vn-back.webp';
 
 function toVnDate(en: string): string {
   // Convert "27 Dec. 1996" → "27/12/1996"
@@ -23,11 +26,12 @@ export const VIETNAM_CONFIG: CountryConfig = {
   cardDescription: 'Vietnamese Citizen Identity Card (Căn Cước Công Dân)',
   cardPromptHint: 'This is a horizontal Vietnamese citizen identity card (CCCD). The portrait photo is on the LEFT side, below the national emblem. Text fields (number, full name, date of birth, sex, nationality, place of origin, place of residence) are on the RIGHT side. The card has a light blue/teal background with Vietnamese decorative patterns and a watermark. The national emblem (gold star on red) is in the upper left. There is a gold chip on the lower left below the portrait. The header reads "CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM" and "CĂN CƯỚC CÔNG DÂN".',
 
-  emblemAsset: require('../../assets/vn-emblem.png'),
+  emblemAsset: vnEmblem,
   cardImages: {
-    front: require('../../assets/cards/vn-front.webp'),
-    back: require('../../assets/cards/vn-back.webp'),
+    front: vnCardFront,
+    back: vnCardBack,
   },
+  cardTemplate: '/templates/vn-template.jpg',
 
   flagLabel: 'Việt Nam',
 

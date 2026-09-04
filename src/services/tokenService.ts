@@ -1,4 +1,4 @@
-import { ProfileType } from '../types/profile';
+import type { ProfileType } from '@/types/profile';
 
 export interface DigitalIdPayload {
   version: string;

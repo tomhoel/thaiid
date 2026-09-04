@@ -1,5 +1,8 @@
-import { type CountryConfig } from '../context/CountryContext';
-import { DEFAULT_PORTRAIT_URI } from '../constants/defaultPortrait';
+import type { CountryConfig } from './types';
+import { DEFAULT_PORTRAIT_URI } from './assets';
+import thEmblem from '../../assets/garuda.png';
+import thCardFront from '../../assets/cards/th-front.png';
+import thCardBack from '../../assets/cards/th-back.png';
 
 const THAI_MONTHS: Record<string, string> = {
   Jan: 'ม.ค.', Feb: 'ก.พ.', Mar: 'มี.ค.', Apr: 'เม.ย.', May: 'พ.ค.', Jun: 'มิ.ย.',
@@ -26,11 +29,12 @@ export const THAILAND_CONFIG: CountryConfig = {
   cardDescription: 'Thai National ID card',
   cardPromptHint: 'This is a horizontal ID card. The portrait photo is on the RIGHT side. Text fields (name, dates) are on the LEFT side. The card has a blue-to-navy gradient background with a Garuda emblem watermark. There is a gold chip on the lower left.',
 
-  emblemAsset: require('../../assets/garuda.png'),
+  emblemAsset: thEmblem,
   cardImages: {
-    front: require('../../assets/cards/th-front.png'),
-    back: require('../../assets/cards/th-back.png'),
+    front: thCardFront,
+    back: thCardBack,
   },
+  cardTemplate: '/templates/th-template.png',
 
   flagLabel: 'ไทย',
 

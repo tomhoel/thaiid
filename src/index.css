@@ -1,0 +1,90 @@
+@import 'tailwindcss';
+
+/*
+ * Design tokens ported from the v4 native app's ColorPalette. Dark is the
+ * canonical theme; light overrides live in the `.theme-light` block below so a
+ * single class on <html> flips the whole surface.
+ */
+@theme {
+  --color-bg: #080f1c;
+  --color-bg-card: #131e33;
+  --color-bg-elevated: #1a2742;
+  --color-bg-surface: rgba(255, 255, 255, 0.04);
+
+  --color-navy: #0c1526;
+  --color-navy-light: #1a2742;
+  --color-navy-mid: #162036;
+
+  --color-gold: #c09520;
+  --color-gold-light: #d4af37;
+  --color-gold-bg: rgba(212, 175, 55, 0.1);
+  --color-gold-border: rgba(212, 175, 55, 0.18);
+
+  --color-blue: #3b82f6;
+  --color-blue-bg: rgba(59, 130, 246, 0.1);
+  --color-flag-red: #e31e2d;
+
+  --color-green: #22c55e;
+  --color-green-bg: rgba(34, 197, 94, 0.1);
+  --color-green-border: rgba(34, 197, 94, 0.18);
+
+  --color-warn: #f59e0b;
+  --color-danger: #ef4444;
+
+  --color-t1: #f1f5f9;
+  --color-t2: #94a3b8;
+  --color-t3: #64748b;
+  --color-t4: #475569;
+
+  --color-b1: rgba(255, 255, 255, 0.06);
+  --color-b2: rgba(255, 255, 255, 0.1);
+  --color-divider: rgba(255, 255, 255, 0.04);
+
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+}
+
+.theme-light {
+  --color-bg: #e8ecf1;
+  --color-bg-card: #ffffff;
+  --color-bg-elevated: #edf0f5;
+  --color-bg-surface: rgba(0, 0, 0, 0.03);
+
+  --color-gold: #b8860b;
+  --color-gold-light: #9a7209;
+  --color-gold-bg: rgba(184, 134, 11, 0.08);
+  --color-gold-border: rgba(184, 134, 11, 0.15);
+
+  --color-blue: #2563eb;
+  --color-blue-bg: rgba(37, 99, 235, 0.08);
+
+  --color-green: #16a34a;
+  --color-green-bg: rgba(22, 163, 74, 0.08);
+  --color-green-border: rgba(22, 163, 74, 0.15);
+
+  --color-warn: #d97706;
+  --color-danger: #dc2626;
+
+  --color-t1: #0f172a;
+  --color-t2: #334155;
+  --color-t3: #64748b;
+  --color-t4: #94a3b8;
+
+  --color-b1: rgba(0, 0, 0, 0.06);
+  --color-b2: rgba(0, 0, 0, 0.1);
+  --color-divider: rgba(0, 0, 0, 0.04);
+}
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    background-color: var(--color-bg);
+    color: var(--color-t1);
+    font-family: var(--font-sans);
+    /* Standalone PWAs have no browser chrome to absorb overscroll. */
+    overscroll-behavior-y: none;
+  }
+}

@@ -44,8 +44,8 @@ export type ProfileType = z.infer<typeof ProfileSchema>;
 export interface GenerateCardParams {
   countryCode: CountryCode;
   profileData: ProfileType;
-  selectedPhotoBase64?: string | null;
-  selectedPhotoMime?: string;
+  /** Base64-encoded portrait to composite into the card, if the user supplied one. */
+  portrait?: { base64: string; mimeType: string } | null;
   cardPromptHint?: string;
 }
 

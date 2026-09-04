@@ -1,5 +1,8 @@
-import { type CountryConfig } from '../context/CountryContext';
-import { DEFAULT_PORTRAIT_URI } from '../constants/defaultPortrait';
+import type { CountryConfig } from './types';
+import { DEFAULT_PORTRAIT_URI } from './assets';
+import brEmblem from '../../assets/br-emblem.png';
+import brCardFront from '../../assets/cards/br-front.webp';
+import brCardBack from '../../assets/cards/br-back.webp';
 
 function toBrDate(en: string): string {
   // Convert "27 Dec. 1996" → "27/12/1996"
@@ -23,11 +26,12 @@ export const BRAZIL_CONFIG: CountryConfig = {
   cardDescription: 'Brazilian Carteira de Identidade Nacional (CIN)',
   cardPromptHint: 'This is a horizontal identity card. The portrait photo is on the RIGHT side. Text fields (name, CPF, dates) are on the LEFT side. The card has a green and yellow color scheme with the Brazilian coat of arms.',
 
-  emblemAsset: require('../../assets/br-emblem.png'),
+  emblemAsset: brEmblem,
   cardImages: {
-    front: require('../../assets/cards/br-front.webp'),
-    back: require('../../assets/cards/br-back.webp'),
+    front: brCardFront,
+    back: brCardBack,
   },
+  cardTemplate: '/templates/br-template.jpg',
 
   flagLabel: 'Brasil',
 
