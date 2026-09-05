@@ -88,36 +88,52 @@ Tables now present: card_versions, profiles, user_preferences
 
 ## 3. Vercel (hosting + Blob storage)
 
-Link the repo first — the Blob token comes from the linked project.
+The Blob option is not always visible in the dashboard, so do this from the CLI.
 
 ```powershell
 vercel login
-vercel link
+vercel link --yes
+vercel blob create-store thaiid-cards --access private --region lhr1
 ```
 
-Accept the prompts to create a new project named `thaiid`.
+`--access private` is the important flag. A public store serves every uploaded
+ID photo from a guessable URL with no way to revoke it. Pick a region near your
+database — `lhr1` is London, matching a Neon project in `eu-west-2`.
 
-Then create the store:
+**Then connect the store to the project.** `create-store` offers this as a
+prompt, which is skipped in non-interactive shells. If it was skipped,
+`vercel env ls` will show no `BLOB_READ_WRITE_TOKEN` and every blob command will
+fail with "No Vercel Blob token found". There is no CLI subcommand to link an
+existing store, so either re-run `create-store` interactively, or use the API:
 
-1. In the [Vercel dashboard](https://vercel.com/dashboard), open your project
-   and go to the **Storage** tab.
-2. **Create** → **Blob**.
-3. Name it `thaiid-cards`.
-4. Set access to **Private**. This is the important one: a public store serves
-   every uploaded ID photo from a guessable URL, with no way to revoke it.
-5. Connect it to the `thaiid` project.
+```powershell
+$tok = (Get-Content "$env:APPDATA\com.vercel.cli\Data\auth.json" -Raw | ConvertFrom-Json).token
+$ids = Get-Content .vercel\project.json | ConvertFrom-Json
+$tmp = Join-Path $env:TEMP 'connect.json'
+@{ projectId = $ids.projectId; envVarEnvironments = @('production','preview','development') } |
+  ConvertTo-Json -Compress | Set-Content $tmp -Encoding ascii
+curl.exe -s -X POST -H "Authorization: Bearer $tok" -H "Content-Type: application/json" `
+  --data "@$tmp" "https://api.vercel.com/v1/storage/stores/<STORE_ID>/connections?teamId=$($ids.orgId)"
+Remove-Item $tmp
+```
 
-Pull the generated token down to your machine:
+Pull the generated token down:
 
 ```powershell
 vercel env pull .env.vercel
 ```
 
-Copy the `BLOB_READ_WRITE_TOKEN` line from `.env.vercel` into `.env.local`, then
-delete `.env.vercel`.
+Copy the `BLOB_READ_WRITE_TOKEN` line into `.env.local`, then delete
+`.env.vercel`.
 
-**Verify:** `BLOB_READ_WRITE_TOKEN` in `.env.local` starts with
-`vercel_blob_rw_`.
+**Verify:** `BLOB_READ_WRITE_TOKEN` starts with `vercel_blob_rw_`, and
+`vercel blob list --rw-token <token>` reports an empty store rather than an
+error.
+
+Note that `vercel blob put` defaults to *public* access and will be rejected by
+a private store — that rejection is the store working as intended. Uploads have
+to go through the SDK with `access: 'private'`, which is what `api/cards.ts`
+does.
 
 ---
 

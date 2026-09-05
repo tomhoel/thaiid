@@ -9,6 +9,7 @@ dev-dist/
 # local env files
 .env
 .env*.local
+.env.vercel
 
 # supabase CLI cache
 supabase/.temp/
@@ -35,3 +36,4 @@ supabase/.branches/
 npm-debug.*
 yarn-debug.*
 yarn-error.*
+.vercel
