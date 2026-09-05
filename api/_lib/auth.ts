@@ -32,7 +32,13 @@ export async function requireUserId(req: VercelRequest): Promise<string | null> 
   }
 }
 
-function authorizedParties(): string[] | undefined {
+/**
+ * The origins Clerk's `azp` claim is allowed to carry.
+ *
+ * Exported for testing: this is security-critical and easy to get subtly wrong,
+ * and the failure mode is every browser token being rejected.
+ */
+export function authorizedParties(): string[] | undefined {
   const configured = (process.env.ALLOWED_ORIGINS ?? '')
     .split(',')
     .map((value) => value.trim())
