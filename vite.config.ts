@@ -80,5 +80,9 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['tests/**/*.test.{ts,tsx}'],
+    // api/ is compiled as NodeNext, so its internal imports carry a .js
+    // extension that points at a .ts file on disk. Vite resolves specifiers
+    // literally, so the integration test cannot load a handler without this.
+    alias: [{ find: /^\.\/_lib\/(.*)\.js$/, replacement: './_lib/$1.ts' }],
   },
 });

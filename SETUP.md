@@ -253,6 +253,18 @@ happen; the dev origins are matched by pattern.
 begin with your Clerk user id. `api/cards.ts` returns 404 rather than 403 on an
 ownership mismatch so that probing cannot confirm a file exists.
 
+**`vercel dev` does not read `.env.local` for functions.** Once the project is
+linked, the functions get the linked project's **Development** environment
+variables instead. If `/api/*` returns 401 locally while the browser signs in
+fine, check `vercel env ls` — the fix is to add the server variables to the
+Development environment, not just to `.env.local`:
+
+```powershell
+vercel env add CLERK_SECRET_KEY development
+vercel env add DATABASE_URL development
+vercel env add GEMINI_API_KEY development
+```
+
 **`/api` 404s under `npm run dev`** — that server does not run functions. Use
 `vercel dev`.
 

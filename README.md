@@ -41,6 +41,18 @@ runtime, so run `vercel dev` when you need the API as well.
 | `npm test` | Vitest |
 | `npm run db:push` | Apply `db/schema.sql` to `DATABASE_URL` |
 
+`npm test` includes `tests/apiHandlers.integration.test.ts`, which runs the real
+handlers against real Clerk tokens, the real Neon database and the real private
+Blob store. It creates two throwaway Clerk users and deletes them, along with
+their rows and blobs, afterwards. It skips itself when `CLERK_SECRET_KEY`,
+`DATABASE_URL` or `BLOB_READ_WRITE_TOKEN` is missing, so the suite still runs on
+an unconfigured machine.
+
+The handlers are invoked in-process rather than over HTTP because Clerk's
+Backend API cannot mint a token carrying an `azp` claim — only a browser session
+gets one — while `vercel dev` always sets `VERCEL_URL`, which switches on
+`authorizedParties` enforcement. The `azp` path is covered by real sign-in.
+
 ### First-time setup
 
 See **[SETUP.md](SETUP.md)** for the full walkthrough. In short:

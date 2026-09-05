@@ -38,8 +38,13 @@ function authorizedParties(): string[] | undefined {
     .map((value) => value.trim())
     .filter(Boolean);
 
-  if (process.env.VERCEL_URL) {
-    configured.push(`https://${process.env.VERCEL_URL}`);
+  const vercelUrl = process.env.VERCEL_URL;
+  if (vercelUrl) {
+    // `vercel dev` sets VERCEL_URL to `localhost:3000`, which is served over
+    // http. Assuming https there rejects every token a browser sends locally,
+    // because Clerk sets `azp` to the page origin.
+    const scheme = /^(localhost|127\.0\.0\.1)(:|$)/.test(vercelUrl) ? 'http' : 'https';
+    configured.push(`${scheme}://${vercelUrl}`);
   }
 
   return configured.length > 0 ? configured : undefined;
