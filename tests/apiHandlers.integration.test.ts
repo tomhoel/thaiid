@@ -143,6 +143,12 @@ describe.skipIf(!configured)('API handlers (integration)', () => {
   let cards: Handler;
   let userA: { id: string; token: string };
   let userB: { id: string; token: string };
+  /**
+   * Uploaded once in setup rather than by the test that asserts it. When the
+   * upload was a test, any transient failure surfaced as three unrelated tests
+   * reporting "expected undefined to be defined" instead of one clear error.
+   */
+  let cardUpload: { status: number; path: string };
   let cardPath: string | undefined;
 
   beforeAll(async () => {
@@ -151,6 +157,20 @@ describe.skipIf(!configured)('API handlers (integration)', () => {
     cards = (await import('../api/cards')).default as Handler;
     userA = await makeUser('A');
     userB = await makeUser('B');
+
+    const upload = await invoke(cards, {
+      method: 'POST',
+      token: userA.token,
+      body: { countryCode: 'TH', imageBase64: PNG.toString('base64'), mimeType: 'image/png' },
+    });
+    const path = (upload.body as { path?: string })?.path;
+    if (upload.status !== 201 || !path) {
+      throw new Error(
+        `Card upload failed in setup: HTTP ${upload.status} ${JSON.stringify(upload.body)}`,
+      );
+    }
+    cardUpload = { status: upload.status, path };
+    cardPath = path;
   }, 60_000);
 
   afterAll(async () => {
@@ -235,20 +255,13 @@ describe.skipIf(!configured)('API handlers (integration)', () => {
     expect(res.status).toBe(400);
   });
 
-  it('uploads a card to the private store under the caller id', async () => {
-    const res = await invoke(cards, {
-      method: 'POST',
-      token: userA.token,
-      body: { countryCode: 'TH', imageBase64: PNG.toString('base64'), mimeType: 'image/png' },
-    });
-    expect(res.status).toBe(201);
-    const { path } = res.body as { path: string };
-    expect(path.startsWith(`${userA.id}/`)).toBe(true);
-    cardPath = path;
-  }, 30_000);
+  it('uploads a card to the private store under the caller id', () => {
+    expect(cardUpload.status).toBe(201);
+    // The prefix is the whole ownership model: reads are authorised by it.
+    expect(cardUpload.path.startsWith(`${userA.id}/`)).toBe(true);
+  });
 
   it('lets the owner read the card back byte for byte', async () => {
-    expect(cardPath).toBeDefined();
     const res = await invoke(cards, { method: 'GET', query: { path: cardPath! }, token: userA.token });
     expect(res.status).toBe(200);
     expect(Buffer.isBuffer(res.body)).toBe(true);
@@ -277,7 +290,6 @@ describe.skipIf(!configured)('API handlers (integration)', () => {
     });
 
     it("refuses to serve another user's card, as 404 not 403", async () => {
-      expect(cardPath).toBeDefined();
       const res = await invoke(cards, { method: 'GET', query: { path: cardPath! }, token: userB.token });
       expect(res.status).toBe(404);
     });
