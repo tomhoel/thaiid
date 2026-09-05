@@ -10,6 +10,7 @@ export interface CountryConfig {
   splashFooter: string;
   qrType: string;
   systemReference: string;
+  chipSerial: string;
   cardDescription: string;
   cardPromptHint: string;
 

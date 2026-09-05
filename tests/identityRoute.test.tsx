@@ -1,38 +1,33 @@
 // @vitest-environment jsdom
 /**
- * Tests for the Identity screen and the card-image hook.
+ * Tests for the ported identity screen.
  *
- * These stub `fetch` rather than the data hooks, so the real `apiClient`,
- * the real react-query wiring and the real component all run. That matters
- * here: the screen's whole job is to turn two API responses plus a country
- * config into a rendered card, and mocking the hooks would assert nothing.
+ * The native screen is the reference: a navy title bar, the flippable card, and
+ * a draggable document panel holding the cardholder rows. These assert the
+ * ported DOM reproduces that structure and stays wired to live preferences,
+ * stubbing only `fetch` so the real hooks and `apiClient` still run.
  */
 import { act, useState, type ReactNode } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
+import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const signOutMock = vi.fn(async () => {});
-
 vi.mock('@clerk/clerk-react', () => ({
-  useAuth: () => ({ isLoaded: true, isSignedIn: true, userId: 'user_1', signOut: signOutMock }),
-  useUser: () => ({
-    user: {
-      fullName: 'Tom Hoel',
-      firstName: 'Tom',
-      primaryEmailAddress: { emailAddress: 'tom@example.com' },
-    },
-  }),
+  useAuth: () => ({ isLoaded: true, isSignedIn: true, userId: 'user_1', signOut: async () => {} }),
+  useUser: () => ({ user: { fullName: 'Tom Hoel', firstName: 'Tom' } }),
 }));
 
 const { Identity } = await import('../src/routes/Identity');
 const { useCardImage } = await import('../src/features/profiles/useCardImage');
-const { getCountryConfig, COUNTRY_CODES } = await import('../src/countries');
+const { getCountryConfig } = await import('../src/countries');
 
 declare global {
   // eslint-disable-next-line no-var
   var IS_REACT_ACT_ENVIRONMENT: boolean;
 }
+
+const TH = getCountryConfig('TH');
 
 interface Prefs {
   user_id: string;
@@ -48,6 +43,9 @@ let profile: Record<string, unknown> | null;
 let requests: { url: string; method: string; body?: string }[];
 let createdUrls: string[];
 let revokedUrls: string[];
+let clipboard: string[];
+let container: HTMLDivElement;
+let root: Root;
 
 beforeAll(() => {
   globalThis.IS_REACT_ACT_ENVIRONMENT = true;
@@ -61,6 +59,15 @@ beforeAll(() => {
     removeListener: () => {},
     dispatchEvent: () => false,
   })) as unknown as typeof window.matchMedia;
+
+  // jsdom ships neither; the panel measures with one and captures the pointer.
+  globalThis.ResizeObserver ??= class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  } as unknown as typeof ResizeObserver;
+  Element.prototype.setPointerCapture ??= function () {};
+  Element.prototype.releasePointerCapture ??= function () {};
 });
 
 const json = (payload: unknown) => ({
@@ -83,6 +90,7 @@ beforeEach(() => {
   requests = [];
   createdUrls = [];
   revokedUrls = [];
+  clipboard = [];
 
   let counter = 0;
   URL.createObjectURL = vi.fn(() => {
@@ -90,9 +98,12 @@ beforeEach(() => {
     createdUrls.push(url);
     return url;
   }) as unknown as typeof URL.createObjectURL;
-  URL.revokeObjectURL = vi.fn((url: string) => {
-    revokedUrls.push(url);
-  }) as unknown as typeof URL.revokeObjectURL;
+  URL.revokeObjectURL = vi.fn((url: string) => revokedUrls.push(url)) as unknown as typeof URL.revokeObjectURL;
+
+  Object.defineProperty(navigator, 'clipboard', {
+    configurable: true,
+    value: { writeText: async (text: string) => void clipboard.push(text) },
+  });
 
   vi.stubGlobal(
     'fetch',
@@ -102,26 +113,21 @@ beforeEach(() => {
 
       if (input.startsWith('/api/preferences')) {
         if (method === 'PATCH') {
-          const patch = JSON.parse(init.body as string) as { activeCountry?: string };
-          if (patch.activeCountry) prefs = { ...prefs, active_country: patch.activeCountry };
+          const patch = JSON.parse(init.body as string) as Partial<Prefs> & { language?: string };
+          if (patch.language) prefs = { ...prefs, language: patch.language };
           return json({ preferences: prefs });
         }
         return json({ preferences: prefs });
       }
-
-      if (input.startsWith('/api/profiles')) {
-        return json({ profile });
-      }
-
+      if (input.startsWith('/api/profiles')) return json({ profile });
       if (input.startsWith('/api/cards')) {
         return {
           ok: true,
           status: 200,
           text: async () => '',
-          blob: async () => new Blob(['image-bytes'], { type: 'image/png' }),
+          blob: async () => new Blob(['bytes'], { type: 'image/png' }),
         };
       }
-
       throw new Error(`Unexpected request: ${method} ${input}`);
     }),
   );
@@ -131,9 +137,6 @@ beforeEach(() => {
   root = createRoot(container);
 });
 
-let container: HTMLDivElement;
-let root: Root;
-
 afterEach(async () => {
   await act(async () => root.unmount());
   container.remove();
@@ -142,13 +145,16 @@ afterEach(async () => {
   vi.clearAllMocks();
 });
 
-/** Renders, then drains the query promises the render kicked off. */
 const render = async (node: ReactNode) => {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   await act(async () => {
-    root.render(<QueryClientProvider client={client}>{node}</QueryClientProvider>);
+    root.render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter>{node}</MemoryRouter>
+      </QueryClientProvider>,
+    );
   });
   await act(async () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
@@ -161,40 +167,123 @@ const settle = async () => {
   });
 };
 
-const flagButtons = () => Array.from(container.querySelectorAll('nav[aria-label="Country"] button'));
+const text = () => container.textContent ?? '';
+const button = (label: string) =>
+  container.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`);
 
-describe('Identity', () => {
-  it('renders the active country from the stored preferences', async () => {
+describe('Identity screen', () => {
+  it('renders the title bar from the country translations', async () => {
     await render(<Identity />);
-    const th = getCountryConfig('TH');
 
-    expect(container.textContent).toContain(th.name.primary);
-    expect(container.textContent).toContain(th.issuer.english);
+    expect(text()).toContain(TH.translations['header.title'].en);
+    expect(text()).toContain(TH.translations['header.sub'].en);
   });
 
-  it('offers every supported country and marks the active one', async () => {
+  it('shows the official document header with both country names', async () => {
     await render(<Identity />);
-    const buttons = flagButtons();
 
-    expect(buttons).toHaveLength(COUNTRY_CODES.length);
-    const current = buttons.filter((b) => b.getAttribute('aria-current') === 'true');
-    expect(current).toHaveLength(1);
+    expect(text()).toContain(TH.name.english);
+    expect(text()).toContain(TH.name.primary);
   });
 
-  it('shows the sample card data when the user has no saved profile', async () => {
+  it('renders the cardholder name uppercased in English', async () => {
     await render(<Identity />);
-    const sample = getCountryConfig('TH').defaultCardData;
+    const { firstName, lastName } = TH.defaultCardData;
 
-    expect(container.textContent).toContain(sample.idNumber);
-    expect(container.textContent).toContain(sample.fullNameEnglish);
-    expect(container.textContent).toContain('sample');
+    expect(text()).toContain(`${firstName.toUpperCase()}  ${lastName.toUpperCase()}`);
   });
 
-  it('prefers saved profile data over the sample', async () => {
+  it('shows the ID number and copies it on demand', async () => {
+    await render(<Identity />);
+    expect(text()).toContain(TH.defaultCardData.idNumber);
+
+    await act(async () => {
+      button('Copy ID number')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    await settle();
+
+    expect(clipboard).toEqual([TH.defaultCardData.idNumber]);
+  });
+
+  it('renders the date grid and the computed age', async () => {
+    await render(<Identity />);
+
+    expect(text()).toContain(TH.translations['info.dob'].en);
+    expect(text()).toContain(TH.translations['info.age'].en);
+    expect(text()).toContain(TH.translations['info.issued'].en);
+    expect(text()).toContain(TH.translations['info.expires'].en);
+    expect(text()).toContain(TH.defaultCardData.dateOfIssue);
+  });
+
+  it('formats the address through the country formatter', async () => {
+    await render(<Identity />);
+
+    expect(text()).toContain(TH.addressFormatter(TH.defaultCardData, 'en'));
+  });
+
+  it('includes the collapsed expanded-detail sections', async () => {
+    await render(<Identity />);
+
+    expect(text()).toContain(TH.translations['expanded.smartCard'].en);
+    expect(text()).toContain(TH.chipSerial);
+    expect(text()).toContain(TH.translations['expanded.biometric'].en);
+    expect(text()).toContain('ISO/IEC 7816-4');
+  });
+
+  it('offers the card details link', async () => {
+    await render(<Identity />);
+
+    expect(text()).toContain(TH.translations['details.cardDetails'].en);
+  });
+
+  it('switches language through the preferences endpoint', async () => {
+    await render(<Identity />);
+
+    const toggle = button(`Switch language to ${TH.secondaryLanguage.langName}`);
+    expect(toggle).not.toBeNull();
+
+    await act(async () => {
+      toggle?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    await settle();
+
+    const patch = requests.find((r) => r.method === 'PATCH');
+    expect(patch?.body).toContain('"language":"th"');
+    expect(text()).toContain(TH.translations['info.dob'].th);
+  });
+
+  it('falls back to initials when no portrait is stored', async () => {
+    await render(<Identity />);
+    const { firstName, lastName } = TH.defaultCardData;
+
+    expect(text()).toContain(`${firstName.charAt(0)}${lastName.charAt(0)}`);
+    expect(requests.some((r) => r.url.startsWith('/api/cards'))).toBe(false);
+  });
+
+  it('loads the private portrait and card render when the profile has them', async () => {
     profile = {
       id: 'p1',
       country_code: 'TH',
-      data: { ...getCountryConfig('TH').defaultCardData, fullNameEnglish: 'Real Person' },
+      data: {},
+      card_front_path: 'cards/user_1/TH.png',
+      portrait_path: 'portraits/user_1/TH.png',
+      created_at: '',
+      updated_at: '',
+    };
+
+    await render(<Identity />);
+    await settle();
+
+    const cardRequests = requests.filter((r) => r.url.startsWith('/api/cards'));
+    expect(cardRequests).toHaveLength(2);
+    expect(createdUrls).toHaveLength(2);
+  });
+
+  it('marks an expired card with a status dot', async () => {
+    profile = {
+      id: 'p1',
+      country_code: 'TH',
+      data: { ...TH.defaultCardData, isValid: false },
       card_front_path: null,
       portrait_path: null,
       created_at: '',
@@ -203,62 +292,14 @@ describe('Identity', () => {
 
     await render(<Identity />);
 
-    expect(container.textContent).toContain('Real Person');
-    expect(container.textContent).not.toContain('sample');
+    expect(container.querySelector('.bg-danger')).not.toBeNull();
   });
 
-  it('switches country through the preferences endpoint', async () => {
-    await render(<Identity />);
-    const sgIndex = COUNTRY_CODES.indexOf('SG');
-
-    await act(async () => {
-      flagButtons()[sgIndex].dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    });
-    await settle();
-
-    const patch = requests.find((r) => r.method === 'PATCH');
-    expect(patch?.body).toContain('SG');
-    expect(container.textContent).toContain(getCountryConfig('SG').name.primary);
-    expect(container.textContent).not.toContain(getCountryConfig('TH').issuer.english);
-  });
-
-  it('does not write when the active country is re-selected', async () => {
-    await render(<Identity />);
-    const thIndex = COUNTRY_CODES.indexOf('TH');
-
-    await act(async () => {
-      flagButtons()[thIndex].dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    });
-    await settle();
-
-    expect(requests.filter((r) => r.method === 'PATCH')).toHaveLength(0);
-  });
-
-  it('loads the private card render through the authenticated endpoint', async () => {
-    profile = {
-      id: 'p1',
-      country_code: 'TH',
-      data: {},
-      card_front_path: 'cards/user_1/TH.png',
-      portrait_path: null,
-      created_at: '',
-      updated_at: '',
-    };
-
-    await render(<Identity />);
-    await settle();
-
-    expect(requests.some((r) => r.url.includes('/api/cards?path='))).toBe(true);
-    const front = container.querySelector('img');
-    expect(front?.getAttribute('src')).toBe(createdUrls[0]);
-  });
-
-  it('falls back to the bundled card image when nothing is stored', async () => {
+  it('leaves a valid card without a status dot', async () => {
     await render(<Identity />);
 
-    expect(requests.some((r) => r.url.startsWith('/api/cards'))).toBe(false);
-    const front = container.querySelector('img');
-    expect(front?.getAttribute('src')).toBe(getCountryConfig('TH').cardImages.front);
+    expect(container.querySelector('.bg-danger')).toBeNull();
+    expect(container.querySelector('.bg-warn')).toBeNull();
   });
 
   it('applies the light theme class only when preferences ask for it', async () => {
@@ -273,77 +314,39 @@ describe('Identity', () => {
     expect(document.documentElement.classList.contains('theme-light')).toBe(true);
   });
 
-  it('signs out through the auth adapter', async () => {
+  it('ignores pointer movement below the drag threshold so taps still land', async () => {
     await render(<Identity />);
-    const button = Array.from(container.querySelectorAll('button')).find(
-      (b) => b.textContent === 'Sign out',
-    );
+    const panel = container.querySelector<HTMLElement>('.touch-pan-y');
+    expect(panel).not.toBeNull();
+
+    const pointer = (type: string, clientY: number) =>
+      new PointerEvent(type, { bubbles: true, clientY, pointerId: 1, button: 0 });
 
     await act(async () => {
-      button?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      panel?.dispatchEvent(pointer('pointerdown', 400));
+      panel?.dispatchEvent(pointer('pointermove', 398));
+      panel?.dispatchEvent(pointer('pointerup', 398));
     });
 
-    expect(signOutMock).toHaveBeenCalledTimes(1);
-  });
+    await act(async () => {
+      button('Copy ID number')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    await settle();
 
-  it('reports an expired card as expired', async () => {
-    profile = {
-      id: 'p1',
-      country_code: 'TH',
-      data: { ...getCountryConfig('TH').defaultCardData, dateOfExpiry: '1 Jan. 2010' },
-      card_front_path: null,
-      portrait_path: null,
-      created_at: '',
-      updated_at: '',
-    };
-
-    await render(<Identity />);
-
-    expect(container.textContent).toContain(
-      getCountryConfig('TH').translations['details.statusExpired'].en,
-    );
-  });
-
-  it('warns when the card expires inside 90 days', async () => {
-    const soon = new Date(Date.now() + 30 * 86_400_000);
-    profile = {
-      id: 'p1',
-      country_code: 'TH',
-      data: { ...getCountryConfig('TH').defaultCardData, dateOfExpiry: soon.toDateString() },
-      card_front_path: null,
-      portrait_path: null,
-      created_at: '',
-      updated_at: '',
-    };
-
-    await render(<Identity />);
-
-    expect(container.textContent).toContain(
-      getCountryConfig('TH').translations['details.statusExpiring'].en,
-    );
-  });
-
-  it('labels details in the preferred language', async () => {
-    prefs = { ...prefs, language: 'th' };
-
-    await render(<Identity />);
-
-    expect(container.textContent).toContain(
-      getCountryConfig('TH').translations['details.idNumber'].th,
-    );
+    expect(clipboard).toHaveLength(1);
   });
 });
 
 function CardImageProbe({ path }: { path: string | null }) {
   const url = useCardImage(path);
-  return <span data-testid="url">{url ?? 'none'}</span>;
+  return <span>{url ?? 'none'}</span>;
 }
 
 describe('useCardImage', () => {
   it('returns null without a path and makes no request', async () => {
     await render(<CardImageProbe path={null} />);
 
-    expect(container.textContent).toBe('none');
+    expect(text()).toBe('none');
     expect(requests).toHaveLength(0);
   });
 
@@ -386,6 +389,6 @@ describe('useCardImage', () => {
     await render(<CardImageProbe path="cards/other/TH.png" />);
     await settle();
 
-    expect(container.textContent).toBe('none');
+    expect(text()).toBe('none');
   });
 });

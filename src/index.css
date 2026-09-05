@@ -39,6 +39,7 @@
   --color-b1: rgba(255, 255, 255, 0.06);
   --color-b2: rgba(255, 255, 255, 0.1);
   --color-divider: rgba(255, 255, 255, 0.04);
+  --color-shadow: rgba(0, 0, 0, 0.3);
 
   --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
@@ -73,6 +74,7 @@
   --color-b1: rgba(0, 0, 0, 0.06);
   --color-b2: rgba(0, 0, 0, 0.1);
   --color-divider: rgba(0, 0, 0, 0.04);
+  --color-shadow: rgba(0, 0, 0, 0.08);
 }
 
 @layer base {
@@ -86,5 +88,65 @@
     font-family: var(--font-sans);
     /* Standalone PWAs have no browser chrome to absorb overscroll. */
     overscroll-behavior-y: none;
+  }
+}
+
+/*
+ * Identity screen support.
+ *
+ * `--atmosphere-peak` is the alpha of the country tint behind the card; the
+ * native app used 0x18 on dark and 0x0F on light. `--hairline` stands in for
+ * RN's StyleSheet.hairlineWidth, which the document panel rules rely on.
+ */
+:root {
+  --atmosphere-peak: 9%;
+  --hairline: 0.5px;
+}
+
+.theme-light {
+  --atmosphere-peak: 6%;
+}
+
+@keyframes watermark-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/*
+ * Identity entrance choreography.
+ *
+ * Reanimated ran these as delayed timings on the UI thread. As keyframes they
+ * are composited off the main thread and cost no JavaScript. `backwards` fill
+ * holds the start frame during the delay so nothing flashes in first.
+ */
+@keyframes enter-header {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes enter-card {
+  from {
+    opacity: 0;
+    transform: scale(0.88) translateY(-16px);
+  }
+}
+
+@keyframes enter-panel {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+}
+
+@keyframes enter-row {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
   }
 }

@@ -32,6 +32,7 @@ export const ProfileSchema = z.object({
   nationality: z.string().optional(),
   nationalityThai: z.string().optional(),
   bloodType: z.string().optional(),
+  laserCode: z.string().optional(),
   reference: z.string().optional(),
   isValid: z.boolean().default(true),
   pictureUri: z.string().optional(),

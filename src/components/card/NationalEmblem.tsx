@@ -15,7 +15,8 @@ import type { CountryCode } from '@/types/profile';
 
 interface NationalEmblemProps {
   code: CountryCode;
-  size?: number;
+  /** A number is treated as pixels; a string is passed through as CSS. */
+  size?: number | string;
   opacity?: number;
   /** Any CSS colour. Defaults to the theme's light gold token. */
   tint?: string;
