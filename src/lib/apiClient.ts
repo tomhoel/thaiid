@@ -44,6 +44,28 @@ function extractMessage(payload: unknown, fallback: string): string {
   return fallback;
 }
 
+/**
+ * Fetches a binary response, such as a card image from the private Blob store.
+ *
+ * A plain `<img src="/api/cards?path=...">` cannot carry an Authorization
+ * header, and the card endpoint requires one, so the bytes are fetched here and
+ * handed to the caller as a Blob to turn into an object URL.
+ */
+export async function apiFetchBlob(path: string, init: RequestInit = {}): Promise<Blob> {
+  const token = await getSessionToken();
+
+  const headers = new Headers(init.headers);
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
+
+  const response = await fetch(path, { ...init, headers });
+  if (!response.ok) {
+    throw new ApiError(`Request to ${path} failed (HTTP ${response.status}).`, response.status);
+  }
+  return response.blob();
+}
+
 export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
   const token = await getSessionToken();
 
