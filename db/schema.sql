@@ -104,7 +104,8 @@ create index if not exists card_versions_user_id_idx on card_versions (user_id);
 create table if not exists user_preferences (
   user_id text primary key,
   active_country country_code not null default 'TH',
-  theme text not null default 'dark',
+  -- Light, as the native app defaulted. Dark is opt-in from settings.
+  theme text not null default 'light',
   language text not null default 'en',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),

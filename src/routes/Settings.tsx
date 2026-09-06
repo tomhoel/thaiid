@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useAuth } from '@/features/auth/useAuth';
 import { useProfile, usePreferences, useUpdatePreferences } from '@/features/profiles/useProfiles';
 import { useCardImage } from '@/features/profiles/useCardImage';
@@ -106,7 +106,7 @@ export function Settings() {
 
   const country = (preferencesQuery.data?.active_country ?? 'TH') as CountryCode;
   const lang = preferencesQuery.data?.language ?? 'en';
-  const theme = preferencesQuery.data?.theme ?? 'dark';
+  const theme = preferencesQuery.data?.theme ?? 'light';
   const config = getCountryConfig(country);
 
   const t = (key: string) => {
@@ -125,10 +125,6 @@ export function Settings() {
   const [notifications, setNotifications] = useLocalFlag('notifications', true);
 
   const [sheet, setSheet] = useState<Sheet | null>(null);
-
-  useEffect(() => {
-    document.documentElement.classList.toggle('theme-light', theme === 'light');
-  }, [theme]);
 
   const patch = (input: Parameters<typeof updatePreferences.mutate>[0]) => {
     updatePreferences.mutate(input, {

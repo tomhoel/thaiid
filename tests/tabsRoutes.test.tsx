@@ -91,7 +91,7 @@ beforeEach(() => {
   prefs = {
     user_id: 'user_1',
     active_country: 'TH',
-    theme: 'dark',
+    theme: 'light',
     language: 'en',
     created_at: '2024-01-01',
     updated_at: '2024-01-01',
@@ -147,6 +147,7 @@ afterEach(async () => {
   await act(async () => root.unmount());
   container.remove();
   document.documentElement.classList.remove('theme-light');
+  document.documentElement.removeAttribute('style');
   vi.unstubAllGlobals();
   vi.clearAllMocks();
   vi.useRealTimers();
@@ -234,6 +235,66 @@ describe('TabLayout', () => {
 
     expect(text()).toContain('screen body');
     expect(container.querySelector('nav[aria-label="Main"]')).toBeTruthy();
+  });
+});
+
+describe('Appearance', () => {
+  const shell = (
+    <Routes>
+      <Route element={<TabLayout />}>
+        <Route path="/" element={<div>body</div>} />
+      </Route>
+    </Routes>
+  );
+  const root$ = () => document.documentElement;
+
+  it('defaults to the light theme, as the native app did', async () => {
+    await render(shell);
+
+    expect(root$().classList.contains('theme-light')).toBe(true);
+  });
+
+  it('applies the dark theme when preferences ask for it', async () => {
+    prefs = { ...prefs, theme: 'dark' };
+    await render(shell);
+
+    expect(root$().classList.contains('theme-light')).toBe(false);
+  });
+
+  it('layers the country accent over the gold and navy tokens', async () => {
+    prefs = { ...prefs, active_country: 'SG' };
+    await render(shell);
+
+    const accent = SG.accent!.light;
+    expect(root$().style.getPropertyValue('--color-gold-light')).toBe(accent.goldLight);
+    expect(root$().style.getPropertyValue('--color-navy')).toBe(accent.navy);
+  });
+
+  it('clears the accent for a country that has none', async () => {
+    prefs = { ...prefs, active_country: 'SG' };
+    await render(shell);
+    expect(root$().style.getPropertyValue('--color-navy')).not.toBe('');
+
+    await act(async () => root.unmount());
+    root = createRoot(container);
+    prefs = { ...prefs, active_country: 'TH' };
+    await render(shell);
+
+    expect(root$().style.getPropertyValue('--color-navy')).toBe('');
+  });
+
+  it('follows the accent navy into the tab bar surface on dark only', async () => {
+    prefs = { ...prefs, active_country: 'SG', theme: 'dark' };
+    await render(shell);
+
+    expect(root$().style.getPropertyValue('--color-tab-bar')).toBe(SG.accent!.dark.navy);
+
+    await act(async () => root.unmount());
+    root = createRoot(container);
+    prefs = { ...prefs, theme: 'light' };
+    await render(shell);
+
+    expect(root$().style.getPropertyValue('--color-tab-bar')).toBe('');
   });
 });
 
@@ -336,17 +397,16 @@ describe('Settings screen', () => {
     expect(text()).toContain(SG.translations['settings.title'].en);
   });
 
-  it('writes the chosen theme through to preferences and applies it', async () => {
+  it('writes the chosen theme through to preferences', async () => {
     await render(<Settings />);
 
     await click(rowByLabel(TH.translations['settings.theme'].en));
     await click(
-      [...container.querySelectorAll('dialog button')].find((b) => b.textContent === 'Light'),
+      [...container.querySelectorAll('dialog button')].find((b) => b.textContent === 'Dark'),
     );
 
     const patch = requests.find((r) => r.method === 'PATCH');
-    expect(patch?.body).toContain('"theme":"light"');
-    expect(document.documentElement.classList.contains('theme-light')).toBe(true);
+    expect(patch?.body).toContain('"theme":"dark"');
   });
 
   it('writes the chosen language through to preferences', async () => {

@@ -135,6 +135,23 @@ beforeEach(() => {
   container = document.createElement('div');
   document.body.appendChild(container);
   root = createRoot(container);
+
+  // jsdom's rAF is tied to a real clock, so a spring would never settle inside
+  // a test. Driving it from the microtask queue with a fixed 16ms step lets
+  // `act` flush the whole animation deterministically.
+  let clock = performance.now();
+  let handle = 0;
+  const cancelled = new Set<number>();
+  vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {
+    const id = ++handle;
+    clock += 16;
+    const at = clock;
+    queueMicrotask(() => {
+      if (!cancelled.has(id)) cb(at);
+    });
+    return id;
+  });
+  vi.stubGlobal('cancelAnimationFrame', (id: number) => cancelled.add(id));
 });
 
 afterEach(async () => {
@@ -302,21 +319,55 @@ describe('Identity screen', () => {
     expect(container.querySelector('.bg-warn')).toBeNull();
   });
 
-  it('applies the light theme class only when preferences ask for it', async () => {
-    await render(<Identity />);
-    expect(document.documentElement.classList.contains('theme-light')).toBe(false);
+  it('drags the document panel with the pointer and snaps it open', async () => {
+    // Every element reports the same height, so the panel's measured range is
+    // cardZone - 16 = 200px. Nothing else in the screen measures itself.
+    const original = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetHeight')!;
+    Object.defineProperty(HTMLElement.prototype, 'offsetHeight', {
+      configurable: true,
+      get: () => 216,
+    });
 
-    await act(async () => root.unmount());
-    root = createRoot(container);
-    prefs = { ...prefs, theme: 'light' };
+    try {
+      await act(async () => root.unmount());
+      root = createRoot(container);
+      await render(<Identity />);
 
-    await render(<Identity />);
-    expect(document.documentElement.classList.contains('theme-light')).toBe(true);
+      // The panel must claim the vertical gesture outright; `pan-y` would leave
+      // it to the browser and the panel would never follow the finger.
+      const handle = container.querySelector<HTMLElement>('.touch-none');
+      expect(handle).not.toBeNull();
+
+      // `paint` is the only writer of an inline translateY in this screen.
+      const panel = container.querySelector<HTMLElement>('[style*="translateY"]');
+      expect(panel).not.toBeNull();
+
+      const pointer = (type: string, clientY: number) =>
+        new PointerEvent(type, { bubbles: true, clientY, pointerId: 1, button: 0 });
+
+      await act(async () => {
+        handle!.dispatchEvent(pointer('pointerdown', 400));
+        handle!.dispatchEvent(pointer('pointermove', 300));
+      });
+
+      // 100px up across a 200px range is half the travel, tracked one-to-one.
+      expect(panel!.style.transform).toBe('translateY(-100px)');
+
+      await act(async () => {
+        handle!.dispatchEvent(pointer('pointerup', 300));
+      });
+      await settle();
+
+      // Past the 0.4 threshold, so it springs the rest of the way open.
+      expect(panel!.style.transform).toBe('translateY(-200px)');
+    } finally {
+      Object.defineProperty(HTMLElement.prototype, 'offsetHeight', original);
+    }
   });
 
   it('ignores pointer movement below the drag threshold so taps still land', async () => {
     await render(<Identity />);
-    const panel = container.querySelector<HTMLElement>('.touch-pan-y');
+    const panel = container.querySelector<HTMLElement>('.touch-none');
     expect(panel).not.toBeNull();
 
     const pointer = (type: string, clientY: number) =>

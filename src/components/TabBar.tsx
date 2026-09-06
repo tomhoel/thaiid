@@ -42,8 +42,11 @@ export function TabBar() {
       aria-label="Main"
       className="relative z-30 flex shrink-0 border-t border-b1 bg-tab-bar pt-1.5"
       style={{
-        height: 'calc(78px + env(safe-area-inset-bottom, 0px))',
-        paddingBottom: 'calc(28px + env(safe-area-inset-bottom, 0px))',
+        // Natively this was a flat height:78 / paddingBottom:28, where the 28
+        // was a hard-coded home-indicator allowance. On the web the inset is
+        // reported, so the bar is content-height plus whatever the device
+        // actually reserves — otherwise the two stack into dead space.
+        paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 10px)',
       }}
     >
       {TABS.map((tab) => (
@@ -51,7 +54,7 @@ export function TabBar() {
           key={tab.to}
           to={tab.to}
           end
-          className="flex flex-1 flex-col items-center justify-start gap-px text-tab-inactive aria-[current=page]:text-gold-light"
+          className="flex h-11 flex-1 flex-col items-center justify-center gap-px text-tab-inactive aria-[current=page]:text-gold-light"
         >
           {({ isActive }) => (
             <>

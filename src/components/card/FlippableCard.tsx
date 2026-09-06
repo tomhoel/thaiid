@@ -396,7 +396,7 @@ export function FlippableCard({
   return (
     <div
       ref={containerRef}
-      className={`relative mx-auto w-full max-w-[390px] select-none ${className ?? ''}`}
+      className={`relative mx-auto w-full select-none ${className ?? ''}`}
       style={{ perspective: '1000px', aspectRatio: '1 / 0.63', touchAction: 'none' }}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}

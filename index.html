@@ -1,9 +1,12 @@
 <!doctype html>
-<html lang="en">
+<!-- Light is the default theme, as it was natively; `useAppearance` removes
+     this class when the stored preference says dark. Shipping it in the markup
+     keeps a cold load from flashing the dark palette. -->
+<html lang="en" class="theme-light">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#0C1526" />
+    <meta name="theme-color" content="#ffffff" />
     <meta name="description" content="Digital ID — a sovereign-grade digital identity wallet." />
 
     <title>Digital ID</title>
@@ -22,7 +25,7 @@
       #root {
         height: 100%;
         margin: 0;
-        background: #080f1c;
+        background: #e8ecf1;
       }
     </style>
   </head>

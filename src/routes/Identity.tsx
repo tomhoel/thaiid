@@ -198,7 +198,6 @@ export function Identity() {
 
   const country = (preferencesQuery.data?.active_country ?? 'TH') as CountryCode;
   const lang = preferencesQuery.data?.language ?? 'en';
-  const theme = preferencesQuery.data?.theme ?? 'dark';
   const config = getCountryConfig(country);
 
   const t = useCallback(
@@ -213,10 +212,6 @@ export function Identity() {
   const profileQuery = useProfile(country);
   const cardFront = useCardImage(profileQuery.data?.card_front_path);
   const portrait = useCardImage(profileQuery.data?.portrait_path);
-
-  useEffect(() => {
-    document.documentElement.classList.toggle('theme-light', theme === 'light');
-  }, [theme]);
 
   const cardData = useMemo(() => {
     const stored = profileQuery.data?.data as Partial<ProfileType> | undefined;
@@ -326,6 +321,11 @@ export function Identity() {
 
   const onPointerDown = (event: React.PointerEvent) => {
     if (event.button !== 0 && event.pointerType === 'mouse') return;
+    // A snap may still be running; the finger takes over from wherever it is.
+    if (frame.current !== null) {
+      cancelAnimationFrame(frame.current);
+      frame.current = null;
+    }
     const state = drag.current;
     state.pointerId = event.pointerId;
     state.startY = event.clientY;
@@ -407,7 +407,9 @@ export function Identity() {
         />
       </div>
 
-      <div ref={cardZoneRef} className="relative z-10 flex flex-col items-center px-4 pt-4 pb-3">
+      {/* Natively the card was a fixed SCREEN_W - 40 wide, so it lined up with
+          the panel's 20px inset regardless of this zone's own padding. */}
+      <div ref={cardZoneRef} className="relative z-10 flex flex-col items-center px-5 pt-4 pb-3">
         <div className="w-full [animation:enter-card_450ms_ease-out_200ms_backwards]">
           <FlippableCard
             frontSrc={cardFront ?? config.cardImages.front}
@@ -437,7 +439,7 @@ export function Identity() {
               onPointerUp={endDrag}
               onPointerCancel={endDrag}
               onClickCapture={onClickCapture}
-              className="touch-pan-y select-none"
+              className="cursor-grab touch-none select-none active:cursor-grabbing"
             >
               {/* Official header */}
               <div className="flex items-center justify-between bg-navy px-4 py-4">
