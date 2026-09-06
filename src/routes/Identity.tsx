@@ -392,7 +392,7 @@ export function Identity() {
   const localDate = (en: string, local?: string) => (lang === 'en' ? en : (local ?? en));
 
   return (
-    <div className="relative h-dvh overflow-hidden bg-bg">
+    <div className="relative h-full overflow-hidden bg-bg">
       <BackgroundAtmosphere />
       <LivenessWatermark code={country} />
 

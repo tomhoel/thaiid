@@ -3,6 +3,9 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import { fileURLToPath, URL } from 'node:url';
+import { createRequire } from 'node:module';
+
+const { version } = createRequire(import.meta.url)('./package.json') as { version: string };
 
 /**
  * Service-worker caching is an app-shell/offline-UX mechanism only — never a
@@ -12,6 +15,10 @@ import { fileURLToPath, URL } from 'node:url';
  * data (/api, auth) is denied and must go to the network.
  */
 export default defineConfig({
+  // Settings shows the app version; expo-constants supplied it natively.
+  define: {
+    __APP_VERSION__: JSON.stringify(version),
+  },
   plugins: [
     react(),
     tailwindcss(),

@@ -13,9 +13,13 @@ import type { CountryCode } from '@/types/profile';
  */
 interface LivenessWatermarkProps {
   code: CountryCode;
+  /** The QR screen keeps the atmosphere but drops the emblem. */
+  showEmblem?: boolean;
 }
 
-export function LivenessWatermark({ code }: LivenessWatermarkProps) {
+export function LivenessWatermark({ code, showEmblem = true }: LivenessWatermarkProps) {
+  if (!showEmblem) return null;
+
   return (
     <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
       <div
@@ -23,7 +27,7 @@ export function LivenessWatermark({ code }: LivenessWatermarkProps) {
         style={{
           width: '60vw',
           height: '60vw',
-          top: 'calc((100dvh - 60vw) * 0.4)',
+          top: 'calc((100% - 60vw) * 0.4)',
           marginLeft: '-30vw',
         }}
       >

@@ -159,7 +159,7 @@ export function CardDetails() {
 
   return (
     <div
-      className="flex h-dvh flex-col bg-bg"
+      className="flex h-full flex-col bg-bg"
       style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.375rem)' }}
     >
       <div className="mb-2.5 flex items-center gap-2 px-4">

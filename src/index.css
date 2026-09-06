@@ -41,6 +41,10 @@
   --color-divider: rgba(255, 255, 255, 0.04);
   --color-shadow: rgba(0, 0, 0, 0.3);
 
+  /* The tab bar swaps surface and inactive tint per theme, so both are tokens. */
+  --color-tab-bar: #0c1526;
+  --color-tab-inactive: rgba(255, 255, 255, 0.35);
+
   --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
 }
@@ -75,6 +79,9 @@
   --color-b2: rgba(0, 0, 0, 0.1);
   --color-divider: rgba(0, 0, 0, 0.04);
   --color-shadow: rgba(0, 0, 0, 0.08);
+
+  --color-tab-bar: #ffffff;
+  --color-tab-inactive: rgba(0, 0, 0, 0.35);
 }
 
 @layer base {
@@ -148,5 +155,59 @@
   from {
     opacity: 0;
     transform: translateY(12px);
+  }
+}
+
+/* The settings picker rising from the bottom edge. */
+@keyframes enter-sheet {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+/*
+ * QR screen motion.
+ *
+ * `qr-reissue` reproduces the native fade-out/fade-in the code played when its
+ * nonce rolled; `drain` is the countdown bar, restarted by keying the element
+ * on the epoch. `spin-once` is the refresh glyph's single turn.
+ */
+@keyframes enter-qr {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.96);
+  }
+}
+
+@keyframes qr-reissue {
+  0% {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  33% {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes spin-once {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes drain {
+  from {
+    width: 100%;
+  }
+  to {
+    width: 0%;
   }
 }
